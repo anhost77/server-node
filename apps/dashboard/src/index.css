@@ -1,18 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --bg-color: #050505;
-  --surface-color: #0a0a0a;
-  --surface-border: rgba(255, 255, 255, 0.08);
-  --primary-color: #0070f3;
-  --primary-glow: rgba(0, 112, 243, 0.3);
-  --secondary-color: #7928ca;
-  --success-color: #00ffbd;
-  --error-color: #ff4d4d;
-  --text-main: #ffffff;
-  --text-muted: #888888;
-  --glass-bg: rgba(15, 15, 15, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --bg-color: #f5f7fa;
+  --surface-color: #ffffff;
+  --surface-border: #e2e8f0;
+  --primary-color: #3b82f6;
+  --primary-glow: rgba(59, 130, 246, 0.3);
+  --secondary-color: #8b5cf6;
+  --success-color: #10b981;
+  --error-color: #ef4444;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --glass-bg: #ffffff;
+  --glass-border: #e2e8f0;
   --font-sans: 'Inter', -apple-system, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 }
@@ -31,27 +31,13 @@ body {
   overflow-x: hidden;
 }
 
-/* Background Gradients */
-body::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background:
-    radial-gradient(circle at 10% 20%, rgba(0, 112, 243, 0.05) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(121, 40, 202, 0.05) 0%, transparent 40%);
-  pointer-events: none;
-  z-index: -1;
-}
-
 h1,
 h2,
 h3,
 h4 {
   font-weight: 700;
   letter-spacing: -0.02em;
+  color: var(--text-main);
 }
 
 button {
@@ -62,34 +48,30 @@ button {
 
 .glass-card {
   background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #fff 0%, #888 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text-main);
+  font-weight: 800;
 }
 
 .premium-btn {
-  background: var(--text-main);
-  color: #000;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: #fff;
   border: none;
   padding: 12px 24px;
   border-radius: 8px;
   font-weight: 600;
   font-size: 0.95rem;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
 .premium-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 25px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
 .premium-btn:active {
@@ -117,9 +99,9 @@ button {
 }
 
 .status-badge.online {
-  background: rgba(0, 255, 189, 0.12);
+  background: rgba(16, 185, 129, 0.1);
   color: var(--success-color);
-  border: 1px solid rgba(0, 255, 189, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .status-badge.online::before {
@@ -128,9 +110,9 @@ button {
 }
 
 .status-badge.offline {
-  background: rgba(255, 77, 77, 0.12);
+  background: rgba(239, 68, 68, 0.1);
   color: var(--error-color);
-  border: 1px solid rgba(255, 77, 77, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 .status-badge.offline::before {
@@ -138,13 +120,13 @@ button {
 }
 
 .status-badge.pending {
-  background: rgba(255, 255, 255, 0.05);
-  color: #888;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(100, 116, 139, 0.1);
+  color: var(--text-muted);
+  border: 1px solid rgba(100, 116, 139, 0.2);
 }
 
 .status-badge.pending::before {
-  background: #444;
+  background: var(--text-muted);
 }
 
 /* Global Utility Colors */
@@ -157,7 +139,7 @@ button {
 }
 
 .warning {
-  color: #f5a623 !important;
+  color: #f59e0b !important;
 }
 
 .text-muted {
@@ -175,10 +157,10 @@ button {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(100, 116, 139, 0.3);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(100, 116, 139, 0.5);
 }

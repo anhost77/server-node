@@ -9,6 +9,7 @@ export const users = sqliteTable('users', {
     avatarUrl: text('avatar_url'),
     passwordHash: text('password_hash'),
     role: text('role').default('user'),
+    mcpToken: text('mcp_token'), // Persistent MCP API token
     createdAt: integer('created_at').default(sql`(cast(strftime('%s','now') as int))`)
 });
 
@@ -71,6 +72,18 @@ export const registrationTokens = sqliteTable('registration_tokens', {
     id: text('id').primaryKey(), // The token itself
     ownerId: text('owner_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
     expiresAt: integer('expires_at').notNull()
+});
+
+// MCP API Tokens
+export const mcpTokens = sqliteTable('mcp_tokens', {
+    id: text('id').primaryKey(),
+    userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+    tokenHash: text('token_hash').notNull(), // bcrypt hash
+    tokenPrefix: text('token_prefix').notNull(), // "sf_mcp_abc..." premiers 12 chars
+    name: text('name').default('Default MCP Token'),
+    lastUsedAt: integer('last_used_at'),
+    createdAt: integer('created_at').default(sql`(cast(strftime('%s','now') as int))`),
+    revokedAt: integer('revoked_at')
 });
 
 // Activity Logs

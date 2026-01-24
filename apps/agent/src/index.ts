@@ -79,7 +79,7 @@ function connectToControlPlane() {
                 source
             }));
         }
-    });
+    }, controlPlaneUrl);
 
     // Safety timeout if connection hangs
     const connectionTimeout = setTimeout(() => {
@@ -103,6 +103,53 @@ function connectToControlPlane() {
     ws.on('message', (data) => {
         try {
             const raw = JSON.parse(data.toString());
+
+            // Handle GET_LOGS separately (not in Zod schema - internal MCP message)
+            if (raw.type === 'GET_LOGS') {
+                (async () => {
+                    const { requestId, logType, lines, filter } = raw;
+                    const { exec } = await import('node:child_process');
+                    const { promisify } = await import('node:util');
+                    const execAsync = promisify(exec);
+
+                    const logPaths: Record<string, string> = {
+                        'nginx-access': '/var/log/nginx/access.log',
+                        'nginx-error': '/var/log/nginx/error.log',
+                        'system': '/var/log/syslog'
+                    };
+
+                    try {
+                        let logs = '';
+                        if (logType === 'pm2') {
+                            const { stdout } = await execAsync(`pm2 logs --lines ${lines} --nostream 2>&1 || echo "PM2 not available"`);
+                            logs = stdout;
+                        } else {
+                            const logPath = logPaths[logType];
+                            if (logPath && fs.existsSync(logPath)) {
+                                const grepCmd = filter ? ` | grep -i "${filter.replace(/"/g, '\\"')}"` : '';
+                                const { stdout } = await execAsync(`tail -n ${lines} "${logPath}"${grepCmd} 2>&1`);
+                                logs = stdout;
+                            } else {
+                                logs = `Log file not found: ${logPath || logType}`;
+                            }
+                        }
+
+                        ws.send(JSON.stringify({
+                            type: 'LOG_RESPONSE',
+                            requestId,
+                            logs: logs.slice(0, 50000)
+                        }));
+                    } catch (err: any) {
+                        ws.send(JSON.stringify({
+                            type: 'LOG_RESPONSE',
+                            requestId,
+                            error: `Failed to read logs: ${err.message}`
+                        }));
+                    }
+                })();
+                return;
+            }
+
             const parsed = ServerMessageSchema.safeParse(raw);
             if (!parsed.success) {
                 console.error('Validation Error:', parsed.error);
@@ -118,14 +165,30 @@ function connectToControlPlane() {
                 console.log('✅ Agent Authorized and Ready');
                 monitor.logConnection('connected', 'Agent authorized and ready');
 
+                // Helper to perform health check and send structured metrics
+                const doHealthCheck = async () => {
+                    const metrics = await monitor.performHealthCheck();
+                    if (metrics && ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'SYSTEM_LOG',
+                            serverId: currentServerId,
+                            data: '', // Empty data, metrics are in dedicated fields
+                            stream: 'metrics',
+                            source: 'metrics',
+                            cpu: metrics.cpu,
+                            ram: metrics.ram,
+                            disk: metrics.disk,
+                            ip: metrics.ip
+                        }));
+                    }
+                };
+
                 // Start health checks every 30 seconds
                 if (healthCheckInterval) clearInterval(healthCheckInterval);
-                healthCheckInterval = setInterval(() => {
-                    monitor.performHealthCheck();
-                }, 30000);
+                healthCheckInterval = setInterval(() => doHealthCheck(), 30000);
 
                 // Immediate health check
-                setTimeout(() => monitor.performHealthCheck(), 2000);
+                setTimeout(() => doHealthCheck(), 2000);
             }
             else if (msg.type === 'REGISTERED') {
                 console.log('✨ Server Registered Successfully');
