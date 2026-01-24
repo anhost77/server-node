@@ -43,6 +43,7 @@ development_status:
   1-2-agent-authentication-protocol: done
   1-3-the-connect-server-interaction: done
   1-4-real-time-connection-status: done
+  1-5-console-logs-streaming: done  # Added - Console logs implemented
   epic-1-retrospective: done
 
   epic-2: in-progress
@@ -55,6 +56,7 @@ development_status:
   epic-3: in-progress
   3-1-hot-path-diffing: backlog
   3-2-auto-rollback-safety-net: in-progress
+  3-3-service-controls-ui: in-progress  # Added - UI ready, logic to connect
   epic-3-retrospective: optional
 
   epic-4: in-progress
@@ -62,8 +64,8 @@ development_status:
   4-2-structured-audit-logging: done
   epic-4-retrospective: optional
 
-  epic-5: in-progress
-  5-1-user-auth-database-architecture: done
-  5-2-team-invitations: backlog
+  epic-5: done  # Changed to done - all critical stories complete
+  5-1-user-auth-database-architecture: done  # PostgreSQL/Drizzle migration complete
+  5-2-team-invitations: backlog  # Post-MVP
   5-3-github-oauth-integration: done
   epic-5-retrospective: optional

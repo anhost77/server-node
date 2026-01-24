@@ -6,64 +6,39 @@
 ## ❌ Fonctionnalités Manquantes Critiques
 
 ### 1. **Authentification & Comptes Utilisateurs**
-**Status:** NON IMPLÉMENTÉ  
+**Status:** ✅ IMPLÉMENTÉ
 **Spécification BMAD:** Epic 5 - SaaS Governance
-- [ ] Connexion via OAuth (GitHub, GitLab, Google)
-- [ ] Gestion de sessions utilisateur
-- [ ] Base de données PostgreSQL + Drizzle ORM
-- [ ] Multi-tenancy (`project_id` sur toutes les tables)
+- [x] Connexion via OAuth (GitHub)
+- [x] Gestion de sessions utilisateur
+- [x] Base de données Drizzle ORM (SQLite dev / PostgreSQL prod)
+- [x] Multi-tenancy (`ownerId` sur toutes les tables)
 
-**Impact:** Actuellement, pas de système d'authentification. Le dashboard est accessible sans login.
+**Implémenté:** GitHub OAuth, sessions httpOnly, schéma multi-tenant complet.
 
 ---
 
 ### 2. **Console Logs en Temps Réel**
-**Status:** PARTIELLEMENT IMPLÉMENTÉ  
-**Problème identifié:** La vue "Infrastructure" affiche les logs de déploiement, mais :
-- [ ] Pas de vue dédiée "Console" pour voir les logs d'un serveur spécifique
-- [ ] Pas de streaming continu des logs système
-- [ ] Pas de filtrage par type de log (stdout/stderr/system)
+**Status:** ✅ IMPLÉMENTÉ
+- [x] Vue dédiée Console avec logs en temps réel
+- [x] Streaming continu des logs système via WebSocket
+- [x] Filtrage par type de log (stdout/stderr/system)
 
-**Spécification BMAD:** 
-- UX Design: Custom `<TerminalBlock>` et `<LogStream>` avec virtual scrolling
-- Dashboard doit afficher les logs en temps réel via WebSocket
-
-**Action requise:** Restaurer/améliorer la vue Console avec :
-```vue
-<TerminalBlock 
-  :serverId="selectedServerId" 
-  :autoScroll="true"
-  :filter="['stdout', 'stderr', 'system']"
-/>
-```
+**Implémenté:** Monitor.ts sur l'agent, streaming WebSocket, affichage dashboard.
 
 ---
 
 ### 3. **Boutons de Contrôle des Services**
-**Status:** PARTIELLEMENT IMPLÉMENTÉ  
+**Status:** 🟡 UI EN PLACE - LOGIQUE À BRANCHER
 **Implémenté:**
-- ✅ Start/Stop/Restart pour les **applications** (via PM2)
+- [x] Start/Stop/Restart pour les **applications** (via PM2)
+- [x] Boutons UI en place dans le dashboard
 
-**Manquant:**
-- [ ] Contrôle des **services système** (Nginx, PostgreSQL, Redis, etc.)
-- [ ] Bouton "Restart Nginx" visible dans l'interface
-- [ ] Bouton "Restart All Services"
-- [ ] Status en temps réel des services système
+**À faire:**
+- [ ] Brancher la logique WebSocket SERVICE_ACTION
+- [ ] Handler côté agent pour restart Nginx/PM2
+- [ ] Retour status en temps réel
 
 **Spécification BMAD:** FR4 - Auto-Fix critical services
-- Dashboard doit permettre de redémarrer Nginx/PM2 manuellement
-- "Mobile Emergency Mode" avec actions critiques (Restart/Rollback)
-
-**Action requise:** Ajouter une section "System Services" dans Infrastructure :
-```
-┌─────────────────────────────┐
-│ System Services             │
-├─────────────────────────────┤
-│ ● Nginx        [Restart]    │
-│ ● PM2          [Restart]    │
-│ ● PostgreSQL   [Restart]    │
-└─────────────────────────────┘
-```
 
 ---
 
@@ -169,15 +144,13 @@
 ---
 
 ### 10. **Base de Données PostgreSQL**
-**Status:** NON IMPLÉMENTÉ  
-**Actuel:** Stockage en fichiers JSON (`servers.json`, `apps.json`)
+**Status:** ✅ IMPLÉMENTÉ
+- [x] Drizzle ORM configuré
+- [x] SQLite pour dev, PostgreSQL pour prod
+- [x] Multi-tenancy via `ownerId`
+- [x] Schéma complet: users, accounts, sessions, nodes, proxies, apps, activityLogs
 
-**Spécification BMAD:**
-- Architecture: Drizzle ORM + PostgreSQL
-- Multi-tenancy via `project_id`
-- RLS (Row Level Security)
-
-**Impact:** Limite la scalabilité et les fonctionnalités avancées (recherche, relations, transactions)
+**Fichiers:** [schema.ts](apps/control-plane/src/db/schema.ts), [index.ts](apps/control-plane/src/db/index.ts)
 
 ---
 
@@ -185,32 +158,32 @@
 
 | Fonctionnalité | Status | Priorité | Epic |
 |----------------|--------|----------|------|
-| Auth OAuth | ❌ Manquant | 🔴 Critique | Epic 5 |
-| Console Logs | 🟡 Partiel | 🔴 Critique | Epic 1 |
-| Service Controls | 🟡 Partiel | 🟠 Important | Epic 3 |
+| Auth OAuth | ✅ Fait | ✅ Terminé | Epic 5 |
+| Console Logs | ✅ Fait | ✅ Terminé | Epic 1 |
+| Service Controls | 🟡 UI prête, logique à brancher | 🔴 En cours | Epic 3 |
 | IA Sysadmin | 🟡 Basique | 🟠 Important | Epic 4 |
 | Git OAuth | 🟡 Partiel | 🟠 Important | Epic 2 |
 | Hot-Path Diffing | 🟡 Incomplet | 🟢 Nice-to-have | Epic 3 |
 | Audit Logs | 🟡 Basique | 🟢 Nice-to-have | Epic 4 |
 | Teams/RBAC | ❌ Manquant | 🟢 Post-MVP | Epic 5 |
 | i18n | ❌ Manquant | 🟢 Post-MVP | Epic 5 |
-| PostgreSQL | ❌ Manquant | 🟠 Important | Architecture |
+| PostgreSQL | ✅ Fait (Drizzle ORM + SQLite/PostgreSQL) | ✅ Terminé | Architecture |
 
 ---
 
 ## 🎯 Plan d'Action Recommandé
 
-### Phase 1: Corrections Critiques (Cette Session)
-1. **Restaurer la Console Logs** - Vue dédiée avec streaming temps réel
-2. **Ajouter les boutons Service Controls** - Restart Nginx/PM2 depuis UI
-3. **Améliorer MCP** - Commandes naturelles + Dry-Run mode
+### Phase 1: ✅ TERMINÉ
+1. ~~**Restaurer la Console Logs**~~ ✅
+2. ~~**Migration PostgreSQL**~~ ✅ (Drizzle ORM)
+3. ~~**Auth OAuth GitHub**~~ ✅
 
-### Phase 2: Fondations Manquantes (Prochaine Session)
-4. **Implémenter Auth OAuth** - GitHub/GitLab login
-5. **Migration PostgreSQL** - Remplacer JSON par Drizzle ORM
-6. **Git Webhook Complet** - Auto-deploy sur push
+### Phase 2: EN COURS
+4. **Brancher les boutons Service Controls** - Logique WebSocket à connecter
+5. **Git Webhook Complet** - Auto-deploy sur push + HMAC
+6. **Améliorer MCP** - Commandes naturelles + Dry-Run mode
 
-### Phase 3: Fonctionnalités Avancées
+### Phase 3: Fonctionnalités Avancées (Post-MVP)
 7. **Teams & RBAC**
 8. **Internationalisation**
 9. **Hot-Path Diffing complet**
