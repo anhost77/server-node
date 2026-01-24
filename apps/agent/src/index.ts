@@ -7,7 +7,6 @@ import os from 'node:os';
 import { getOrGenerateIdentity, signData } from './identity.js';
 import { AgentMessage, ServerMessageSchema } from '@server-flow/shared';
 
-
 const CONFIG_DIR = path.join(os.homedir(), '.server-flow');
 const REG_FILE = path.join(CONFIG_DIR, 'registration.json');
 
@@ -27,30 +26,20 @@ function isRegistered() {
     return fs.existsSync(REG_FILE);
 }
 
-// Agent Server (Metrics/Local Control)
+// Agent Server
 fastify.register(websocket);
-fastify.get('/', async function handler(request, reply) {
-    return {
-        hello: 'agent',
-        pubKey: identity.publicKey,
-        registered: isRegistered()
-    }
-});
+fastify.get('/', async () => ({ hello: 'agent', registered: isRegistered() }));
 
-// Connect to Control Plane
+// Connect Logic
 function connectToControlPlane() {
     const ws = new WebSocket('ws://localhost:3000/api/connect');
 
     ws.on('open', () => {
-        console.log('Connected to Control Plane');
-
+        console.log('🔗 Connected to Control Plane');
         if (registrationToken) {
-            console.log('Registering with token...');
-            const msg: AgentMessage = { type: 'REGISTER', token: registrationToken, pubKey: identity.publicKey };
-            ws.send(JSON.stringify(msg));
+            ws.send(JSON.stringify({ type: 'REGISTER', token: registrationToken, pubKey: identity.publicKey }));
         } else {
-            const msg: AgentMessage = { type: 'CONNECT', pubKey: identity.publicKey };
-            ws.send(JSON.stringify(msg));
+            ws.send(JSON.stringify({ type: 'CONNECT', pubKey: identity.publicKey }));
         }
     });
 
@@ -58,30 +47,37 @@ function connectToControlPlane() {
         try {
             const raw = JSON.parse(data.toString());
             const parsed = ServerMessageSchema.safeParse(raw);
-
-            if (!parsed.success) {
-                console.error('Invalid server message:', parsed.error);
-                return;
-            }
+            if (!parsed.success) return;
 
             const msg = parsed.data;
 
             if (msg.type === 'CHALLENGE') {
-                console.log('Received Challenge:', msg.nonce);
                 const signature = signData(msg.nonce, identity.privateKey);
-                const response: AgentMessage = { type: 'RESPONSE', signature };
-                ws.send(JSON.stringify(response));
-            } else if (msg.type === 'AUTHORIZED') {
-                console.log('✅ Agent Authorized! Session:', msg.sessionId);
-            } else if (msg.type === 'REGISTERED') {
-                console.log('✨ Server Successfully Registered! ID:', msg.serverId);
-                saveRegistration({ serverId: msg.serverId, registeredAt: new Date().toISOString() });
-            } else if (msg.type === 'ERROR') {
+                ws.send(JSON.stringify({ type: 'RESPONSE', signature }));
+            }
+            else if (msg.type === 'AUTHORIZED') {
+                console.log('✅ Agent Authorized');
+            }
+            else if (msg.type === 'REGISTERED') {
+                console.log('✨ Server Registered');
+                saveRegistration({ serverId: msg.serverId });
+            }
+            else if (msg.type === 'DEPLOY') {
+                console.log(`🚀 DEPLOY TRIGGERED: ${msg.repoUrl} @ ${msg.commitHash}`);
+                // Simulated Deployment
+                console.log('[DEPLOY] Performing git pull...');
+                setTimeout(() => {
+                    console.log('[DEPLOY] Building application...');
+                    setTimeout(() => {
+                        console.log('✔️ DEPLOY SUCCESS');
+                    }, 2000);
+                }, 2000);
+            }
+            else if (msg.type === 'ERROR') {
                 console.error('❌ Server Error:', msg.message);
             }
-
         } catch (err) {
-            console.error('Message processing error:', err);
+            console.error('Processing error', err);
         }
     });
 
@@ -90,9 +86,7 @@ function connectToControlPlane() {
         setTimeout(connectToControlPlane, 5000);
     });
 
-    ws.on('error', (err) => {
-        console.error('WS Error:', err.message);
-    });
+    ws.on('error', (err) => console.error('WS Error:', err.message));
 }
 
 const start = async () => {

@@ -45,8 +45,8 @@ development_status:
   1-4-real-time-connection-status: done
   epic-1-retrospective: optional
 
-  epic-2: backlog
-  2-1-git-push-webhook-handler: backlog
+  epic-2: in-progress
+  2-1-git-push-webhook-handler: review
   2-2-git-pull-build-agent-side: backlog
   2-3-nginx-ssl-automation: backlog
   epic-2-retrospective: optional

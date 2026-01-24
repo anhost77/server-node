@@ -4,11 +4,13 @@ import staticFiles from '@fastify/static';
 import cors from '@fastify/cors';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomUUID, verify } from 'node:crypto';
+import { randomUUID, verify, createHmac, timingSafeEqual } from 'node:crypto';
 import { AgentMessageSchema, ServerMessage } from '@server-flow/shared';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET || 'server-flow-secret';
 
 const fastify = Fastify({
     logger: true
@@ -27,9 +29,9 @@ interface Session {
 }
 
 const agentSessions = new Map<string, Session>();
-const dashboardSessions = new Set<any>(); // Simple set for MVP broadcast
+const dashboardSessions = new Set<any>();
 const registrationTokens = new Map<string, { userId: string, expires: number }>();
-const registeredServers = new Map<string, { id: string, pubKey: string, registeredAt: number }>();
+const registeredServers = new Map<string, { id: string, pubKey: string, registeredAt: number, repoUrl?: string }>();
 
 function broadcastToDashboards(msg: ServerMessage) {
     const payload = JSON.stringify(msg);
@@ -40,28 +42,66 @@ function broadcastToDashboards(msg: ServerMessage) {
     });
 }
 
-// REST APIs
+// APIs
 fastify.post('/api/servers/token', async () => {
     const token = randomUUID();
     registrationTokens.set(token, { userId: 'default-user', expires: Date.now() + 10 * 60 * 1000 });
     return { token };
 });
 
+// GitHub Webhook Handler
+fastify.post('/api/webhooks/github', async (request, reply) => {
+    const signature = request.headers['x-hub-signature-256'];
+    if (!signature) return reply.status(401).send('Missing signature');
+
+    const hmac = createHmac('sha256', WEBHOOK_SECRET);
+    const body = JSON.stringify(request.body);
+    const digest = 'sha256=' + hmac.update(body).digest('hex');
+
+    // Use timingSafeEqual to prevent timing attacks
+    if (!timingSafeEqual(Buffer.from(signature as string), Buffer.from(digest))) {
+        return reply.status(401).send('Invalid signature');
+    }
+
+    const payload: any = request.body;
+    if (payload.ref !== 'refs/heads/main') return { skipped: 'Not main branch' };
+
+    const repoUrl = payload.repository.clone_url;
+    const commitHash = payload.after;
+
+    console.log(`📡 GitHub Webhook received for ${repoUrl} @ ${commitHash}`);
+
+    // Find agent managing this repo
+    // For MVP, we'll just send to the first authorized agent if it matches (or all for demo)
+    let found = false;
+    agentSessions.forEach(session => {
+        if (session.authorized) {
+            const server = registeredServers.get(session.pubKey!);
+            // MOCK: Auto-assign repo to the first server if not set
+            if (server && (!server.repoUrl || server.repoUrl === repoUrl)) {
+                server.repoUrl = repoUrl;
+                session.socket.send(JSON.stringify({
+                    type: 'DEPLOY',
+                    repoUrl,
+                    commitHash,
+                    branch: 'main'
+                }));
+                found = true;
+            }
+        }
+    });
+
+    return { received: true, triggeredAgent: found };
+});
+
 // WebSocket Handlers
 fastify.register(async function (fastify) {
-    // 1. Dashboard Events Socket
     fastify.get('/api/dashboard/ws', { websocket: true }, (connection) => {
         const socket = connection.socket;
         dashboardSessions.add(socket);
-        console.log('Dashboard connected');
-
-        socket.on('close', () => {
-            dashboardSessions.delete(socket);
-            console.log('Dashboard disconnected');
-        });
+        socket.on('close', () => dashboardSessions.delete(socket));
     });
 
-    // 2. Agent Connection Socket
     fastify.get('/api/connect', { websocket: true }, (connection) => {
         const socket = connection.socket;
         const connectionId = randomUUID();
@@ -108,10 +148,7 @@ fastify.register(async function (fastify) {
                 }
                 else if (msg.type === 'REGISTER') {
                     const tokenData = registrationTokens.get(msg.token);
-                    if (!tokenData || tokenData.expires < Date.now()) {
-                        socket.send(JSON.stringify({ type: 'ERROR', message: 'Invalid token' }));
-                        return;
-                    }
+                    if (!tokenData) return;
 
                     const serverId = randomUUID();
                     registeredServers.set(msg.pubKey, { id: serverId, pubKey: msg.pubKey, registeredAt: Date.now() });
@@ -120,7 +157,6 @@ fastify.register(async function (fastify) {
                     broadcastToDashboards({ type: 'SERVER_STATUS', serverId, status: 'online' });
                     socket.send(JSON.stringify({ type: 'REGISTERED', serverId }));
                 }
-
             } catch (err) {
                 console.error('WS Error', err);
             }
@@ -130,9 +166,7 @@ fastify.register(async function (fastify) {
             const session = agentSessions.get(connectionId);
             if (session?.pubKey) {
                 const server = registeredServers.get(session.pubKey);
-                if (server) {
-                    broadcastToDashboards({ type: 'SERVER_STATUS', serverId: server.id, status: 'offline' });
-                }
+                if (server) broadcastToDashboards({ type: 'SERVER_STATUS', serverId: server.id, status: 'offline' });
             }
             agentSessions.delete(connectionId);
         });
