@@ -66,9 +66,11 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # 1. System Dependencies
-if ! check_cmd git; then
-    echo "📦 [1/4] Installing git & tools..."
-    $SUDO apt-get update && $SUDO apt-get install -y git psmisc
+if ! check_cmd git || ! check_cmd nginx; then
+    echo "📦 [1/4] Installing git, nginx & tools..."
+    $SUDO apt-get update && $SUDO apt-get install -y git psmisc nginx
+    $SUDO systemctl enable nginx
+    $SUDO systemctl start nginx
 fi
 
 # 2. Node.js
