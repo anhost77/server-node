@@ -103,7 +103,7 @@ function connectToControlPlane() {
 
 const start = async () => {
     try {
-        await fastify.listen({ port: 3001, host: '0.0.0.0' });
+        await fastify.listen({ port: 3001, host: '127.0.0.1' });
         connectToControlPlane();
     } catch (err) {
         process.exit(1);

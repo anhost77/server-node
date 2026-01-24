@@ -9,9 +9,9 @@
         "start": "node dist/index.js"
     },
     "dependencies": {
-        "@fastify/cors": "8",
-        "@fastify/static": "^7.0.4",
-        "@fastify/websocket": "^8.3.1",
+        "@fastify/cors": "^8.4.1",
+        "@fastify/static": "^6.10.2",
+        "@fastify/websocket": "^8.2.0",
         "@server-flow/shared": "workspace:*",
         "fastify": "^4.26.1"
     },

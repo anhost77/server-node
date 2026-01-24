@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ServerFlow Agent Installer (Direct Bundle Mode)
+# ServerFlow Agent Installer (Background Service Mode)
 set -e
 
 # Parse arguments
@@ -33,7 +33,7 @@ if [ -z "$URL" ]; then
   exit 1
 fi
 
-echo "🚀 Starting ServerFlow Agent Installation (Standalone)..."
+echo "🚀 Starting ServerFlow Agent Installation (Background Service)..."
 
 check_cmd() {
     command -v "$1" >/dev/null 2>&1
@@ -64,28 +64,57 @@ if ! check_cmd pnpm; then
     $SUDO npm install -g pnpm
 fi
 
-# 4. Workspace setup (No GitHub Needed)
-echo "📂 [4/4] Fetching ServerFlow Agent bundle from $URL..."
-mkdir -p ~/.server-flow
-cd ~/.server-flow
+# 4. Workspace setup
+echo "📂 [4/4] Preparing workspace..."
+INSTALL_DIR="$HOME/.server-flow/agent-bundle"
+mkdir -p "$HOME/.server-flow"
 
-# Clear old version if exists
-if [ -d "agent-bundle" ]; then rm -rf agent-bundle; fi
-mkdir -p agent-bundle
+if [ -d "$INSTALL_DIR" ]; then rm -rf "$INSTALL_DIR"; fi
+mkdir -p "$INSTALL_DIR"
 
-# Download and Extract Bundle directly from Control Plane
-curl -sSL "$URL/agent-bundle.tar.gz" -o agent-bundle.tar.gz
-tar -xzf agent-bundle.tar.gz -C agent-bundle
-rm agent-bundle.tar.gz
+# Download and Extract Bundle
+curl -L --progress-bar "$URL/agent-bundle.tar.gz" -o "$HOME/.server-flow/agent-bundle.tar.gz"
+tar -xzf "$HOME/.server-flow/agent-bundle.tar.gz" -C "$INSTALL_DIR"
+rm "$HOME/.server-flow/agent-bundle.tar.gz"
 
-cd agent-bundle
+cd "$INSTALL_DIR"
 
-echo "🔨 Finalizing local configuration..."
-# Install only production dependencies for the agent to save RAM
+echo "🔨 Initializing workspace (Installing Deps)..."
 pnpm install --filter @server-flow/agent --filter @server-flow/shared > /dev/null 2>&1
 
-echo "✨ Installation Successful!"
-echo "📡 Linking agent to control plane at $URL..."
+# 5. CREATE SYSTEMD SERVICE
+echo "⚙️  Configuring background service (systemd)..."
 
-# 5. Start Agent
-npx tsx apps/agent/src/index.ts --token $TOKEN --url $URL
+SERVICE_FILE="/etc/systemd/system/server-flow-agent.service"
+# Detect actual node and pnpm paths
+NODE_PATH=$(which node)
+PNPM_PATH=$(which pnpm)
+USER_NAME=$(whoami)
+
+SERVICE_CONTENT="[Unit]
+Description=ServerFlow Agent
+After=network.target
+
+[Service]
+Type=simple
+User=$USER_NAME
+WorkingDirectory=$INSTALL_DIR
+ExecStart=$NODE_PATH $INSTALL_DIR/node_modules/tsx/dist/cli.mjs $INSTALL_DIR/apps/agent/src/index.ts --token $TOKEN --url $URL
+Restart=always
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target"
+
+# Write service file (requires sudo)
+echo "$SERVICE_CONTENT" | $SUDO tee $SERVICE_FILE > /dev/null
+
+# Reload and Start
+$SUDO systemctl daemon-reload
+$SUDO systemctl enable server-flow-agent
+$SUDO systemctl restart server-flow-agent
+
+echo "✨ Installation Success!"
+echo "📡 Agent is now running in the background."
+echo "📜 To see logs: sudo journalctl -u server-flow-agent -f"
+echo "✅ Check your Dashboard at $URL"
