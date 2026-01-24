@@ -1,0 +1,24 @@
+{
+  "name": "server-flow-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "clean": "turbo run clean",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "turbo": "^1.12.4",
+    "typescript": "^5.3.3",
+    "prettier": "^3.2.5",
+    "eslint": "^8.56.0",
+    "@types/node": "^20.11.19"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}
