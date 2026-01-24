@@ -47,7 +47,7 @@ development_status:
 
   epic-2: in-progress
   2-1-git-push-webhook-handler: done
-  2-2-git-pull-build-agent-side: backlog
+  2-2-git-pull-build-agent-side: review
   2-3-nginx-ssl-automation: backlog
   epic-2-retrospective: optional
 

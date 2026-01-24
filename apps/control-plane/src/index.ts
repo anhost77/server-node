@@ -61,7 +61,6 @@ fastify.post('/api/webhooks/github', async (request, reply) => {
     const signatureBuffer = Buffer.from(signature as string);
     const digestBuffer = Buffer.from(digest);
 
-    // timingSafeEqual requires buffers of identical length
     if (signatureBuffer.length !== digestBuffer.length || !timingSafeEqual(signatureBuffer, digestBuffer)) {
         return reply.status(401).send('Invalid signature');
     }
@@ -71,10 +70,8 @@ fastify.post('/api/webhooks/github', async (request, reply) => {
 
     const repoUrl = payload.repository.clone_url;
     const commitHash = payload.after;
+    const branch = payload.ref.replace('refs/heads/', '');
 
-    console.log(`📡 GitHub Webhook received for ${repoUrl} @ ${commitHash}`);
-
-    let found = false;
     agentSessions.forEach(session => {
         if (session.authorized) {
             const server = registeredServers.get(session.pubKey!);
@@ -84,14 +81,13 @@ fastify.post('/api/webhooks/github', async (request, reply) => {
                     type: 'DEPLOY',
                     repoUrl,
                     commitHash,
-                    branch: 'main'
+                    branch
                 }));
-                found = true;
             }
         }
     });
 
-    return { received: true, triggeredAgent: found };
+    return { received: true };
 });
 
 // WebSocket Handlers
@@ -156,6 +152,35 @@ fastify.register(async function (fastify) {
 
                     broadcastToDashboards({ type: 'SERVER_STATUS', serverId, status: 'online' });
                     socket.send(JSON.stringify({ type: 'REGISTERED', serverId }));
+                }
+                else if (msg.type === 'LOG_STREAM') {
+                    const session = agentSessions.get(connectionId);
+                    if (session?.pubKey) {
+                        const server = registeredServers.get(session.pubKey);
+                        if (server) {
+                            broadcastToDashboards({
+                                type: 'DEPLOY_LOG',
+                                serverId: server.id,
+                                repoUrl: msg.repoUrl,
+                                data: msg.data,
+                                stream: msg.stream
+                            });
+                        }
+                    }
+                }
+                else if (msg.type === 'STATUS_UPDATE') {
+                    const session = agentSessions.get(connectionId);
+                    if (session?.pubKey) {
+                        const server = registeredServers.get(session.pubKey);
+                        if (server) {
+                            broadcastToDashboards({
+                                type: 'DEPLOY_STATUS',
+                                serverId: server.id,
+                                repoUrl: msg.repoUrl,
+                                status: msg.status
+                            });
+                        }
+                    }
                 }
             } catch (err) {
                 console.error('WS Error', err);

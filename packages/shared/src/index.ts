@@ -13,23 +13,47 @@ export const ServerMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('AUTHORIZED'), sessionId: z.string() }),
   z.object({ type: z.literal('ERROR'), message: z.string() }),
   z.object({ type: z.literal('REGISTERED'), serverId: z.string() }),
-  z.object({ 
-    type: z.literal('SERVER_STATUS'), 
-    serverId: z.string(), 
-    status: z.enum(['online', 'offline']) 
+  z.object({
+    type: z.literal('SERVER_STATUS'),
+    serverId: z.string(),
+    status: z.enum(['online', 'offline'])
   }),
   z.object({
     type: z.literal('DEPLOY'),
     repoUrl: z.string(),
     commitHash: z.string(),
     branch: z.string()
+  }),
+  z.object({
+    type: z.literal('DEPLOY_LOG'),
+    serverId: z.string(),
+    repoUrl: z.string(),
+    data: z.string(),
+    stream: z.enum(['stdout', 'stderr'])
+  }),
+  z.object({
+    type: z.literal('DEPLOY_STATUS'),
+    serverId: z.string(),
+    repoUrl: z.string(),
+    status: z.enum(['cloning', 'installing', 'building', 'success', 'failure'])
   })
 ]);
 
 export const AgentMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('CONNECT'), pubKey: z.string() }),
   z.object({ type: z.literal('RESPONSE'), signature: z.string() }),
-  z.object({ type: z.literal('REGISTER'), token: z.string(), pubKey: z.string() })
+  z.object({ type: z.literal('REGISTER'), token: z.string(), pubKey: z.string() }),
+  z.object({
+    type: z.literal('LOG_STREAM'),
+    data: z.string(),
+    stream: z.enum(['stdout', 'stderr']),
+    repoUrl: z.string()
+  }),
+  z.object({
+    type: z.literal('STATUS_UPDATE'),
+    repoUrl: z.string(),
+    status: z.enum(['cloning', 'installing', 'building', 'success', 'failure'])
+  })
 ]);
 
 export type ServerMessage = z.infer<typeof ServerMessageSchema>;

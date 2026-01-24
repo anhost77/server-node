@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { getOrGenerateIdentity, signData } from './identity.js';
+import { ExecutionManager } from './execution.js';
 import { AgentMessage, ServerMessageSchema } from '@server-flow/shared';
 
 const CONFIG_DIR = path.join(os.homedir(), '.server-flow');
@@ -30,9 +31,21 @@ function isRegistered() {
 fastify.register(websocket);
 fastify.get('/', async () => ({ hello: 'agent', registered: isRegistered() }));
 
+// Execution Manager setup
+let controlPlaneWs: WebSocket | null = null;
+
+const executor = new ExecutionManager((data, stream) => {
+    if (controlPlaneWs && controlPlaneWs.readyState === 1) {
+        // Find a way to associate this log with current repoUrl if possible, 
+        // or just stream raw with enough metadata.
+        // For now, using a global "current task" pattern or just raw stream.
+    }
+});
+
 // Connect Logic
 function connectToControlPlane() {
     const ws = new WebSocket('ws://localhost:3000/api/connect');
+    controlPlaneWs = ws;
 
     ws.on('open', () => {
         console.log('🔗 Connected to Control Plane');
@@ -64,14 +77,29 @@ function connectToControlPlane() {
             }
             else if (msg.type === 'DEPLOY') {
                 console.log(`🚀 DEPLOY TRIGGERED: ${msg.repoUrl} @ ${msg.commitHash}`);
-                // Simulated Deployment
-                console.log('[DEPLOY] Performing git pull...');
-                setTimeout(() => {
-                    console.log('[DEPLOY] Building application...');
-                    setTimeout(() => {
-                        console.log('✔️ DEPLOY SUCCESS');
-                    }, 2000);
-                }, 2000);
+
+                const logExecutor = new ExecutionManager((logData, stream) => {
+                    ws.send(JSON.stringify({
+                        type: 'LOG_STREAM',
+                        data: logData,
+                        stream,
+                        repoUrl: msg.repoUrl
+                    }));
+                });
+
+                ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: 'cloning' }));
+
+                logExecutor.deploy({
+                    repoUrl: msg.repoUrl,
+                    commitHash: msg.commitHash,
+                    branch: msg.branch
+                }).then(success => {
+                    ws.send(JSON.stringify({
+                        type: 'STATUS_UPDATE',
+                        repoUrl: msg.repoUrl,
+                        status: success ? 'success' : 'failure'
+                    }));
+                });
             }
             else if (msg.type === 'ERROR') {
                 console.error('❌ Server Error:', msg.message);
