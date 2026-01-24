@@ -58,8 +58,11 @@ fastify.post('/api/webhooks/github', async (request, reply) => {
     const body = JSON.stringify(request.body);
     const digest = 'sha256=' + hmac.update(body).digest('hex');
 
-    // Use timingSafeEqual to prevent timing attacks
-    if (!timingSafeEqual(Buffer.from(signature as string), Buffer.from(digest))) {
+    const signatureBuffer = Buffer.from(signature as string);
+    const digestBuffer = Buffer.from(digest);
+
+    // timingSafeEqual requires buffers of identical length
+    if (signatureBuffer.length !== digestBuffer.length || !timingSafeEqual(signatureBuffer, digestBuffer)) {
         return reply.status(401).send('Invalid signature');
     }
 
@@ -71,13 +74,10 @@ fastify.post('/api/webhooks/github', async (request, reply) => {
 
     console.log(`📡 GitHub Webhook received for ${repoUrl} @ ${commitHash}`);
 
-    // Find agent managing this repo
-    // For MVP, we'll just send to the first authorized agent if it matches (or all for demo)
     let found = false;
     agentSessions.forEach(session => {
         if (session.authorized) {
             const server = registeredServers.get(session.pubKey!);
-            // MOCK: Auto-assign repo to the first server if not set
             if (server && (!server.repoUrl || server.repoUrl === repoUrl)) {
                 server.repoUrl = repoUrl;
                 session.socket.send(JSON.stringify({
