@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { availableLocales, setLocale } from './i18n'
+
+const { t, locale } = useI18n()
+const showLanguageMenu = ref(false)
 
 const token = ref<string | null>(null)
+const tokenError = ref<{ message: string; upgradeUrl?: string } | null>(null)
 const loading = ref(false)
 const servers = ref<any[]>([])
 const apps = ref<any[]>([])
@@ -9,6 +15,26 @@ const proxies = ref<any[]>([])
 const auditLogs = ref<any[]>([])
 const activeMenu = ref('infrastructure')
 const selectedServerId = ref<string | null>(null)
+
+// Server Alias Editing
+const editingAlias = ref(false)
+const newAlias = ref('')
+
+// Mobile Menu State
+const mobileMenuOpen = ref(false)
+function closeMobileMenu() {
+  mobileMenuOpen.value = false
+}
+
+// Sidebar Collapsed Sections State
+const collapsedSections = ref<Record<string, boolean>>({
+  orchestration: false,
+  integrations: true,
+  admin: true
+})
+
+// User Menu Dropdown State
+const userMenuOpen = ref(false)
 
 // Console Logs State
 const consoleLogs = ref<{ timestamp: number, data: string, stream: string, type: string, serverId: string }[]>([])
@@ -87,6 +113,89 @@ const showNewTokenModal = ref(false)
 const newlyGeneratedToken = ref<string | null>(null)
 const newTokenName = ref('')
 
+// Admin State
+const adminUsers = ref<any[]>([])
+const adminPlans = ref<any[]>([])
+const adminSubscriptions = ref<any[]>([])
+const adminMetrics = ref<any>(null)
+const showPlanModal = ref(false)
+const editingPlan = ref<any>(null)
+const selectedUserDetails = ref<any>(null)
+
+function viewUserDetails(u: any) {
+  selectedUserDetails.value = u
+}
+const planForm = ref({
+    name: '',
+    displayName: '',
+    description: '',
+    priceMonthly: 0,
+    priceYearly: 0,
+    maxServers: 1,
+    maxApps: 3,
+    maxDomains: 3,
+    maxDeploysPerDay: 10,
+    stripePriceIdMonthly: '',
+    stripePriceIdYearly: '',
+    isActive: true,
+    isDefault: false
+})
+
+// Billing State
+const billingPlans = ref<any[]>([])
+const currentSubscription = ref<any>(null)
+const usageReport = ref<any>(null)
+
+// Managed Servers State
+const managedServers = ref<any[]>([])
+const vpsProviders = ref<any[]>([])
+const vpsPlans = ref<any[]>([])
+const vpsRegions = ref<any[]>([])
+const showProvisionModal = ref(false)
+const provisionForm = ref({
+    provider: 'hetzner',
+    planId: '',
+    regionId: '',
+    name: ''
+})
+const provisionLoading = ref(false)
+
+// Support Ticket State
+const supportTickets = ref<any[]>([])
+const selectedTicket = ref<any>(null)
+const ticketMessages = ref<any[]>([])
+const ticketAttachments = ref<any[]>([])
+const showNewTicketModal = ref(false)
+const newTicketForm = ref({
+    subject: '',
+    message: '',
+    category: 'general',
+    priority: 'normal'
+})
+const newMessage = ref('')
+const sendingMessage = ref(false)
+const uploadingFile = ref(false)
+const supportMetrics = ref<any>(null)
+const cannedResponses = ref<any[]>([])
+const showCannedResponseModal = ref(false)
+const editingCannedResponse = ref<any>(null)
+const showCannedForm = ref(false)
+const expandedAdminChat = ref(false)
+const cannedResponseForm = ref({
+    title: '',
+    content: '',
+    category: '',
+    keywords: '',
+    isAutoResponse: false,
+    sortOrder: 0
+})
+const adminTicketFilters = ref({
+    status: '',
+    category: '',
+    priority: ''
+})
+const adminTickets = ref<any[]>([])
+
 const modal = ref<{
   show: boolean,
   title: string,
@@ -121,11 +230,80 @@ const authMode = ref<'login' | 'register' | 'forgot'>('login')
 const authForm = ref({ email: '', password: '', name: '' })
 const authError = ref('')
 
+// Onboarding Form State
+const onboardingForm = ref({
+  billingName: '',
+  billingEmail: '',
+  billingCompany: '',
+  billingAddress: '',
+  billingCity: '',
+  billingPostalCode: '',
+  billingCountry: '',
+  billingPhone: '',
+  billingVatNumber: '',
+  acceptTerms: false,
+  acceptPrivacy: false,
+  waiveWithdrawal: false
+})
+const onboardingError = ref('')
+const onboardingLoading = ref(false)
+
+async function submitOnboarding() {
+  onboardingError.value = ''
+
+  // Validate legal checkboxes
+  if (!onboardingForm.value.acceptTerms) {
+    onboardingError.value = 'You must accept the Terms of Service'
+    return
+  }
+  if (!onboardingForm.value.acceptPrivacy) {
+    onboardingError.value = 'You must accept the Privacy Policy'
+    return
+  }
+  if (!onboardingForm.value.waiveWithdrawal) {
+    onboardingError.value = 'You must acknowledge the withdrawal waiver to access the service immediately'
+    return
+  }
+
+  onboardingLoading.value = true
+
+  try {
+    const res = await request('/api/billing/onboarding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(onboardingForm.value)
+    })
+
+    if (res.error) {
+      onboardingError.value = res.error
+    } else {
+      // Update user and redirect to billing page
+      user.value.onboardingCompleted = 1
+      activeMenu.value = 'billing'
+      loadBillingPlans()
+      loadSubscription()
+    }
+  } catch (e: any) {
+    onboardingError.value = 'Failed to save billing information'
+  } finally {
+    onboardingLoading.value = false
+  }
+}
+
+// Initialize onboarding form with user data
+function initOnboardingForm() {
+  if (user.value) {
+    onboardingForm.value.billingName = user.value.name || ''
+    onboardingForm.value.billingEmail = user.value.email || ''
+  }
+}
+
 async function checkAuth() {
   try {
     const res = await request('/api/auth/me');
     if (res && res.id) {
       user.value = res;
+      initOnboardingForm();
       return true;
     }
   } catch (e) {}
@@ -167,6 +345,77 @@ async function logout() {
   user.value = null
   ghToken.value = null
   localStorage.removeItem('gh_token')
+}
+
+// GDPR Functions
+const downloadingData = ref(false)
+
+async function downloadMyData() {
+  downloadingData.value = true
+  try {
+    const res = await fetch(`${baseUrl}/api/user/export-data`, {
+      credentials: 'include'
+    })
+    if (res.ok) {
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `serverflow-data-${user.value.id}.json`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      a.remove()
+    } else {
+      alert('Failed to download data')
+    }
+  } catch (e) {
+    alert('Failed to download data')
+  } finally {
+    downloadingData.value = false
+  }
+}
+
+async function requestAccountDeletion() {
+  const confirmed = confirm(
+    'Are you sure you want to delete your account?\n\n' +
+    'This action is IRREVERSIBLE. All your data, applications, servers, and configurations will be permanently deleted.\n\n' +
+    'Type "DELETE" in the next prompt to confirm.'
+  )
+  if (!confirmed) return
+
+  const confirmation = prompt('Type DELETE to confirm account deletion:')
+  if (confirmation !== 'DELETE') {
+    alert('Account deletion cancelled.')
+    return
+  }
+
+  try {
+    const res = await request('/api/user/delete-account', { method: 'DELETE' })
+    if (res.success) {
+      alert('Your account has been deleted. You will be logged out.')
+      logout()
+    } else {
+      alert(res.error || 'Failed to delete account')
+    }
+  } catch (e) {
+    alert('Failed to delete account')
+  }
+}
+
+function formatDate(timestamp: number | null | undefined): string {
+  if (!timestamp) return '-'
+  return new Date(timestamp * 1000).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+function scrollToPlans() {
+  document.querySelector('.plan-card-enhanced.recommended')?.scrollIntoView({ behavior: 'smooth' })
 }
 
 // GitHub Logic
@@ -400,13 +649,52 @@ onMounted(async () => {
 })
 
 async function generateToken() {
+  // Always navigate to the Connect Node view first
+  selectedServerId.value = 'pending'
+  activeMenu.value = 'infrastructure'
+
   loading.value = true
+  tokenError.value = null
+  token.value = null
+
   try {
     const data = await request('/api/servers/token', { method: 'POST' })
-    token.value = data.token
-    selectedServerId.value = 'pending'
-    activeMenu.value = 'infrastructure'
-  } finally { loading.value = false }
+
+    // Handle limit exceeded error
+    if (data.error === 'LIMIT_EXCEEDED') {
+      tokenError.value = {
+        message: data.message || `Server limit reached (${data.current}/${data.limit})`,
+        upgradeUrl: data.upgradeUrl || '/billing'
+      }
+      return
+    }
+
+    // Handle other errors (network, unauthorized, etc.)
+    if (data.error) {
+      tokenError.value = {
+        message: data.error === 'Unauthorized' ? 'Please log in again' : data.message || data.error,
+        upgradeUrl: '/billing'
+      }
+      return
+    }
+
+    // Success - got a token
+    if (data.token) {
+      token.value = data.token
+    } else {
+      tokenError.value = {
+        message: 'Failed to generate token - no token received',
+        upgradeUrl: '/billing'
+      }
+    }
+  } catch (e: any) {
+    tokenError.value = {
+      message: e.message || 'Failed to generate token',
+      upgradeUrl: '/billing'
+    }
+  } finally {
+    loading.value = false
+  }
 }
 
 // SSH Assisted Installation Functions
@@ -700,6 +988,25 @@ async function createApp() {
   } catch(e) {}
 }
 
+async function saveAlias() {
+  if (!activeServer.value) return
+  try {
+    await request(`/api/servers/${activeServer.value.id}/alias`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alias: newAlias.value.trim() })
+    })
+    // Update local state
+    const server = servers.value.find(s => s.id === activeServer.value!.id)
+    if (server) {
+      server.alias = newAlias.value.trim() || null
+    }
+    editingAlias.value = false
+  } catch(e) {
+    console.error('Failed to save alias:', e)
+  }
+}
+
 async function triggerDeploy(appId: string, commitHash: string = 'main') {
   const app = apps.value.find(a => a.id === appId)
   deployModalApp.value = app
@@ -875,43 +1182,718 @@ function toggleConsoleFilter(type: string) {
   if (idx > -1) consoleFilter.value.splice(idx, 1)
   else consoleFilter.value.push(type)
 }
+
+// ==================== ADMIN FUNCTIONS ====================
+
+async function loadAdminUsers() {
+  try {
+    const res = await request('/api/admin/users')
+    adminUsers.value = res || []
+  } catch (e) {
+    console.error('Failed to load admin users:', e)
+  }
+}
+
+async function loadAdminPlans() {
+  try {
+    const res = await request('/api/admin/plans')
+    adminPlans.value = res || []
+  } catch (e) {
+    console.error('Failed to load admin plans:', e)
+  }
+}
+
+async function loadAdminSubscriptions() {
+  try {
+    const res = await request('/api/admin/subscriptions')
+    adminSubscriptions.value = res || []
+  } catch (e) {
+    console.error('Failed to load admin subscriptions:', e)
+  }
+}
+
+async function loadAdminMetrics() {
+  try {
+    const res = await request('/api/admin/metrics')
+    adminMetrics.value = res
+  } catch (e) {
+    console.error('Failed to load admin metrics:', e)
+  }
+}
+
+function openPlanModal(plan?: any) {
+  if (plan) {
+    editingPlan.value = plan
+    planForm.value = {
+      name: plan.name,
+      displayName: plan.displayName,
+      description: plan.description || '',
+      priceMonthly: plan.priceMonthly || 0,
+      priceYearly: plan.priceYearly || 0,
+      maxServers: plan.maxServers || 1,
+      maxApps: plan.maxApps || 3,
+      maxDomains: plan.maxDomains || 3,
+      maxDeploysPerDay: plan.maxDeploysPerDay || 10,
+      stripePriceIdMonthly: plan.stripePriceIdMonthly || '',
+      stripePriceIdYearly: plan.stripePriceIdYearly || '',
+      isActive: plan.isActive ?? true,
+      isDefault: plan.isDefault ?? false
+    }
+  } else {
+    editingPlan.value = null
+    planForm.value = {
+      name: '',
+      displayName: '',
+      description: '',
+      priceMonthly: 0,
+      priceYearly: 0,
+      maxServers: 1,
+      maxApps: 3,
+      maxDomains: 3,
+      maxDeploysPerDay: 10,
+      stripePriceIdMonthly: '',
+      stripePriceIdYearly: '',
+      isActive: true,
+      isDefault: false
+    }
+  }
+  showPlanModal.value = true
+}
+
+async function savePlan() {
+  try {
+    if (editingPlan.value) {
+      await request(`/api/admin/plans/${editingPlan.value.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(planForm.value)
+      })
+      showAlert('Success', 'Plan updated successfully', 'info')
+    } else {
+      await request('/api/admin/plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(planForm.value)
+      })
+      showAlert('Success', 'Plan created successfully', 'info')
+    }
+    showPlanModal.value = false
+    loadAdminPlans()
+  } catch (e: any) {
+    showAlert('Error', e.message || 'Failed to save plan', 'error')
+  }
+}
+
+async function deletePlan(planId: string) {
+  showConfirm('Delete Plan', 'Are you sure you want to delete this plan?', async () => {
+    try {
+      await request(`/api/admin/plans/${planId}`, { method: 'DELETE' })
+      showAlert('Success', 'Plan deleted', 'info')
+      loadAdminPlans()
+    } catch (e: any) {
+      showAlert('Error', e.error || 'Failed to delete plan', 'error')
+    }
+  })
+}
+
+async function updateUserRole(userId: string, role: string) {
+  try {
+    await request(`/api/admin/users/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role })
+    })
+    showAlert('Success', 'User role updated', 'info')
+    loadAdminUsers()
+  } catch (e) {
+    showAlert('Error', 'Failed to update user', 'error')
+  }
+}
+
+async function impersonateUser(userId: string) {
+  showConfirm('Impersonate User', 'You will be logged in as this user. Continue?', async () => {
+    try {
+      await request(`/api/admin/users/${userId}/impersonate`, { method: 'POST' })
+      window.location.reload()
+    } catch (e) {
+      showAlert('Error', 'Failed to impersonate user', 'error')
+    }
+  })
+}
+
+async function assignUserPlan(userId: string) {
+  // Simple plan selection - could be enhanced with a modal
+  const planIds = adminPlans.value.map(p => p.id).join(', ')
+  showInput('Assign Plan', `Enter plan ID (${planIds}):`, 'Plan ID', async (planId) => {
+    if (!planId) return
+    try {
+      await request(`/api/admin/subscriptions/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId, status: 'active' })
+      })
+      showAlert('Success', 'Subscription assigned', 'info')
+      loadAdminUsers()
+      loadAdminSubscriptions()
+    } catch (e) {
+      showAlert('Error', 'Failed to assign subscription', 'error')
+    }
+  })
+}
+
+// ==================== BILLING FUNCTIONS ====================
+
+async function loadBillingPlans() {
+  try {
+    const res = await request('/api/billing/plans')
+    billingPlans.value = res?.plans || []
+  } catch (e) {
+    console.error('Failed to load billing plans:', e)
+  }
+}
+
+async function loadSubscription() {
+  try {
+    currentSubscription.value = await request('/api/billing/subscription')
+  } catch (e) {
+    console.error('Failed to load subscription:', e)
+  }
+}
+
+async function loadUsageReport() {
+  try {
+    usageReport.value = await request('/api/billing/usage')
+  } catch (e) {
+    console.error('Failed to load usage report:', e)
+  }
+}
+
+async function upgradePlan(planId: string, interval: 'month' | 'year' = 'month') {
+  try {
+    const res = await request('/api/billing/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ planId, billingInterval: interval })
+    })
+    if (res?.url) {
+      window.location.href = res.url
+    } else {
+      showAlert('Error', 'Could not create checkout session', 'error')
+    }
+  } catch (e) {
+    showAlert('Error', 'Failed to start checkout', 'error')
+  }
+}
+
+async function openBillingPortal() {
+  try {
+    const res = await request('/api/billing/portal', { method: 'POST' })
+    if (res?.url) {
+      window.open(res.url, '_blank')
+    } else {
+      showAlert('Info', 'No billing account found. Upgrade first to access the billing portal.', 'info')
+    }
+  } catch (e) {
+    showAlert('Error', 'Failed to open billing portal', 'error')
+  }
+}
+
+function formatCurrency(cents: number): string {
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(cents / 100)
+}
+
+// ============ Chart Helper Functions ============
+
+function getFreeUsersArc(): string {
+  if (!adminMetrics.value || adminMetrics.value.users.total === 0) return '0 251.2'
+  const freeUsers = adminMetrics.value.users.total - adminMetrics.value.subscriptions.active
+  const percentage = freeUsers / adminMetrics.value.users.total
+  const circumference = 2 * Math.PI * 40 // r=40
+  return `${percentage * circumference} ${circumference}`
+}
+
+function getPaidUsersArc(): string {
+  if (!adminMetrics.value || adminMetrics.value.users.total === 0) return '0 251.2'
+  const percentage = adminMetrics.value.subscriptions.active / adminMetrics.value.users.total
+  const circumference = 2 * Math.PI * 40
+  return `${percentage * circumference} ${circumference}`
+}
+
+function getFreeUsersOffset(): string {
+  if (!adminMetrics.value || adminMetrics.value.users.total === 0) return '0'
+  const freeUsers = adminMetrics.value.users.total - adminMetrics.value.subscriptions.active
+  const percentage = freeUsers / adminMetrics.value.users.total
+  const circumference = 2 * Math.PI * 40
+  return `${percentage * circumference}`
+}
+
+function getBarWidth(value: number, max: number): string {
+  if (max === 0) return '0%'
+  return `${Math.min(100, (value / max) * 100)}%`
+}
+
+// ============ Managed Servers Functions ============
+
+async function loadManagedServers() {
+  try {
+    managedServers.value = await request('/api/managed-servers') || []
+  } catch (e) {
+    console.error('Failed to load managed servers:', e)
+  }
+}
+
+async function loadVPSProviders() {
+  try {
+    vpsProviders.value = await request('/api/managed-servers/providers') || []
+  } catch (e) {
+    console.error('Failed to load VPS providers:', e)
+  }
+}
+
+async function loadVPSPlans() {
+  try {
+    vpsPlans.value = await request('/api/managed-servers/plans') || []
+  } catch (e) {
+    console.error('Failed to load VPS plans:', e)
+  }
+}
+
+async function loadVPSRegions() {
+  try {
+    vpsRegions.value = await request('/api/managed-servers/regions') || []
+  } catch (e) {
+    console.error('Failed to load VPS regions:', e)
+  }
+}
+
+const filteredVPSPlans = computed(() => {
+  return vpsPlans.value.filter(p => p.provider === provisionForm.value.provider)
+})
+
+const filteredVPSRegions = computed(() => {
+  const selectedPlan = vpsPlans.value.find(p => p.id === provisionForm.value.planId)
+  if (!selectedPlan) return vpsRegions.value.filter(r => r.provider === provisionForm.value.provider)
+  return vpsRegions.value.filter(r =>
+    r.provider === provisionForm.value.provider &&
+    selectedPlan.regions.includes(r.id.replace(`${r.provider}-`, ''))
+  )
+})
+
+async function openProvisionModal() {
+  showProvisionModal.value = true
+  provisionForm.value = { provider: 'hetzner', planId: '', regionId: '', name: '' }
+  await Promise.all([loadVPSProviders(), loadVPSPlans(), loadVPSRegions()])
+}
+
+async function provisionManagedServer() {
+  if (!provisionForm.value.name || !provisionForm.value.planId || !provisionForm.value.regionId) {
+    showAlert('Error', 'Please fill all fields', 'error')
+    return
+  }
+
+  provisionLoading.value = true
+  try {
+    const planParts = provisionForm.value.planId.split('-')
+    const regionParts = provisionForm.value.regionId.split('-')
+
+    const res = await request('/api/managed-servers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        provider: provisionForm.value.provider,
+        planId: planParts.slice(1).join('-'), // Remove provider prefix
+        regionId: regionParts.slice(1).join('-'), // Remove provider prefix
+        name: provisionForm.value.name
+      })
+    })
+
+    if (res?.error) {
+      showAlert('Error', res.message || 'Failed to provision server', 'error')
+    } else {
+      showAlert('Success', `Server "${provisionForm.value.name}" is being provisioned. It will appear in your list once ready.`, 'info')
+      showProvisionModal.value = false
+      await loadManagedServers()
+    }
+  } catch (e: any) {
+    showAlert('Error', e.message || 'Failed to provision server', 'error')
+  } finally {
+    provisionLoading.value = false
+  }
+}
+
+async function deleteManagedServer(server: any) {
+  showConfirm('Delete Server', `Are you sure you want to delete "${server.hostname || server.id}"? This will also terminate the server at the provider.`, async () => {
+    try {
+      const res = await request(`/api/managed-servers/${server.id}`, { method: 'DELETE' })
+      if (res?.success) {
+        await loadManagedServers()
+        showAlert('Success', 'Server deleted successfully', 'info')
+      } else {
+        showAlert('Error', res?.message || 'Failed to delete server', 'error')
+      }
+    } catch (e: any) {
+      showAlert('Error', e.message || 'Failed to delete server', 'error')
+    }
+  })
+}
+
+function getProviderIcon(provider: string): string {
+  switch (provider) {
+    case 'hetzner': return 'H'
+    case 'digitalocean': return 'DO'
+    case 'vultr': return 'V'
+    default: return '?'
+  }
+}
+
+function getManagedServerStatus(status: string): { class: string, label: string } {
+  switch (status) {
+    case 'provisioning': return { class: 'status-pending', label: 'Provisioning' }
+    case 'installing': return { class: 'status-pending', label: 'Installing' }
+    case 'running': return { class: 'status-online', label: 'Running' }
+    case 'stopped': return { class: 'status-offline', label: 'Stopped' }
+    case 'error': return { class: 'status-error', label: 'Error' }
+    default: return { class: 'status-unknown', label: status || 'Unknown' }
+  }
+}
+
+// ============ Support Ticket Functions ============
+
+async function loadSupportTickets() {
+  try {
+    supportTickets.value = await request('/api/support/tickets') || []
+  } catch (e) {
+    console.error('Failed to load support tickets:', e)
+  }
+}
+
+async function loadTicketDetails(ticketId: string) {
+  try {
+    const data = await request(`/api/support/tickets/${ticketId}`)
+    if (data) {
+      selectedTicket.value = data.ticket
+      ticketMessages.value = data.messages || []
+      ticketAttachments.value = data.attachments || []
+    }
+  } catch (e) {
+    console.error('Failed to load ticket details:', e)
+  }
+}
+
+async function createSupportTicket() {
+  if (!newTicketForm.value.subject.trim() || !newTicketForm.value.message.trim()) {
+    showAlert('Error', 'Subject and message are required', 'error')
+    return
+  }
+
+  try {
+    const res = await request('/api/support/tickets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newTicketForm.value)
+    })
+
+    if (res?.success) {
+      showNewTicketModal.value = false
+      newTicketForm.value = { subject: '', message: '', category: 'general', priority: 'normal' }
+      await loadSupportTickets()
+      // Open the newly created ticket
+      await loadTicketDetails(res.ticketId)
+      if (res.hasAutoResponse) {
+        showAlert('Info', 'An automated response has been added to your ticket.', 'info')
+      }
+    } else {
+      showAlert('Error', res?.error || 'Failed to create ticket', 'error')
+    }
+  } catch (e: any) {
+    showAlert('Error', e.message || 'Failed to create ticket', 'error')
+  }
+}
+
+async function sendTicketMessage() {
+  if (!newMessage.value.trim() || !selectedTicket.value) return
+
+  sendingMessage.value = true
+  try {
+    const res = await request(`/api/support/tickets/${selectedTicket.value.id}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: newMessage.value })
+    })
+
+    if (res?.success) {
+      newMessage.value = ''
+      await loadTicketDetails(selectedTicket.value.id)
+      await loadSupportTickets() // Refresh list to update last message time
+    } else {
+      showAlert('Error', res?.error || 'Failed to send message', 'error')
+    }
+  } catch (e: any) {
+    showAlert('Error', e.message || 'Failed to send message', 'error')
+  } finally {
+    sendingMessage.value = false
+  }
+}
+
+function autoResizeTextarea(event: Event) {
+  const textarea = event.target as HTMLTextAreaElement
+  textarea.style.height = 'auto'
+  textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px'
+}
+
+async function uploadTicketFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (!input.files?.length || !selectedTicket.value) return
+
+  uploadingFile.value = true
+  try {
+    const formData = new FormData()
+    const filesArray = Array.from(input.files)
+    for (const file of filesArray) {
+      formData.append('files', file)
+    }
+
+    const res = await fetch(`${baseUrl}/api/support/tickets/${selectedTicket.value.id}/attachments`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData
+    })
+
+    const data = await res.json()
+    if (data.success) {
+      await loadTicketDetails(selectedTicket.value.id)
+      showAlert('Success', `${data.files.length} file(s) uploaded`, 'info')
+    } else {
+      showAlert('Error', data.error || 'Failed to upload files', 'error')
+    }
+  } catch (e: any) {
+    showAlert('Error', e.message || 'Failed to upload files', 'error')
+  } finally {
+    uploadingFile.value = false
+    input.value = '' // Reset input
+  }
+}
+
+function downloadAttachment(attachment: any) {
+  window.open(`${baseUrl}/api/support/attachments/${attachment.id}`, '_blank')
+}
+
+function getTicketStatusClass(status: string): string {
+  switch (status) {
+    case 'open': return 'status-open'
+    case 'pending': return 'status-pending'
+    case 'in_progress': return 'status-progress'
+    case 'resolved': return 'status-resolved'
+    case 'closed': return 'status-closed'
+    default: return ''
+  }
+}
+
+function getPriorityClass(priority: string): string {
+  switch (priority) {
+    case 'urgent': return 'priority-urgent'
+    case 'high': return 'priority-high'
+    case 'normal': return 'priority-normal'
+    case 'low': return 'priority-low'
+    default: return ''
+  }
+}
+
+function getCategoryLabel(category: string): string {
+  switch (category) {
+    case 'general': return 'General'
+    case 'billing': return 'Billing'
+    case 'technical': return 'Technical'
+    case 'feature_request': return 'Feature Request'
+    case 'bug_report': return 'Bug Report'
+    default: return category
+  }
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+// Admin Support Functions
+async function loadAdminTickets() {
+  try {
+    const params = new URLSearchParams()
+    if (adminTicketFilters.value.status) params.append('status', adminTicketFilters.value.status)
+    if (adminTicketFilters.value.category) params.append('category', adminTicketFilters.value.category)
+    if (adminTicketFilters.value.priority) params.append('priority', adminTicketFilters.value.priority)
+
+    const url = `/api/admin/support/tickets${params.toString() ? '?' + params.toString() : ''}`
+    adminTickets.value = await request(url) || []
+  } catch (e) {
+    console.error('Failed to load admin tickets:', e)
+  }
+}
+
+async function loadSupportMetrics() {
+  try {
+    supportMetrics.value = await request('/api/admin/support/metrics')
+  } catch (e) {
+    console.error('Failed to load support metrics:', e)
+  }
+}
+
+async function loadCannedResponses() {
+  try {
+    cannedResponses.value = await request('/api/admin/support/canned-responses') || []
+  } catch (e) {
+    console.error('Failed to load canned responses:', e)
+  }
+}
+
+async function updateTicketStatus(ticketId: string, status: string) {
+  try {
+    const res = await request(`/api/admin/support/tickets/${ticketId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    })
+
+    if (res?.success) {
+      await loadAdminTickets()
+      if (selectedTicket.value?.id === ticketId) {
+        selectedTicket.value.status = status
+      }
+    }
+  } catch (e: any) {
+    showAlert('Error', e.message || 'Failed to update ticket', 'error')
+  }
+}
+
+async function sendAdminReply(isInternal = false) {
+  if (!newMessage.value.trim() || !selectedTicket.value) return
+
+  sendingMessage.value = true
+  try {
+    const res = await request(`/api/admin/support/tickets/${selectedTicket.value.id}/reply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: newMessage.value, isInternal })
+    })
+
+    if (res?.success) {
+      newMessage.value = ''
+      await loadTicketDetails(selectedTicket.value.id)
+      await loadAdminTickets()
+    } else {
+      showAlert('Error', res?.error || 'Failed to send reply', 'error')
+    }
+  } catch (e: any) {
+    showAlert('Error', e.message || 'Failed to send reply', 'error')
+  } finally {
+    sendingMessage.value = false
+  }
+}
+
+function insertCannedResponse(response: any) {
+  newMessage.value = response.content
+}
+
+async function saveCannedResponse() {
+  if (!cannedResponseForm.value.title.trim() || !cannedResponseForm.value.content.trim()) {
+    showAlert('Error', 'Title and content are required', 'error')
+    return
+  }
+
+  try {
+    const method = editingCannedResponse.value ? 'PATCH' : 'POST'
+    const url = editingCannedResponse.value
+      ? `/api/admin/support/canned-responses/${editingCannedResponse.value.id}`
+      : '/api/admin/support/canned-responses'
+
+    const res = await request(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cannedResponseForm.value)
+    })
+
+    if (res?.success) {
+      showCannedForm.value = false
+      editingCannedResponse.value = null
+      cannedResponseForm.value = { title: '', content: '', category: '', keywords: '', isAutoResponse: false, sortOrder: 0 }
+      await loadCannedResponses()
+    } else {
+      showAlert('Error', res?.error || 'Failed to save response', 'error')
+    }
+  } catch (e: any) {
+    showAlert('Error', e.message || 'Failed to save response', 'error')
+  }
+}
+
+async function deleteCannedResponse(id: string) {
+  showConfirm('Delete Response', 'Are you sure you want to delete this canned response?', async () => {
+    try {
+      const res = await request(`/api/admin/support/canned-responses/${id}`, { method: 'DELETE' })
+      if (res?.success) {
+        await loadCannedResponses()
+      }
+    } catch (e: any) {
+      showAlert('Error', e.message || 'Failed to delete response', 'error')
+    }
+  })
+}
+
+function openEditCannedResponse(response: any) {
+  editingCannedResponse.value = response
+  cannedResponseForm.value = {
+    title: response.title,
+    content: response.content,
+    category: response.category || '',
+    keywords: response.keywords || '',
+    isAutoResponse: response.isAutoResponse || false,
+    sortOrder: response.sortOrder || 0
+  }
+  showCannedForm.value = true
+}
+
+function openNewCannedResponse() {
+  editingCannedResponse.value = null
+  cannedResponseForm.value = { title: '', content: '', category: '', keywords: '', isAutoResponse: false, sortOrder: 0 }
+  showCannedForm.value = true
+}
 </script>
 
 <template>
   <!-- Auth Screen -->
   <div v-if="!user" class="login-screen">
     <div class="glass-card login-card">
-      <div class="login-logo">ServerFlow</div>
-      <p>Modern Node.js Fleet Management</p>
+      <div class="login-logo">{{ t('app.title') }}</div>
+      <p>{{ t('app.tagline') }}</p>
 
       <div class="auth-tabs">
-        <div class="auth-tab" :class="{ active: authMode === 'login' }" @click="authMode = 'login'">Login</div>
-        <div class="auth-tab" :class="{ active: authMode === 'register' }" @click="authMode = 'register'">Register</div>
+        <div class="auth-tab" :class="{ active: authMode === 'login' }" @click="authMode = 'login'">{{ t('auth.login') }}</div>
+        <div class="auth-tab" :class="{ active: authMode === 'register' }" @click="authMode = 'register'">{{ t('auth.register') }}</div>
       </div>
 
       <form class="login-form" @submit.prevent="handleEmailAuth">
         <div v-if="authMode === 'register'">
-          <label>Full Name</label>
+          <label>{{ t('auth.fullName') }}</label>
           <input v-model="authForm.name" placeholder="John Doe" required />
         </div>
-        
-        <label>Email Address</label>
+
+        <label>{{ t('auth.emailAddress') }}</label>
         <input v-model="authForm.email" type="email" placeholder="john@example.com" required />
-        
-        <label>Password</label>
+
+        <label>{{ t('common.password') }}</label>
         <input v-model="authForm.password" type="password" placeholder="••••••••" required />
 
         <button type="submit" class="primary-btn" :disabled="loading">
-          {{ authMode === 'login' ? 'Sign In' : 'Create Account' }}
+          {{ authMode === 'login' ? t('auth.signIn') : t('auth.createAccount') }}
         </button>
 
         <div v-if="authError" class="auth-error">{{ authError }}</div>
       </form>
 
-      <div class="oauth-divider">Or continue with</div>
+      <div class="oauth-divider">{{ t('auth.orContinueWith') }}</div>
 
       <button class="github-btn" style="width: 100%" @click="loginWithGithub">
-        <div class="gh-icon"></div> Login with GitHub
+        <div class="gh-icon"></div> {{ t('auth.loginWithGithub') }}
       </button>
     </div>
   </div>
@@ -936,9 +1918,9 @@ function toggleConsoleFilter(type: string) {
       </div>
 
       <div class="modal-actions" style="margin-top: 40px; justify-content: center; gap: 16px;">
-        <button v-if="['confirm', 'input'].includes(modal.type)" class="secondary" @click="modal.show = false" style="padding: 14px 28px; font-size: 1rem; font-weight: 600;">Cancel</button>
+        <button v-if="['confirm', 'input'].includes(modal.type)" class="secondary" @click="modal.show = false" style="padding: 14px 28px; font-size: 1rem; font-weight: 600;">{{ t('common.cancel') }}</button>
         <button class="premium-btn" style="margin-top: 0; padding: 14px 32px; font-size: 1rem; font-weight: 700; min-width: 140px;" @click="if(modal.onConfirm) modal.onConfirm(modal.inputValue); modal.show = false">
-          {{ modal.type === 'confirm' || modal.type === 'input' ? 'Confirm' : 'OK' }}
+          {{ modal.type === 'confirm' || modal.type === 'input' ? t('common.confirm') : t('common.ok') }}
         </button>
       </div>
     </div>
@@ -952,8 +1934,8 @@ function toggleConsoleFilter(type: string) {
               <span class="console-server">🛰️ {{ activeServer?.id?.slice(0, 12) }} - Live System Analytics</span>
            </div>
            <div class="console-controls">
-              <button class="clear-btn" @click="clearConsoleLogs">Clear</button>
-              <button class="secondary" @click="showLargeConsole = false">Close</button>
+              <button class="clear-btn" @click="clearConsoleLogs">{{ t('common.clear') }}</button>
+              <button class="secondary" @click="showLargeConsole = false">{{ t('common.close') }}</button>
            </div>
         </div>
         <div class="console-body" ref="consoleContainerLarge">
@@ -995,7 +1977,7 @@ function toggleConsoleFilter(type: string) {
            </div>
         </div>
         <div class="deploy-modal-footer">
-           <button class="secondary" @click="showDeployModal = false">Close</button>
+           <button class="secondary" @click="showDeployModal = false">{{ t('common.close') }}</button>
         </div>
      </div>
   </div>
@@ -1071,6 +2053,119 @@ function toggleConsoleFilter(type: string) {
   </div>
 
   <div v-if="user" class="dashboard-layout">
+    <!-- Onboarding Overlay -->
+    <div v-if="!user.onboardingCompleted" class="onboarding-overlay">
+      <div class="onboarding-card">
+        <div class="onboarding-header">
+          <div class="onboarding-logo">SF</div>
+          <h2>{{ t('onboarding.title') }}</h2>
+          <p>{{ t('onboarding.subtitle') }}</p>
+        </div>
+
+        <form class="onboarding-form" @submit.prevent="submitOnboarding">
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ t('onboarding.fullName') }} *</label>
+              <input v-model="onboardingForm.billingName" type="text" placeholder="John Doe" required />
+            </div>
+            <div class="form-group">
+              <label>{{ t('onboarding.email') }} *</label>
+              <input v-model="onboardingForm.billingEmail" type="email" placeholder="john@example.com" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>{{ t('onboarding.company') }} ({{ t('common.optional') }})</label>
+            <input v-model="onboardingForm.billingCompany" type="text" placeholder="Acme Inc." />
+          </div>
+
+          <div class="form-group">
+            <label>{{ t('onboarding.address') }} *</label>
+            <input v-model="onboardingForm.billingAddress" type="text" placeholder="123 Main Street" required />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ t('onboarding.city') }} *</label>
+              <input v-model="onboardingForm.billingCity" type="text" placeholder="Paris" required />
+            </div>
+            <div class="form-group">
+              <label>{{ t('onboarding.postalCode') }} *</label>
+              <input v-model="onboardingForm.billingPostalCode" type="text" placeholder="75001" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>{{ t('onboarding.country') }} *</label>
+              <select v-model="onboardingForm.billingCountry" required>
+                <option value="">{{ t('onboarding.selectCountry') }}</option>
+                <option value="FR">{{ t('onboarding.countries.FR') }}</option>
+                <option value="DE">{{ t('onboarding.countries.DE') }}</option>
+                <option value="GB">{{ t('onboarding.countries.GB') }}</option>
+                <option value="US">{{ t('onboarding.countries.US') }}</option>
+                <option value="BE">{{ t('onboarding.countries.BE') }}</option>
+                <option value="CH">{{ t('onboarding.countries.CH') }}</option>
+                <option value="ES">{{ t('onboarding.countries.ES') }}</option>
+                <option value="IT">{{ t('onboarding.countries.IT') }}</option>
+                <option value="NL">{{ t('onboarding.countries.NL') }}</option>
+                <option value="PT">{{ t('onboarding.countries.PT') }}</option>
+                <option value="CA">{{ t('onboarding.countries.CA') }}</option>
+                <option value="AU">{{ t('onboarding.countries.AU') }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>{{ t('onboarding.phone') }} ({{ t('common.optional') }})</label>
+              <input v-model="onboardingForm.billingPhone" type="tel" placeholder="+33 6 12 34 56 78" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>{{ t('onboarding.vatNumber') }} ({{ t('common.optional') }})</label>
+            <input v-model="onboardingForm.billingVatNumber" type="text" placeholder="FR12345678901" />
+          </div>
+
+          <!-- Legal Checkboxes -->
+          <div class="legal-section">
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="onboardingForm.acceptTerms" />
+              <span class="checkmark"></span>
+              <span class="checkbox-text">
+                {{ t('onboarding.acceptTerms') }} <a href="/terms" target="_blank">{{ t('onboarding.termsOfService') }}</a> {{ t('onboarding.and') }} <a href="/cgv" target="_blank">{{ t('onboarding.generalConditions') }}</a> *
+              </span>
+            </label>
+
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="onboardingForm.acceptPrivacy" />
+              <span class="checkmark"></span>
+              <span class="checkbox-text">
+                {{ t('onboarding.acceptTerms') }} <a href="/privacy" target="_blank">{{ t('onboarding.privacyPolicy') }}</a> {{ t('onboarding.gdpr') }} *
+              </span>
+            </label>
+
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="onboardingForm.waiveWithdrawal" />
+              <span class="checkmark"></span>
+              <span class="checkbox-text">
+                {{ t('onboarding.waiveWithdrawal') }} *
+              </span>
+            </label>
+          </div>
+
+          <p v-if="onboardingError" class="error-message">{{ onboardingError }}</p>
+
+          <button type="submit" class="onboarding-submit" :disabled="onboardingLoading || !onboardingForm.acceptTerms || !onboardingForm.acceptPrivacy || !onboardingForm.waiveWithdrawal">
+            <span v-if="onboardingLoading">{{ t('onboarding.saving') }}</span>
+            <span v-else>{{ t('onboarding.continueToPlans') }}</span>
+          </button>
+
+          <p class="onboarding-footer">
+            {{ t('auth.hasAccount') }} <a href="#" @click.prevent="logout">{{ t('common.logout') }}</a>
+          </p>
+        </form>
+      </div>
+    </div>
+
     <!-- Modal -->
     <div v-if="showAddAppModal" class="modal-overlay" @click.self="showAddAppModal = false">
       <div class="glass-card modal-card">
@@ -1219,33 +2314,238 @@ function toggleConsoleFilter(type: string) {
       </div>
     </div>
 
-    <aside class="sidebar">
-      <div class="logo"><div class="logo-icon"></div><span>ServerFlow</span></div>
-      <div class="nav-label">ORCHESTRATION</div>
-      <nav>
-        <a href="#" :class="{ active: activeMenu === 'infrastructure' }" @click="activeMenu = 'infrastructure'; selectedServerId = null">Infrastructure</a>
-        <a href="#" :class="{ active: activeMenu === 'applications' }" @click="activeMenu = 'applications'">Applications</a>
-        <a href="#" :class="{ active: activeMenu === 'activity' }" @click="activeMenu = 'activity'; refreshData()">Activity</a>
-      </nav>
-      <div class="nav-label">INTEGRATIONS</div>
-      <nav>
-        <a href="#" :class="{ active: activeMenu === 'mcp' }" @click="activeMenu = 'mcp'; loadMcpTokens()">MCP Bridge</a>
-      </nav>
-      <div class="nav-label">MANAGEMENT</div>
-      <nav><a href="#" @click="generateToken" :class="{ active: selectedServerId === 'pending' }">+ Connect Node</a></nav>
-      <div class="server-list" style="flex: 1; overflow-y: auto;">
-        <div v-for="s in servers" :key="s.id" class="server-item" :class="{ selected: selectedServerId === s.id, online: s.status === 'online' }" @click="selectedServerId = s.id; activeMenu = 'infrastructure'">
-           <div class="status-dot"></div>
-           <div class="node-info"><p>{{ s.id.slice(0, 12) }}</p><span>{{ s.status }}</span></div>
+    <!-- Plan Modal -->
+    <div v-if="showPlanModal" class="modal-overlay" @click.self="showPlanModal = false">
+      <div class="modal-box" style="max-width: 500px;">
+        <h3>{{ editingPlan ? 'Edit Plan' : 'Create Plan' }}</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Name (internal)</label>
+            <input v-model="planForm.name" placeholder="pro" :disabled="!!editingPlan" />
+          </div>
+          <div class="form-group">
+            <label>Display Name</label>
+            <input v-model="planForm.displayName" placeholder="Pro Plan" />
+          </div>
+          <div class="form-group" style="grid-column: span 2;">
+            <label>Description</label>
+            <input v-model="planForm.description" placeholder="For growing teams..." />
+          </div>
+          <div class="form-group">
+            <label>Price Monthly (cents)</label>
+            <input type="number" v-model.number="planForm.priceMonthly" />
+          </div>
+          <div class="form-group">
+            <label>Price Yearly (cents)</label>
+            <input type="number" v-model.number="planForm.priceYearly" />
+          </div>
+          <div class="form-group">
+            <label>Max Servers (-1 = unlimited)</label>
+            <input type="number" v-model.number="planForm.maxServers" />
+          </div>
+          <div class="form-group">
+            <label>Max Apps</label>
+            <input type="number" v-model.number="planForm.maxApps" />
+          </div>
+          <div class="form-group">
+            <label>Max Domains</label>
+            <input type="number" v-model.number="planForm.maxDomains" />
+          </div>
+          <div class="form-group">
+            <label>Max Deploys/Day</label>
+            <input type="number" v-model.number="planForm.maxDeploysPerDay" />
+          </div>
+          <div class="form-group" style="grid-column: span 2;">
+            <label>Stripe Price ID Monthly</label>
+            <input v-model="planForm.stripePriceIdMonthly" placeholder="price_xxx (optional)" />
+          </div>
+          <div class="form-group" style="grid-column: span 2;">
+            <label>Stripe Price ID Yearly</label>
+            <input v-model="planForm.stripePriceIdYearly" placeholder="price_xxx (optional)" />
+          </div>
+          <div class="form-group">
+            <label><input type="checkbox" v-model="planForm.isActive" /> Active</label>
+          </div>
+          <div class="form-group">
+            <label><input type="checkbox" v-model="planForm.isDefault" /> Default Plan</label>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="secondary-btn" @click="showPlanModal = false">Cancel</button>
+          <button class="premium-btn" @click="savePlan">{{ editingPlan ? 'Save Changes' : 'Create Plan' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROVISION SERVER MODAL -->
+    <div v-if="showProvisionModal" class="modal-overlay" @click.self="showProvisionModal = false">
+      <div class="modal-box" style="max-width: 500px;">
+        <h3 style="margin: 0 0 1rem 0;">Provision Cloud Server</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+          Automatically deploy a new server with ServerFlow pre-installed.
+        </p>
+
+        <div class="form-group">
+          <label>Provider</label>
+          <select v-model="provisionForm.provider" class="form-input">
+            <option v-for="p in vpsProviders.filter(p => p.configured)" :key="p.provider" :value="p.provider">
+              {{ p.name }}
+            </option>
+          </select>
+          <p v-if="!vpsProviders.some(p => p.configured)" style="color: #f59e0b; font-size: 0.875rem; margin-top: 0.5rem;">
+            No providers configured. Add API keys in .env file.
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label>Server Name</label>
+          <input v-model="provisionForm.name" type="text" placeholder="my-server" class="form-input" />
+        </div>
+
+        <div class="form-group">
+          <label>Server Type</label>
+          <select v-model="provisionForm.planId" class="form-input">
+            <option value="">Select a plan...</option>
+            <option v-for="plan in filteredVPSPlans" :key="plan.id" :value="plan.id">
+              {{ plan.name }} - {{ formatCurrency(plan.priceMonthly) }}/mo
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Region</label>
+          <select v-model="provisionForm.regionId" class="form-input">
+            <option value="">Select a region...</option>
+            <option v-for="region in filteredVPSRegions" :key="region.id" :value="region.id">
+              {{ region.name }} ({{ region.country }})
+            </option>
+          </select>
+        </div>
+
+        <div class="modal-actions">
+          <button class="secondary-btn" @click="showProvisionModal = false">Cancel</button>
+          <button class="premium-btn" @click="provisionManagedServer" :disabled="provisionLoading || !provisionForm.name || !provisionForm.planId || !provisionForm.regionId">
+            {{ provisionLoading ? 'Provisioning...' : 'Provision Server' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Menu Overlay -->
+    <div v-if="mobileMenuOpen" class="mobile-overlay" @click="closeMobileMenu"></div>
+
+    <aside class="sidebar" :class="{ 'mobile-open': mobileMenuOpen }">
+      <div class="logo" @click="activeMenu = 'infrastructure'; selectedServerId = null; closeMobileMenu()" style="cursor: pointer;"><div class="logo-icon"></div><span>ServerFlow</span></div>
+
+      <!-- ORCHESTRATION Section -->
+      <div class="nav-section">
+        <div class="nav-label clickable" @click="collapsedSections.orchestration = !collapsedSections.orchestration">
+          <span>{{ t('nav.orchestration') }}</span>
+          <span class="collapse-icon" :class="{ collapsed: collapsedSections.orchestration }">▾</span>
+        </div>
+        <nav v-show="!collapsedSections.orchestration">
+          <a href="#" :class="{ active: activeMenu === 'infrastructure' }" @click="activeMenu = 'infrastructure'; selectedServerId = null; closeMobileMenu()">{{ t('nav.infrastructure') }}</a>
+          <a href="#" :class="{ active: activeMenu === 'applications' }" @click="activeMenu = 'applications'; closeMobileMenu()">{{ t('nav.applications') }}</a>
+          <a href="#" :class="{ active: activeMenu === 'activity' }" @click="activeMenu = 'activity'; refreshData(); closeMobileMenu()">{{ t('nav.activityLogs') }}</a>
+        </nav>
+      </div>
+
+      <!-- INTEGRATIONS Section -->
+      <div class="nav-section">
+        <div class="nav-label clickable" @click="collapsedSections.integrations = !collapsedSections.integrations">
+          <span>{{ t('nav.integrations') }}</span>
+          <span class="collapse-icon" :class="{ collapsed: collapsedSections.integrations }">▾</span>
+        </div>
+        <nav v-show="!collapsedSections.integrations">
+          <a href="#" :class="{ active: activeMenu === 'mcp' }" @click="activeMenu = 'mcp'; loadMcpTokens(); closeMobileMenu()">{{ t('nav.mcpTokens') }}</a>
+        </nav>
+      </div>
+
+      <!-- ADMIN Section (conditional) -->
+      <template v-if="user?.role === 'admin'">
+        <div class="nav-section">
+          <div class="nav-label clickable admin-label" @click="collapsedSections.admin = !collapsedSections.admin">
+            <span>{{ t('nav.admin') }}</span>
+            <span class="collapse-icon" :class="{ collapsed: collapsedSections.admin }">▾</span>
+          </div>
+          <nav v-show="!collapsedSections.admin">
+            <a href="#" :class="{ active: activeMenu === 'admin-users' }" @click="activeMenu = 'admin-users'; loadAdminUsers(); loadAdminPlans(); closeMobileMenu()">{{ t('nav.users') }}</a>
+            <a href="#" :class="{ active: activeMenu === 'admin-plans' }" @click="activeMenu = 'admin-plans'; loadAdminPlans(); closeMobileMenu()">{{ t('nav.plans') }}</a>
+            <a href="#" :class="{ active: activeMenu === 'admin-support' }" @click="activeMenu = 'admin-support'; loadAdminTickets(); loadSupportMetrics(); loadCannedResponses(); closeMobileMenu()">{{ t('nav.support') }}</a>
+            <a href="#" :class="{ active: activeMenu === 'admin-metrics' }" @click="activeMenu = 'admin-metrics'; loadAdminMetrics(); closeMobileMenu()">{{ t('admin.metrics.title') }}</a>
+          </nav>
+        </div>
+      </template>
+
+      <!-- MANAGEMENT Section (Connect Node + Server List) -->
+      <div class="nav-section management-section">
+        <div class="nav-label">
+          <span>{{ t('infrastructure.servers') }}</span>
+          <span class="server-count">{{ servers.length }}</span>
+        </div>
+        <nav>
+          <a href="#" @click="generateToken(); closeMobileMenu()" :class="{ active: selectedServerId === 'pending' }">+ {{ t('infrastructure.connectServer') }}</a>
+        </nav>
+        <div class="server-list">
+          <div v-for="s in servers" :key="s.id" class="server-item" :class="{ selected: selectedServerId === s.id, online: s.status === 'online' }" @click="selectedServerId = s.id; activeMenu = 'infrastructure'; closeMobileMenu()">
+             <div class="status-dot"></div>
+             <div class="node-info"><p>{{ s.id.slice(0, 12) }}</p><span>{{ s.status }}</span></div>
+          </div>
         </div>
       </div>
 
       <div class="sidebar-footer">
-        <div class="user-profile">
-          <div class="avatar-mini" :style="{ backgroundImage: user.avatarUrl ? `url(${user.avatarUrl})` : '' }"></div>
-          <div class="user-info">
-            <p>{{ user.name }}</p>
-            <span @click="logout" style="cursor:pointer; color: #ff4d4d;">Sign Out</span>
+        <!-- Language Selector -->
+        <div class="language-selector-wrapper">
+          <div class="language-selector" @click="showLanguageMenu = !showLanguageMenu">
+            <span class="lang-flag">{{ availableLocales.find(l => l.code === locale)?.flag }}</span>
+            <span class="lang-name">{{ availableLocales.find(l => l.code === locale)?.name }}</span>
+            <span class="dropdown-arrow" :class="{ open: showLanguageMenu }">▾</span>
+          </div>
+          <div class="language-dropdown" v-show="showLanguageMenu">
+            <a
+              v-for="lang in availableLocales"
+              :key="lang.code"
+              href="#"
+              class="dropdown-item"
+              :class="{ active: locale === lang.code }"
+              @click.prevent="setLocale(lang.code); showLanguageMenu = false"
+            >
+              <span class="lang-flag">{{ lang.flag }}</span>
+              {{ lang.name }}
+            </a>
+          </div>
+        </div>
+
+        <div class="user-profile-wrapper">
+          <div class="user-profile" @click="userMenuOpen = !userMenuOpen">
+            <div class="avatar-mini" :style="{ backgroundImage: user.avatarUrl ? `url(${user.avatarUrl})` : '' }"></div>
+            <div class="user-info">
+              <p>{{ user.name }}</p>
+              <span class="user-email">{{ user.email }}</span>
+            </div>
+            <span class="dropdown-arrow" :class="{ open: userMenuOpen }">▾</span>
+          </div>
+
+          <!-- User Dropdown Menu -->
+          <div class="user-dropdown" v-show="userMenuOpen">
+            <a href="#" class="dropdown-item" @click="activeMenu = 'billing'; loadBillingPlans(); loadSubscription(); loadUsageReport(); userMenuOpen = false; closeMobileMenu()">
+              <span class="dropdown-icon">💳</span>
+              {{ t('nav.billing') }}
+            </a>
+            <a href="#" class="dropdown-item" @click="activeMenu = 'support'; loadSupportTickets(); userMenuOpen = false; closeMobileMenu()">
+              <span class="dropdown-icon">🎫</span>
+              {{ t('nav.support') }}
+            </a>
+            <a href="#" class="dropdown-item" @click="activeMenu = 'settings'; userMenuOpen = false; closeMobileMenu()">
+              <span class="dropdown-icon">⚙️</span>
+              {{ t('common.settings') }}
+            </a>
+            <div class="dropdown-divider"></div>
+            <a href="#" class="dropdown-item logout-item" @click="logout">
+              <span class="dropdown-icon">🚪</span>
+              {{ t('common.logout') }}
+            </a>
           </div>
         </div>
       </div>
@@ -1253,8 +2553,14 @@ function toggleConsoleFilter(type: string) {
 
     <div class="main-wrapper">
       <header class="top-bar">
+        <!-- Mobile Hamburger Button -->
+        <button class="hamburger-btn" @click="mobileMenuOpen = !mobileMenuOpen" aria-label="Toggle menu">
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+          <span class="hamburger-line"></span>
+        </button>
         <div class="actions" style="margin-left: auto;">
-           <button v-if="activeMenu === 'applications'" class="premium-btn" @click="showAddAppModal = true">+ New App</button>
+           <button v-if="activeMenu === 'applications'" class="premium-btn" @click="showAddAppModal = true">+ {{ t('applications.newApp') }}</button>
            <span :class="['status-badge', serverStatus]" v-if="selectedServerId !== 'pending'">
              {{ serverStatus === 'online' ? 'Engine Online' : 'Node Offline' }}
           </span>
@@ -1264,7 +2570,7 @@ function toggleConsoleFilter(type: string) {
       <main class="content">
         <!-- APPLICATIONS VIEW -->
         <div v-if="activeMenu === 'applications'" class="apps-view">
-           <h1 class="gradient-text">Applications</h1>
+           <h1 class="gradient-text">{{ t('nav.applications') }}</h1>
            <div class="apps-grid">
               <div v-for="app in apps" :key="app.id" class="glass-card app-card">
                  <div class="app-header">
@@ -1273,28 +2579,28 @@ function toggleConsoleFilter(type: string) {
                        <h4>{{ app.name }}</h4>
                        <p>{{ app.repoUrl.split('/').pop() }}</p>
                     </div>
-                    <div class="app-status">Running</div>
+                    <div class="app-status">{{ t('applications.running') }}</div>
                  </div>
                  <div class="app-details">
                     <span>Node: {{ app.nodeId?.slice(0,8) }}</span>
-                    <span>Port: {{ app.port }}</span>
+                    <span>{{ t('applications.port') }}: {{ app.port }}</span>
                  </div>
                  <div class="app-actions">
-                    <button class="action-btn" @click="triggerDeploy(app.id)">Deploy</button>
-                    <button class="action-btn restore" @click="restoreApp(app.id)">Restore</button>
-                    <button class="action-btn" @click="lifecycleAction(app.id, 'start')">Start</button>
-                    <button class="action-btn" @click="lifecycleAction(app.id, 'restart')">Restart</button>
-                    <button class="action-btn secondary" @click="lifecycleAction(app.id, 'stop')">Stop</button>
-                    <button class="action-btn error" @click="deleteApp(app.id)">Delete</button>
+                    <button class="action-btn" @click="triggerDeploy(app.id)">{{ t('applications.deploy') }}</button>
+                    <button class="action-btn restore" @click="restoreApp(app.id)">{{ t('applications.restore') }}</button>
+                    <button class="action-btn" @click="lifecycleAction(app.id, 'start')">{{ t('applications.start') }}</button>
+                    <button class="action-btn" @click="lifecycleAction(app.id, 'restart')">{{ t('applications.restart') }}</button>
+                    <button class="action-btn secondary" @click="lifecycleAction(app.id, 'stop')">{{ t('applications.stop') }}</button>
+                    <button class="action-btn error" @click="deleteApp(app.id)">{{ t('common.delete') }}</button>
                  </div>
               </div>
-              <div v-if="apps.length === 0" class="empty-msg">No applications registered.</div>
+              <div v-if="apps.length === 0" class="empty-msg">{{ t('applications.noApps') }}</div>
            </div>
         </div>
 
         <!-- ACTIVITY VIEW -->
         <div v-else-if="activeMenu === 'activity'" class="activity-view">
-           <h1 class="gradient-text">System Activity</h1>
+           <h1 class="gradient-text">{{ t('activityLogs.title') }}</h1>
            <div class="glass-card audit-table">
               <div v-for="log in auditLogs" :key="log.id" class="audit-row">
                  <div class="log-time">{{ new Date(log.timestamp).toLocaleTimeString() }}</div>
@@ -1307,19 +2613,19 @@ function toggleConsoleFilter(type: string) {
 
         <!-- MCP BRIDGE VIEW -->
         <div v-else-if="activeMenu === 'mcp'" class="mcp-view">
-           <h1 class="gradient-text">MCP Bridge</h1>
-           <p class="mcp-subtitle">Connect AI assistants (Claude, Cursor) to control your infrastructure via natural language.</p>
+           <h1 class="gradient-text">{{ t('mcp.title') }}</h1>
+           <p class="mcp-subtitle">{{ t('mcp.subtitle') }}</p>
 
            <div class="mcp-grid">
               <!-- Setup Card -->
               <div class="glass-card mcp-setup-card">
-                 <h3>Quick Setup</h3>
-                 <p class="mcp-desc">Add ServerFlow to your Claude Desktop or Cursor configuration.</p>
+                 <h3>{{ t('mcp.quickSetup') }}</h3>
+                 <p class="mcp-desc">{{ t('mcp.setupDesc') }}</p>
 
                  <div class="mcp-step">
                     <span class="step-number">1</span>
                     <div class="step-content">
-                       <strong>Open config file</strong>
+                       <strong>{{ t('mcp.step1Title') }}</strong>
                        <code class="config-path">~/.config/claude/claude_desktop_config.json</code>
                     </div>
                  </div>
@@ -1327,7 +2633,7 @@ function toggleConsoleFilter(type: string) {
                  <div class="mcp-step">
                     <span class="step-number">2</span>
                     <div class="step-content">
-                       <strong>Add MCP server</strong>
+                       <strong>{{ t('mcp.step2Title') }}</strong>
                        <div class="code-block">
                           <pre>{
   "mcpServers": {
@@ -1341,7 +2647,7 @@ function toggleConsoleFilter(type: string) {
     }
   }
 }</pre>
-                          <button class="copy-code-btn" @click="copyMcpConfig">Copy</button>
+                          <button class="copy-code-btn" @click="copyMcpConfig">{{ t('mcp.copy') }}</button>
                        </div>
                     </div>
                  </div>
@@ -1349,8 +2655,8 @@ function toggleConsoleFilter(type: string) {
                  <div class="mcp-step">
                     <span class="step-number">3</span>
                     <div class="step-content">
-                       <strong>Restart Claude Desktop</strong>
-                       <span class="step-hint">ServerFlow tools will appear automatically.</span>
+                       <strong>{{ t('mcp.step3Title') }}</strong>
+                       <span class="step-hint">{{ t('mcp.step3Hint') }}</span>
                     </div>
                  </div>
               </div>
@@ -1359,17 +2665,17 @@ function toggleConsoleFilter(type: string) {
               <div class="glass-card mcp-tokens-card">
                  <div class="tokens-header">
                     <div>
-                       <h3>API Tokens</h3>
-                       <p class="mcp-desc">Secure tokens for MCP authentication.</p>
+                       <h3>{{ t('mcp.apiTokens') }}</h3>
+                       <p class="mcp-desc">{{ t('mcp.tokensDesc') }}</p>
                     </div>
                     <button class="premium-btn" @click="showNewTokenModal = true; newTokenName = ''">
-                       + Generate Token
+                       {{ t('mcp.generateToken') }}
                     </button>
                  </div>
 
                  <div v-if="mcpTokens.length === 0" class="no-tokens">
                     <span class="no-tokens-icon">🔑</span>
-                    <p>No tokens yet. Generate one to connect your AI assistant.</p>
+                    <p>{{ t('mcp.noTokens') }}</p>
                  </div>
 
                  <div v-else class="tokens-list">
@@ -1378,42 +2684,42 @@ function toggleConsoleFilter(type: string) {
                           <code class="token-prefix">{{ token.prefix }}••••••••</code>
                           <span class="token-name">{{ token.name }}</span>
                           <span class="token-meta">
-                             Created {{ new Date(token.createdAt * 1000).toLocaleDateString() }}
+                             {{ t('mcp.created') }} {{ new Date(token.createdAt * 1000).toLocaleDateString() }}
                              <template v-if="token.lastUsedAt">
-                                · Last used {{ new Date(token.lastUsedAt * 1000).toLocaleDateString() }}
+                                · {{ t('mcp.lastUsed') }} {{ new Date(token.lastUsedAt * 1000).toLocaleDateString() }}
                              </template>
                           </span>
                        </div>
-                       <button class="revoke-btn" @click="revokeMcpToken(token.id)">Revoke</button>
+                       <button class="revoke-btn" @click="revokeMcpToken(token.id)">{{ t('mcp.revoke') }}</button>
                     </div>
                  </div>
               </div>
 
               <!-- Tools Card -->
               <div class="glass-card mcp-tools-card">
-                 <h3>Available Tools</h3>
-                 <p class="mcp-desc">14 tools available for AI-powered infrastructure management.</p>
+                 <h3>{{ t('mcp.availableTools') }}</h3>
+                 <p class="mcp-desc">{{ t('mcp.toolsCount', { n: 14 }) }}</p>
 
                  <div class="tools-list">
                     <div class="tool-item">
                        <div class="tool-icon">📋</div>
                        <div class="tool-info">
                           <span class="tool-name">list_servers</span>
-                          <span class="tool-desc">List all nodes and their connection status</span>
+                          <span class="tool-desc">{{ t('mcp.tools.listServers') }}</span>
                        </div>
                     </div>
                     <div class="tool-item">
                        <div class="tool-icon">📦</div>
                        <div class="tool-info">
                           <span class="tool-name">list_apps</span>
-                          <span class="tool-desc">List all registered applications</span>
+                          <span class="tool-desc">{{ t('mcp.tools.listApps') }}</span>
                        </div>
                     </div>
                     <div class="tool-item">
                        <div class="tool-icon">🚀</div>
                        <div class="tool-info">
                           <span class="tool-name">deploy_app</span>
-                          <span class="tool-desc">Trigger deployment by app name</span>
+                          <span class="tool-desc">{{ t('mcp.tools.deployApp') }}</span>
                        </div>
                        <span class="tool-tag">dry-run</span>
                     </div>
@@ -1421,7 +2727,7 @@ function toggleConsoleFilter(type: string) {
                        <div class="tool-icon">⚡</div>
                        <div class="tool-info">
                           <span class="tool-name">app_action</span>
-                          <span class="tool-desc">Start, stop, restart, or delete an app</span>
+                          <span class="tool-desc">{{ t('mcp.tools.appAction') }}</span>
                        </div>
                        <span class="tool-tag">dry-run</span>
                     </div>
@@ -1429,14 +2735,14 @@ function toggleConsoleFilter(type: string) {
                        <div class="tool-icon">📊</div>
                        <div class="tool-info">
                           <span class="tool-name">get_activity_logs</span>
-                          <span class="tool-desc">Retrieve recent system activity</span>
+                          <span class="tool-desc">{{ t('mcp.tools.getActivityLogs') }}</span>
                        </div>
                     </div>
                     <div class="tool-item">
                        <div class="tool-icon">🌐</div>
                        <div class="tool-info">
                           <span class="tool-name">provision_domain</span>
-                          <span class="tool-desc">Setup domain with nginx + SSL</span>
+                          <span class="tool-desc">{{ t('mcp.tools.provisionDomain') }}</span>
                        </div>
                        <span class="tool-tag">dry-run</span>
                     </div>
@@ -1444,56 +2750,56 @@ function toggleConsoleFilter(type: string) {
                        <div class="tool-icon">🔗</div>
                        <div class="tool-info">
                           <span class="tool-name">list_domains</span>
-                          <span class="tool-desc">List all configured domain proxies</span>
+                          <span class="tool-desc">{{ t('mcp.tools.listDomains') }}</span>
                        </div>
                     </div>
                     <div class="tool-item">
                        <div class="tool-icon">📈</div>
                        <div class="tool-info">
                           <span class="tool-name">get_server_metrics</span>
-                          <span class="tool-desc">Real-time CPU, RAM, disk usage</span>
+                          <span class="tool-desc">{{ t('mcp.tools.getServerMetrics') }}</span>
                        </div>
                     </div>
                     <div class="tool-item">
                        <div class="tool-icon">💓</div>
                        <div class="tool-info">
                           <span class="tool-name">check_app_health</span>
-                          <span class="tool-desc">HTTP health check for an app</span>
+                          <span class="tool-desc">{{ t('mcp.tools.checkAppHealth') }}</span>
                        </div>
                     </div>
                     <div class="tool-item">
                        <div class="tool-icon">📜</div>
                        <div class="tool-info">
                           <span class="tool-name">get_deployment_history</span>
-                          <span class="tool-desc">List recent deployments</span>
+                          <span class="tool-desc">{{ t('mcp.tools.getDeploymentHistory') }}</span>
                        </div>
                     </div>
                     <div class="tool-item">
                        <div class="tool-icon">📝</div>
                        <div class="tool-info">
                           <span class="tool-name">get_server_logs</span>
-                          <span class="tool-desc">Read nginx/pm2/system logs (GDPR-safe)</span>
+                          <span class="tool-desc">{{ t('mcp.tools.getServerLogs') }}</span>
                        </div>
                     </div>
                     <div class="tool-item">
                        <div class="tool-icon">🔄</div>
                        <div class="tool-info">
                           <span class="tool-name">service_action</span>
-                          <span class="tool-desc">Control nginx/pm2 services</span>
+                          <span class="tool-desc">{{ t('mcp.tools.serviceAction') }}</span>
                        </div>
                     </div>
                     <div class="tool-item">
                        <div class="tool-icon">🛡️</div>
                        <div class="tool-info">
                           <span class="tool-name">get_security_status</span>
-                          <span class="tool-desc">Firewall, failed services, load average</span>
+                          <span class="tool-desc">{{ t('mcp.tools.getSecurityStatus') }}</span>
                        </div>
                     </div>
                     <div class="tool-item">
                        <div class="tool-icon">🔧</div>
                        <div class="tool-info">
                           <span class="tool-name">install_server_extras</span>
-                          <span class="tool-desc">Install ufw, fail2ban, htop, etc.</span>
+                          <span class="tool-desc">{{ t('mcp.tools.installServerExtras') }}</span>
                        </div>
                     </div>
                  </div>
@@ -1501,29 +2807,29 @@ function toggleConsoleFilter(type: string) {
 
               <!-- Examples Card -->
               <div class="glass-card mcp-examples-card">
-                 <h3>Example Prompts</h3>
-                 <p class="mcp-desc">Try these commands with Claude or Cursor.</p>
+                 <h3>{{ t('mcp.examplePrompts') }}</h3>
+                 <p class="mcp-desc">{{ t('mcp.examplePromptsDesc') }}</p>
 
                  <div class="example-list">
                     <div class="example-item">
-                       <span class="example-label">Deploy</span>
-                       <span class="example-text">"Deploy my-api to production"</span>
+                       <span class="example-label">{{ t('mcp.examples.deploy') }}</span>
+                       <span class="example-text">{{ t('mcp.examples.deployText') }}</span>
                     </div>
                     <div class="example-item">
-                       <span class="example-label">Status</span>
-                       <span class="example-text">"Show me all my servers and their status"</span>
+                       <span class="example-label">{{ t('mcp.examples.status') }}</span>
+                       <span class="example-text">{{ t('mcp.examples.statusText') }}</span>
                     </div>
                     <div class="example-item">
-                       <span class="example-label">Restart</span>
-                       <span class="example-text">"Restart nginx on server abc123"</span>
+                       <span class="example-label">{{ t('mcp.examples.restart') }}</span>
+                       <span class="example-text">{{ t('mcp.examples.restartText') }}</span>
                     </div>
                     <div class="example-item">
-                       <span class="example-label">Domain</span>
-                       <span class="example-text">"Setup api.example.com pointing to port 3000"</span>
+                       <span class="example-label">{{ t('mcp.examples.domain') }}</span>
+                       <span class="example-text">{{ t('mcp.examples.domainText') }}</span>
                     </div>
                     <div class="example-item">
-                       <span class="example-label">Dry Run</span>
-                       <span class="example-text">"What would happen if I deploy my-api? (dry run)"</span>
+                       <span class="example-label">{{ t('mcp.examples.dryRun') }}</span>
+                       <span class="example-text">{{ t('mcp.examples.dryRunText') }}</span>
                     </div>
                  </div>
               </div>
@@ -1532,15 +2838,15 @@ function toggleConsoleFilter(type: string) {
 
         <!-- CONSOLE VIEW -->
         <div v-else-if="activeMenu === 'console'" class="console-view">
-           <h1 class="gradient-text">Live Console</h1>
+           <h1 class="gradient-text">{{ t('console.liveConsole') }}</h1>
            <div v-if="!activeServer || selectedServerId === 'pending'" class="empty-msg">
-              Select an online server to view console logs
+              {{ t('console.selectServer') }}
            </div>
            <div v-else class="glass-card console-card">
               <div class="console-toolbar">
                  <div class="console-info">
                     <span class="console-server">{{ activeServer.id?.slice(0, 12) }}</span>
-                    <span class="console-count">{{ filteredConsoleLogs.length }} lines</span>
+                    <span class="console-count">{{ filteredConsoleLogs.length }} {{ t('console.lines') }}</span>
                  </div>
                  <div class="console-controls">
                     <div class="filter-group">
@@ -1565,7 +2871,7 @@ function toggleConsoleFilter(type: string) {
                        @click="consoleAutoScroll = !consoleAutoScroll">
                        {{ consoleAutoScroll ? '⏸' : '▶' }} Auto-scroll
                     </button>
-                    <button class="clear-btn" @click="clearConsoleLogs">Clear</button>
+                    <button class="clear-btn" @click="clearConsoleLogs">{{ t('common.clear') }}</button>
                  </div>
               </div>
               <div class="console-body" ref="consoleContainer">
@@ -1586,13 +2892,1225 @@ function toggleConsoleFilter(type: string) {
            </div>
         </div>
 
+        <!-- BILLING VIEW -->
+        <div v-else-if="activeMenu === 'billing'" class="billing-view">
+           <div class="billing-header">
+              <h1 class="gradient-text">{{ t('billing.title') }}</h1>
+              <p class="billing-subtitle">{{ t('billing.subtitle') }}</p>
+           </div>
+
+           <!-- Current Subscription Card -->
+           <div class="current-plan-card glass-card">
+              <div class="current-plan-info">
+                 <div class="current-plan-icon">{{ currentSubscription?.isPaid ? '⭐' : '🆓' }}</div>
+                 <div class="current-plan-details">
+                    <div class="current-plan-name">{{ currentSubscription?.planDisplayName || t('billing.freePlan') }}</div>
+                    <span :class="['subscription-status', currentSubscription?.isPastDue ? 'past-due' : (currentSubscription?.isActive ? 'active' : 'inactive')]">
+                       {{ currentSubscription?.isPastDue ? '⚠️ ' + t('billing.paymentRequired') : (currentSubscription?.isActive ? '✓ ' + t('billing.active') : t('billing.inactive')) }}
+                    </span>
+                 </div>
+              </div>
+              <button class="manage-billing-btn" @click="openBillingPortal" v-if="currentSubscription?.isPaid">
+                 <span class="btn-icon">💳</span>
+                 {{ t('billing.manageBilling') }}
+              </button>
+           </div>
+
+           <!-- Usage Section with Warnings -->
+           <div class="usage-section glass-card" v-if="usageReport">
+              <div class="usage-header">
+                 <h3>📊 {{ t('billing.currentUsage') }}</h3>
+                 <span class="billing-period" v-if="currentSubscription?.periodEnd">
+                    {{ t('billing.resets') }} {{ new Date(currentSubscription.periodEnd * 1000).toLocaleDateString() }}
+                 </span>
+              </div>
+              <div class="usage-grid-enhanced">
+                 <div class="usage-card" :class="{ warning: usageReport.usage.servers.percentage >= 80, critical: usageReport.usage.servers.percentage >= 100 }">
+                    <div class="usage-card-header">
+                       <span class="usage-icon">🖥️</span>
+                       <span class="usage-name">{{ t('billing.servers') }}</span>
+                    </div>
+                    <div class="usage-numbers">
+                       <span class="usage-current">{{ usageReport.usage.servers.current }}</span>
+                       <span class="usage-separator">/</span>
+                       <span class="usage-max">{{ usageReport.usage.servers.limit === -1 ? '∞' : usageReport.usage.servers.limit }}</span>
+                    </div>
+                    <div class="usage-bar-enhanced">
+                       <div class="usage-fill-enhanced" :style="{ width: Math.min(usageReport.usage.servers.percentage, 100) + '%' }"></div>
+                    </div>
+                    <div class="usage-warning-text" v-if="usageReport.usage.servers.percentage >= 80">
+                       {{ usageReport.usage.servers.percentage >= 100 ? t('billing.limitReached') : t('billing.almostAtLimit') }}
+                    </div>
+                 </div>
+                 <div class="usage-card" :class="{ warning: usageReport.usage.apps.percentage >= 80, critical: usageReport.usage.apps.percentage >= 100 }">
+                    <div class="usage-card-header">
+                       <span class="usage-icon">📦</span>
+                       <span class="usage-name">{{ t('billing.apps') }}</span>
+                    </div>
+                    <div class="usage-numbers">
+                       <span class="usage-current">{{ usageReport.usage.apps.current }}</span>
+                       <span class="usage-separator">/</span>
+                       <span class="usage-max">{{ usageReport.usage.apps.limit === -1 ? '∞' : usageReport.usage.apps.limit }}</span>
+                    </div>
+                    <div class="usage-bar-enhanced">
+                       <div class="usage-fill-enhanced" :style="{ width: Math.min(usageReport.usage.apps.percentage, 100) + '%' }"></div>
+                    </div>
+                    <div class="usage-warning-text" v-if="usageReport.usage.apps.percentage >= 80">
+                       {{ usageReport.usage.apps.percentage >= 100 ? t('billing.limitReached') : t('billing.almostAtLimit') }}
+                    </div>
+                 </div>
+                 <div class="usage-card" :class="{ warning: usageReport.usage.domains.percentage >= 80, critical: usageReport.usage.domains.percentage >= 100 }">
+                    <div class="usage-card-header">
+                       <span class="usage-icon">🌐</span>
+                       <span class="usage-name">{{ t('billing.domains') }}</span>
+                    </div>
+                    <div class="usage-numbers">
+                       <span class="usage-current">{{ usageReport.usage.domains.current }}</span>
+                       <span class="usage-separator">/</span>
+                       <span class="usage-max">{{ usageReport.usage.domains.limit === -1 ? '∞' : usageReport.usage.domains.limit }}</span>
+                    </div>
+                    <div class="usage-bar-enhanced">
+                       <div class="usage-fill-enhanced" :style="{ width: Math.min(usageReport.usage.domains.percentage, 100) + '%' }"></div>
+                    </div>
+                    <div class="usage-warning-text" v-if="usageReport.usage.domains.percentage >= 80">
+                       {{ usageReport.usage.domains.percentage >= 100 ? t('billing.limitReached') : t('billing.almostAtLimit') }}
+                    </div>
+                 </div>
+                 <div class="usage-card" :class="{ warning: usageReport.usage.deploysToday.percentage >= 80, critical: usageReport.usage.deploysToday.percentage >= 100 }">
+                    <div class="usage-card-header">
+                       <span class="usage-icon">🚀</span>
+                       <span class="usage-name">{{ t('billing.deploysToday') }}</span>
+                    </div>
+                    <div class="usage-numbers">
+                       <span class="usage-current">{{ usageReport.usage.deploysToday.current }}</span>
+                       <span class="usage-separator">/</span>
+                       <span class="usage-max">{{ usageReport.usage.deploysToday.limit === -1 ? '∞' : usageReport.usage.deploysToday.limit }}</span>
+                    </div>
+                    <div class="usage-bar-enhanced">
+                       <div class="usage-fill-enhanced" :style="{ width: Math.min(usageReport.usage.deploysToday.percentage, 100) + '%' }"></div>
+                    </div>
+                    <div class="usage-warning-text" v-if="usageReport.usage.deploysToday.percentage >= 80">
+                       {{ usageReport.usage.deploysToday.percentage >= 100 ? t('billing.limitReached') : t('billing.almostAtLimit') }}
+                    </div>
+                 </div>
+              </div>
+           </div>
+
+           <!-- Upgrade Suggestion (shown when usage is high) -->
+           <div class="upgrade-suggestion glass-card" v-if="usageReport && (usageReport.usage.servers.percentage >= 80 || usageReport.usage.apps.percentage >= 80)">
+              <div class="upgrade-icon">💡</div>
+              <div class="upgrade-content">
+                 <h4>{{ t('billing.needMoreResources') }}</h4>
+                 <p>{{ t('billing.approachingLimits') }}</p>
+              </div>
+              <button class="upgrade-now-btn" @click="scrollToPlans()">
+                 {{ t('billing.viewPlans') }} ↓
+              </button>
+           </div>
+
+           <!-- Available Plans -->
+           <div class="plans-section">
+              <h3 class="plans-title">{{ t('billing.choosePlan') }}</h3>
+              <p class="plans-subtitle">{{ t('billing.allPlansInclude') }}</p>
+
+              <div class="plans-grid-enhanced">
+                 <div
+                    v-for="(plan, index) in billingPlans"
+                    :key="plan.id"
+                    class="plan-card-enhanced"
+                    :class="{
+                       current: currentSubscription?.planName === plan.name,
+                       recommended: index === 1 && currentSubscription?.planName !== plan.name,
+                       popular: index === 1
+                    }"
+                 >
+                    <!-- Plan Badge -->
+                    <div class="plan-badge current-badge" v-if="currentSubscription?.planName === plan.name">
+                       ✓ {{ t('billing.currentPlanBadge') }}
+                    </div>
+                    <div class="plan-badge popular-badge" v-else-if="index === 1">
+                       ⭐ {{ t('billing.mostPopular') }}
+                    </div>
+                    <div class="plan-badge value-badge" v-else-if="index === billingPlans.length - 1 && billingPlans.length > 2">
+                       💎 {{ t('billing.bestValue') }}
+                    </div>
+
+                    <!-- Plan Header -->
+                    <div class="plan-card-header">
+                       <h4 class="plan-name">{{ plan.displayName }}</h4>
+                       <p class="plan-tagline">{{ plan.description }}</p>
+                    </div>
+
+                    <!-- Price Display -->
+                    <div class="plan-pricing">
+                       <div class="price-main">
+                          <span class="currency">$</span>
+                          <span class="amount">{{ Math.floor(plan.priceMonthly / 100) }}</span>
+                          <span class="cents" v-if="plan.priceMonthly % 100">.{{ String(plan.priceMonthly % 100).padStart(2, '0') }}</span>
+                       </div>
+                       <div class="price-period">{{ t('billing.perMonth') }}</div>
+                       <div class="price-yearly" v-if="plan.priceYearly && plan.priceYearly < plan.priceMonthly * 12">
+                          <span class="yearly-price">{{ formatCurrency(plan.priceYearly) }}{{ t('billing.perYear') }}</span>
+                          <span class="savings-badge">{{ t('billing.save') }} {{ Math.round((1 - plan.priceYearly / (plan.priceMonthly * 12)) * 100) }}%</span>
+                       </div>
+                    </div>
+
+                    <!-- Features List -->
+                    <ul class="plan-features">
+                       <li>
+                          <span class="feature-icon">🖥️</span>
+                          <span class="feature-text">{{ plan.limits.servers === -1 ? t('billing.unlimited') : plan.limits.servers }} {{ t('billing.servers').toLowerCase() }}</span>
+                       </li>
+                       <li>
+                          <span class="feature-icon">📦</span>
+                          <span class="feature-text">{{ plan.limits.apps === -1 ? t('billing.unlimited') : plan.limits.apps }} {{ t('billing.apps').toLowerCase() }}</span>
+                       </li>
+                       <li>
+                          <span class="feature-icon">🌐</span>
+                          <span class="feature-text">{{ plan.limits.domains === -1 ? t('billing.unlimited') : plan.limits.domains }} {{ t('billing.customDomains') }}</span>
+                       </li>
+                       <li>
+                          <span class="feature-icon">🚀</span>
+                          <span class="feature-text">{{ plan.limits.deploysPerDay === -1 ? t('billing.unlimited') : plan.limits.deploysPerDay }} {{ t('billing.deploysPerDay') }}</span>
+                       </li>
+                       <li>
+                          <span class="feature-icon">🔒</span>
+                          <span class="feature-text">Free SSL certificates</span>
+                       </li>
+                       <li v-if="plan.priceMonthly > 0">
+                          <span class="feature-icon">💬</span>
+                          <span class="feature-text">Priority support</span>
+                       </li>
+                    </ul>
+
+                    <!-- CTA Button -->
+                    <button
+                       class="plan-cta-btn"
+                       :class="{
+                          'cta-current': currentSubscription?.planName === plan.name,
+                          'cta-upgrade': currentSubscription?.planName !== plan.name && plan.priceMonthly > 0,
+                          'cta-downgrade': currentSubscription?.planName !== plan.name && plan.priceMonthly === 0
+                       }"
+                       :disabled="currentSubscription?.planName === plan.name"
+                       @click="upgradePlan(plan.id)"
+                    >
+                       <template v-if="currentSubscription?.planName === plan.name">
+                          ✓ Your Current Plan
+                       </template>
+                       <template v-else-if="plan.priceMonthly === 0">
+                          Switch to Free
+                       </template>
+                       <template v-else>
+                          Upgrade Now →
+                       </template>
+                    </button>
+                 </div>
+              </div>
+           </div>
+
+        </div>
+
+        <!-- MANAGED SERVERS VIEW (HIDDEN - kept for future use) -->
+        <div v-else-if="false && activeMenu === 'managed-servers'" class="managed-servers-view">
+           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <h1 class="gradient-text">Managed Servers</h1>
+              <button class="premium-btn" @click="openProvisionModal">+ Provision Server</button>
+           </div>
+
+           <!-- Providers Status -->
+           <div class="glass-card" style="padding: 1rem; margin-bottom: 1.5rem;" v-if="vpsProviders.length">
+              <h4 style="margin: 0 0 0.5rem 0;">Available Providers</h4>
+              <div style="display: flex; gap: 1rem;">
+                 <div v-for="p in vpsProviders" :key="p.provider" class="provider-badge" :class="{ configured: p.configured }">
+                    <span class="provider-icon">{{ getProviderIcon(p.provider) }}</span>
+                    <span>{{ p.name }}</span>
+                    <span :class="['status-dot', p.configured ? 'online' : 'offline']"></span>
+                 </div>
+              </div>
+           </div>
+
+           <!-- Managed Servers List -->
+           <div v-if="managedServers.length === 0" class="glass-card empty-state" style="padding: 3rem; text-align: center;">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">☁️</div>
+              <h3>No managed servers yet</h3>
+              <p style="color: var(--text-secondary);">Provision your first cloud server with one click.</p>
+              <button class="premium-btn" style="margin-top: 1rem;" @click="openProvisionModal">+ Provision Server</button>
+           </div>
+
+           <div v-else class="managed-servers-grid">
+              <div v-for="server in managedServers" :key="server.id" class="glass-card server-card">
+                 <div class="server-header">
+                    <div class="provider-icon-large">{{ getProviderIcon(server.provider) }}</div>
+                    <div class="server-info">
+                       <h4>{{ server.hostname || server.id.slice(0, 12) }}</h4>
+                       <span :class="['status-badge', getManagedServerStatus(server.status).class]">
+                          {{ getManagedServerStatus(server.status).label }}
+                       </span>
+                    </div>
+                 </div>
+                 <div class="server-details">
+                    <div class="detail-row">
+                       <span class="label">Provider</span>
+                       <span class="value">{{ server.provider }}</span>
+                    </div>
+                    <div class="detail-row" v-if="server.ipAddress">
+                       <span class="label">IP Address</span>
+                       <span class="value monospace">{{ server.ipAddress }}</span>
+                    </div>
+                    <div class="detail-row" v-if="server.serverType">
+                       <span class="label">Type</span>
+                       <span class="value">{{ server.serverType }}</span>
+                    </div>
+                    <div class="detail-row" v-if="server.providerRegion">
+                       <span class="label">Region</span>
+                       <span class="value">{{ server.providerRegion }}</span>
+                    </div>
+                    <div class="detail-row" v-if="server.monthlyCostCents">
+                       <span class="label">Cost</span>
+                       <span class="value">{{ formatCurrency(server.monthlyCostCents) }}/mo</span>
+                    </div>
+                 </div>
+                 <div class="server-actions">
+                    <button class="action-btn danger" @click="deleteManagedServer(server)" title="Delete Server">🗑️</button>
+                 </div>
+              </div>
+           </div>
+        </div>
+
+        <!-- SETTINGS VIEW -->
+        <div v-else-if="activeMenu === 'settings'" class="settings-view">
+           <h1 class="gradient-text">{{ t('settings.title') }}</h1>
+           <p class="settings-subtitle">Manage your account and privacy settings</p>
+
+           <!-- Billing Information Card -->
+           <div class="settings-section">
+              <h2 class="section-title">Billing Information</h2>
+              <div class="glass-card settings-card">
+                 <div class="settings-grid">
+                    <div class="setting-item">
+                       <label>Full Name</label>
+                       <p>{{ user.billingName || '-' }}</p>
+                    </div>
+                    <div class="setting-item">
+                       <label>Email</label>
+                       <p>{{ user.billingEmail || user.email }}</p>
+                    </div>
+                    <div class="setting-item">
+                       <label>Company</label>
+                       <p>{{ user.billingCompany || '-' }}</p>
+                    </div>
+                    <div class="setting-item">
+                       <label>Phone</label>
+                       <p>{{ user.billingPhone || '-' }}</p>
+                    </div>
+                    <div class="setting-item full-width">
+                       <label>Address</label>
+                       <p>{{ user.billingAddress ? `${user.billingAddress}, ${user.billingPostalCode} ${user.billingCity}, ${user.billingCountry}` : '-' }}</p>
+                    </div>
+                    <div class="setting-item">
+                       <label>VAT Number</label>
+                       <p>{{ user.billingVatNumber || '-' }}</p>
+                    </div>
+                 </div>
+              </div>
+           </div>
+
+           <!-- Legal Acceptance Card -->
+           <div class="settings-section">
+              <h2 class="section-title">Legal Agreements</h2>
+              <div class="glass-card settings-card">
+                 <div class="legal-info">
+                    <div class="legal-item">
+                       <span class="legal-icon accepted">✓</span>
+                       <div class="legal-details">
+                          <strong>Terms of Service & General Conditions</strong>
+                          <span v-if="user.acceptedTermsAt">Accepted on {{ formatDate(user.acceptedTermsAt) }}</span>
+                       </div>
+                    </div>
+                    <div class="legal-item">
+                       <span class="legal-icon accepted">✓</span>
+                       <div class="legal-details">
+                          <strong>Privacy Policy (GDPR)</strong>
+                          <span v-if="user.acceptedPrivacyAt">Accepted on {{ formatDate(user.acceptedPrivacyAt) }}</span>
+                       </div>
+                    </div>
+                    <div class="legal-item">
+                       <span class="legal-icon accepted">✓</span>
+                       <div class="legal-details">
+                          <strong>Withdrawal Right Waiver</strong>
+                          <span v-if="user.waivedWithdrawalAt">Acknowledged on {{ formatDate(user.waivedWithdrawalAt) }}</span>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+           </div>
+
+           <!-- GDPR Data Rights -->
+           <div class="settings-section">
+              <h2 class="section-title">Your Data Rights (GDPR)</h2>
+              <div class="glass-card settings-card">
+                 <div class="gdpr-actions">
+                    <div class="gdpr-action">
+                       <div class="gdpr-info">
+                          <strong>Download Your Data</strong>
+                          <p>Get a copy of all your personal data we hold (Article 20 - Right to data portability)</p>
+                       </div>
+                       <button class="action-btn-outline" @click="downloadMyData" :disabled="downloadingData">
+                          {{ downloadingData ? 'Preparing...' : 'Download Data' }}
+                       </button>
+                    </div>
+                    <div class="gdpr-divider"></div>
+                    <div class="gdpr-action danger-zone">
+                       <div class="gdpr-info">
+                          <strong>Delete My Account</strong>
+                          <p>Permanently delete your account and all associated data (Article 17 - Right to erasure)</p>
+                       </div>
+                       <button class="action-btn-danger" @click="requestAccountDeletion">
+                          Delete Account
+                       </button>
+                    </div>
+                 </div>
+              </div>
+           </div>
+
+           <!-- Account Info -->
+           <div class="settings-section">
+              <h2 class="section-title">Account Information</h2>
+              <div class="glass-card settings-card">
+                 <div class="settings-grid">
+                    <div class="setting-item">
+                       <label>User ID</label>
+                       <p class="mono">{{ user.id }}</p>
+                    </div>
+                    <div class="setting-item">
+                       <label>Account Created</label>
+                       <p>{{ user.createdAt ? formatDate(user.createdAt) : '-' }}</p>
+                    </div>
+                    <div class="setting-item">
+                       <label>Role</label>
+                       <p><span :class="['role-badge', user.role]">{{ user.role }}</span></p>
+                    </div>
+                 </div>
+              </div>
+           </div>
+        </div>
+
+        <!-- SUPPORT VIEW -->
+        <div v-else-if="activeMenu === 'support'" class="support-view">
+           <div class="support-header">
+              <div class="support-header-content">
+                 <h1 class="gradient-text">{{ t('support.title') }}</h1>
+                 <p class="support-subtitle">{{ t('support.subtitle') }}</p>
+              </div>
+              <button class="new-ticket-btn" @click="showNewTicketModal = true">
+                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                 </svg>
+                 <span>{{ t('support.newTicket') }}</span>
+              </button>
+           </div>
+
+           <div class="support-layout">
+              <!-- Ticket List Panel -->
+              <div class="tickets-panel">
+                 <div class="tickets-panel-header">
+                    <h3>{{ t('support.myTickets') }}</h3>
+                    <span class="ticket-count">{{ supportTickets.length }}</span>
+                 </div>
+                 <div v-if="supportTickets.length === 0" class="empty-tickets">
+                    <div class="empty-icon">
+                       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M9 5H7C5.89543 5 5 5.89543 5 7V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V7C19 5.89543 18.1046 5 17 5H15M9 5C9 6.10457 9.89543 7 11 7H13C14.1046 7 15 6.10457 15 5M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                       </svg>
+                    </div>
+                    <p class="empty-title">{{ t('support.noTickets') }}</p>
+                    <p class="empty-description">{{ t('support.noTicketsDesc') }}</p>
+                 </div>
+                 <div v-else class="tickets-list">
+                    <div
+                       v-for="ticket in supportTickets"
+                       :key="ticket.id"
+                       class="ticket-item"
+                       :class="{ active: selectedTicket?.id === ticket.id }"
+                       @click="loadTicketDetails(ticket.id)"
+                    >
+                       <div class="ticket-item-top">
+                          <span :class="['ticket-status-badge', getTicketStatusClass(ticket.status)]">
+                             <span class="status-dot"></span>
+                             {{ ticket.status }}
+                          </span>
+                          <span v-if="ticket.unreadCount > 0" class="unread-badge">{{ ticket.unreadCount }} {{ t('support.newLabel') }}</span>
+                       </div>
+                       <div class="ticket-subject">{{ ticket.subject }}</div>
+                       <div class="ticket-meta">
+                          <span class="ticket-category-tag">{{ getCategoryLabel(ticket.category) }}</span>
+                          <span class="ticket-date">{{ formatDate(ticket.lastMessageAt || ticket.createdAt) }}</span>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+
+              <!-- Ticket Chat Panel -->
+              <div class="chat-panel">
+                 <div v-if="!selectedTicket" class="empty-chat">
+                    <div class="empty-chat-icon">
+                       <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M8 12H8.01M12 12H12.01M16 12H16.01M21 12C21 16.4183 16.9706 20 12 20C10.4607 20 9.01172 19.6565 7.74467 19.0511L3 20L4.39499 16.28C3.51156 15.0423 3 13.5743 3 12C3 7.58172 7.02944 4 12 4C16.9706 4 21 7.58172 21 12Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                       </svg>
+                    </div>
+                    <p class="empty-chat-title">{{ t('support.selectConversation') }}</p>
+                    <p class="empty-chat-description">{{ t('support.selectConversationDesc') }}</p>
+                 </div>
+                 <div v-else class="chat-content">
+                    <div class="chat-header">
+                       <div class="chat-header-info">
+                          <h3 class="chat-title">{{ selectedTicket.subject }}</h3>
+                          <div class="chat-badges">
+                             <span :class="['ticket-status-badge', getTicketStatusClass(selectedTicket.status)]">
+                                <span class="status-dot"></span>
+                                {{ selectedTicket.status }}
+                             </span>
+                             <span :class="['ticket-priority-badge', getPriorityClass(selectedTicket.priority)]">{{ selectedTicket.priority }}</span>
+                             <span class="ticket-category-tag">{{ getCategoryLabel(selectedTicket.category) }}</span>
+                          </div>
+                       </div>
+                    </div>
+
+                    <div class="chat-messages" ref="chatMessagesRef">
+                       <div
+                          v-for="(msg, index) in ticketMessages"
+                          :key="msg.id"
+                          class="message-wrapper"
+                          :class="{ 'message-user-wrapper': msg.senderType === 'user' }"
+                       >
+                          <div
+                             :class="['message-bubble', msg.senderType === 'user' ? 'message-user' : 'message-support', { 'message-ai': msg.senderType === 'ai', 'message-system': msg.senderType === 'system' }]"
+                          >
+                             <div class="message-bubble-header">
+                                <span class="message-sender">
+                                   <template v-if="msg.senderType === 'user'">{{ t('support.senderYou') }}</template>
+                                   <template v-else-if="msg.senderType === 'ai'">{{ t('support.senderAi') }}</template>
+                                   <template v-else-if="msg.senderType === 'system'">{{ t('support.senderSystem') }}</template>
+                                   <template v-else>{{ msg.senderName || t('support.senderSupport') }}</template>
+                                </span>
+                             </div>
+                             <div class="message-text">{{ msg.content }}</div>
+                             <div class="message-timestamp">{{ formatDate(msg.createdAt) }}</div>
+                          </div>
+                       </div>
+                    </div>
+
+                    <!-- Attachments -->
+                    <div v-if="ticketAttachments.length > 0" class="chat-attachments">
+                       <div class="attachments-header">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                             <path d="M21.44 11.05L12.25 20.24C10.7051 21.7849 8.10429 21.7849 6.55935 20.24C5.0144 18.6951 5.0144 16.0943 6.55935 14.5493L15.7493 5.35939C16.7051 4.40359 18.2456 4.40359 19.2014 5.35939C20.1572 6.31519 20.1572 7.85569 19.2014 8.81149L10.0114 18.0015C9.53353 18.4794 8.76327 18.4794 8.28538 18.0015C7.80749 17.5236 7.80749 16.7534 8.28538 16.2755L16.7854 7.77549" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                          <span>{{ t('support.attachments') }} ({{ ticketAttachments.length }})</span>
+                       </div>
+                       <div class="attachments-grid">
+                          <div v-for="att in ticketAttachments" :key="att.id" class="attachment-item" @click="downloadAttachment(att)">
+                             <div class="attachment-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                   <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8M14 2L20 8M14 2V8H20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                             </div>
+                             <div class="attachment-info">
+                                <span class="attachment-name">{{ att.fileName }}</span>
+                                <span class="attachment-size">{{ formatFileSize(att.fileSize) }}</span>
+                             </div>
+                             <div class="attachment-download">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                   <path d="M21 15V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V15M7 10L12 15M12 15L17 10M12 15V3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                             </div>
+                          </div>
+                       </div>
+                    </div>
+
+                    <!-- Reply Input Area -->
+                    <div v-if="selectedTicket.status !== 'closed'" class="chat-input-area">
+                       <div class="chat-input-wrapper">
+                          <textarea
+                             v-model="newMessage"
+                             :placeholder="t('support.typeMessage')"
+                             rows="1"
+                             class="chat-input"
+                             @keydown.enter.exact.prevent="sendTicketMessage"
+                             @input="autoResizeTextarea"
+                          ></textarea>
+                          <div class="chat-input-actions">
+                             <label class="attach-btn" title="Attach file">
+                                <input type="file" multiple @change="uploadTicketFile" accept="image/*,.pdf,.txt,.zip" hidden />
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                   <path d="M21.44 11.05L12.25 20.24C10.7051 21.7849 8.10429 21.7849 6.55935 20.24C5.0144 18.6951 5.0144 16.0943 6.55935 14.5493L15.7493 5.35939C16.7051 4.40359 18.2456 4.40359 19.2014 5.35939C20.1572 6.31519 20.1572 7.85569 19.2014 8.81149L10.0114 18.0015C9.53353 18.4794 8.76327 18.4794 8.28538 18.0015C7.80749 17.5236 7.80749 16.7534 8.28538 16.2755L16.7854 7.77549" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                             </label>
+                             <button
+                                class="send-btn"
+                                @click="sendTicketMessage"
+                                :disabled="sendingMessage || !newMessage.trim()"
+                                title="Send message"
+                             >
+                                <svg v-if="!sendingMessage" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                   <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span v-else class="sending-spinner"></span>
+                             </button>
+                          </div>
+                       </div>
+                       <p class="input-hint">{{ t('support.inputHint') }}</p>
+                    </div>
+                    <div v-else class="ticket-closed-notice">
+                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="1.5"/>
+                          <path d="M12 8V12M12 16H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                       </svg>
+                       <span>{{ t('support.ticketClosed') }}</span>
+                    </div>
+                 </div>
+              </div>
+           </div>
+
+           <!-- New Ticket Modal -->
+           <div v-if="showNewTicketModal" class="modal-overlay" @click.self="showNewTicketModal = false">
+              <div class="new-ticket-modal">
+                 <div class="modal-header">
+                    <h2>{{ t('support.createTicket') }}</h2>
+                    <button class="modal-close-btn" @click="showNewTicketModal = false">
+                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                       </svg>
+                    </button>
+                 </div>
+                 <div class="modal-body">
+                    <div class="form-row">
+                       <div class="form-group">
+                          <label>{{ t('support.category') }}</label>
+                          <select v-model="newTicketForm.category" class="form-select">
+                             <option value="general">{{ t('support.categories.general') }}</option>
+                             <option value="billing">{{ t('support.categories.billing') }}</option>
+                             <option value="technical">{{ t('support.categories.technical') }}</option>
+                             <option value="feature_request">{{ t('support.categories.featureRequest') }}</option>
+                             <option value="bug_report">{{ t('support.categories.bugReport') }}</option>
+                          </select>
+                       </div>
+                       <div class="form-group">
+                          <label>{{ t('support.priority') }}</label>
+                          <select v-model="newTicketForm.priority" class="form-select priority-select">
+                             <option value="low">{{ t('support.priorities.low') }} - {{ t('support.priorities.lowDesc') }}</option>
+                             <option value="normal">{{ t('support.priorities.normal') }} - {{ t('support.priorities.normalDesc') }}</option>
+                             <option value="high">{{ t('support.priorities.high') }} - {{ t('support.priorities.highDesc') }}</option>
+                             <option value="urgent">{{ t('support.priorities.urgent') }} - {{ t('support.priorities.urgentDesc') }}</option>
+                          </select>
+                       </div>
+                    </div>
+                    <div class="form-group">
+                       <label>{{ t('support.subject') }}</label>
+                       <input v-model="newTicketForm.subject" type="text" :placeholder="t('support.subjectPlaceholder')" class="form-input" />
+                    </div>
+                    <div class="form-group">
+                       <label>{{ t('support.description') }}</label>
+                       <textarea v-model="newTicketForm.message" rows="6" :placeholder="t('support.descriptionPlaceholder')" class="form-textarea"></textarea>
+                    </div>
+                 </div>
+                 <div class="modal-footer">
+                    <button class="cancel-btn" @click="showNewTicketModal = false">{{ t('common.cancel') }}</button>
+                    <button class="submit-btn" @click="createSupportTicket" :disabled="!newTicketForm.subject.trim() || !newTicketForm.message.trim()">
+                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                       </svg>
+                       {{ t('support.createTicket') }}
+                    </button>
+                 </div>
+              </div>
+           </div>
+        </div>
+
+        <!-- ADMIN USERS VIEW -->
+        <div v-else-if="activeMenu === 'admin-users'" class="admin-view">
+           <h1 class="gradient-text">{{ t('admin.users.title') }}</h1>
+           <div class="glass-card" style="padding: 1rem; overflow-x: auto;">
+              <table class="admin-table">
+                 <thead>
+                    <tr>
+                       <th>{{ t('admin.users.email') }}</th>
+                       <th>{{ t('admin.users.name') }}</th>
+                       <th>{{ t('admin.users.role') }}</th>
+                       <th>{{ t('admin.users.plan') }}</th>
+                       <th>{{ t('admin.users.onboarding') }}</th>
+                       <th>{{ t('admin.users.createdAt') }}</th>
+                       <th>{{ t('admin.users.actions') }}</th>
+                    </tr>
+                 </thead>
+                 <tbody>
+                    <tr v-for="u in adminUsers" :key="u.id">
+                       <td>{{ u.email }}</td>
+                       <td>{{ u.name || '-' }}</td>
+                       <td>
+                          <select :value="u.role" @change="updateUserRole(u.id, ($event.target as HTMLSelectElement).value)" class="role-select">
+                             <option value="user">{{ t('admin.users.user') }}</option>
+                             <option value="admin">{{ t('admin.users.adminRole') }}</option>
+                          </select>
+                       </td>
+                       <td><span class="plan-badge">{{ u.plan }}</span></td>
+                       <td>
+                          <span :class="['onboarding-badge', u.onboardingCompleted ? 'complete' : 'pending']">
+                             {{ u.onboardingCompleted ? t('admin.users.complete') : t('admin.users.pending') }}
+                          </span>
+                       </td>
+                       <td>{{ new Date(u.createdAt * 1000).toLocaleDateString() }}</td>
+                       <td>
+                          <button class="action-btn" @click="viewUserDetails(u)" :title="t('admin.users.viewDetails')">📋</button>
+                          <button class="action-btn" @click="impersonateUser(u.id)" :title="t('admin.users.impersonate')">👤</button>
+                          <button class="action-btn" @click="assignUserPlan(u.id)" :title="t('admin.users.assignPlan')">💳</button>
+                       </td>
+                    </tr>
+                 </tbody>
+              </table>
+           </div>
+
+           <!-- User Details Modal -->
+           <div v-if="selectedUserDetails" class="modal-overlay" @click.self="selectedUserDetails = null">
+              <div class="modal-box user-details-modal">
+                 <h3>{{ t('userDetails.title') }}</h3>
+                 <div class="user-details-grid">
+                    <div class="detail-section">
+                       <h4>{{ t('userDetails.accountInfo') }}</h4>
+                       <div class="detail-row"><span class="label">{{ t('userDetails.id') }}</span><span class="value mono">{{ selectedUserDetails.id }}</span></div>
+                       <div class="detail-row"><span class="label">{{ t('userDetails.email') }}</span><span class="value">{{ selectedUserDetails.email }}</span></div>
+                       <div class="detail-row"><span class="label">{{ t('userDetails.name') }}</span><span class="value">{{ selectedUserDetails.name || '-' }}</span></div>
+                       <div class="detail-row"><span class="label">{{ t('userDetails.role') }}</span><span class="value"><span :class="['role-badge', selectedUserDetails.role]">{{ selectedUserDetails.role }}</span></span></div>
+                       <div class="detail-row"><span class="label">{{ t('userDetails.createdAt') }}</span><span class="value">{{ selectedUserDetails.createdAt ? formatDate(selectedUserDetails.createdAt) : '-' }}</span></div>
+                    </div>
+                    <div class="detail-section">
+                       <h4>{{ t('userDetails.billingInfo') }}</h4>
+                       <div class="detail-row"><span class="label">{{ t('userDetails.billingName') }}</span><span class="value">{{ selectedUserDetails.billingName || '-' }}</span></div>
+                       <div class="detail-row"><span class="label">{{ t('userDetails.billingEmail') }}</span><span class="value">{{ selectedUserDetails.billingEmail || '-' }}</span></div>
+                       <div class="detail-row"><span class="label">{{ t('userDetails.company') }}</span><span class="value">{{ selectedUserDetails.billingCompany || '-' }}</span></div>
+                       <div class="detail-row"><span class="label">{{ t('userDetails.phone') }}</span><span class="value">{{ selectedUserDetails.billingPhone || '-' }}</span></div>
+                       <div class="detail-row"><span class="label">{{ t('userDetails.vatNumber') }}</span><span class="value">{{ selectedUserDetails.billingVatNumber || '-' }}</span></div>
+                       <div class="detail-row"><span class="label">{{ t('userDetails.address') }}</span><span class="value">{{ selectedUserDetails.billingAddress || '-' }}</span></div>
+                       <div class="detail-row"><span class="label">{{ t('userDetails.city') }}</span><span class="value">{{ selectedUserDetails.billingCity || '-' }}</span></div>
+                       <div class="detail-row"><span class="label">{{ t('userDetails.postalCode') }}</span><span class="value">{{ selectedUserDetails.billingPostalCode || '-' }}</span></div>
+                       <div class="detail-row"><span class="label">{{ t('userDetails.country') }}</span><span class="value">{{ selectedUserDetails.billingCountry || '-' }}</span></div>
+                    </div>
+                    <div class="detail-section">
+                       <h4>{{ t('userDetails.legalAcceptance') }}</h4>
+                       <div class="detail-row">
+                          <span class="label">{{ t('userDetails.termsAccepted') }}</span>
+                          <span class="value">{{ selectedUserDetails.acceptedTermsAt ? formatDate(selectedUserDetails.acceptedTermsAt) : t('userDetails.notAccepted') }}</span>
+                       </div>
+                       <div class="detail-row">
+                          <span class="label">{{ t('userDetails.privacyAccepted') }}</span>
+                          <span class="value">{{ selectedUserDetails.acceptedPrivacyAt ? formatDate(selectedUserDetails.acceptedPrivacyAt) : t('userDetails.notAccepted') }}</span>
+                       </div>
+                       <div class="detail-row">
+                          <span class="label">{{ t('userDetails.withdrawalWaived') }}</span>
+                          <span class="value">{{ selectedUserDetails.waivedWithdrawalAt ? formatDate(selectedUserDetails.waivedWithdrawalAt) : t('userDetails.notWaived') }}</span>
+                       </div>
+                    </div>
+                    <div class="detail-section">
+                       <h4>Stripe</h4>
+                       <div class="detail-row"><span class="label">{{ t('userDetails.stripe') }}</span><span class="value mono">{{ selectedUserDetails.stripeCustomerId || '-' }}</span></div>
+                    </div>
+                 </div>
+                 <div class="modal-actions">
+                    <button class="secondary" @click="selectedUserDetails = null">{{ t('common.close') }}</button>
+                 </div>
+              </div>
+           </div>
+        </div>
+
+        <!-- ADMIN PLANS VIEW -->
+        <div v-else-if="activeMenu === 'admin-plans'" class="admin-view">
+           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <h1 class="gradient-text">{{ t('admin.plans.title') }}</h1>
+              <button class="premium-btn" @click="openPlanModal()">+ {{ t('admin.plans.createPlan') }}</button>
+           </div>
+           <div class="plans-admin-grid">
+              <div v-for="plan in adminPlans" :key="plan.id" class="glass-card" style="padding: 1rem;">
+                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                       <h4 style="margin: 0;">{{ plan.displayName }} <span v-if="plan.isDefault" class="badge-default">{{ t('admin.plans.isDefault') }}</span></h4>
+                       <p style="color: #64748b; margin: 0.25rem 0;">{{ plan.name }}</p>
+                    </div>
+                    <span :class="['status-badge', plan.isActive ? 'online' : 'offline']">{{ plan.isActive ? t('admin.plans.isActive') : 'Inactive' }}</span>
+                 </div>
+                 <div class="plan-stats">
+                    <div><strong>{{ formatCurrency(plan.priceMonthly) }}</strong>{{ t('billing.perMonth') }}</div>
+                    <div><strong>{{ formatCurrency(plan.priceYearly) }}</strong>{{ t('billing.perYear') }}</div>
+                 </div>
+                 <div class="plan-limits-compact">
+                    <span>{{ plan.maxServers }} srv</span>
+                    <span>{{ plan.maxApps }} apps</span>
+                    <span>{{ plan.maxDomains }} dom</span>
+                    <span>{{ plan.maxDeploysPerDay }} dep/d</span>
+                 </div>
+                 <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                    <button class="action-btn" @click="openPlanModal(plan)">{{ t('common.edit') }}</button>
+                    <button class="action-btn danger" @click="deletePlan(plan.id)" v-if="!plan.isDefault">{{ t('common.delete') }}</button>
+                 </div>
+              </div>
+           </div>
+        </div>
+
+        <!-- ADMIN METRICS VIEW -->
+        <div v-else-if="activeMenu === 'admin-metrics'" class="admin-view metrics-dashboard">
+           <h1 class="gradient-text">{{ t('admin.metrics.title') }}</h1>
+
+           <!-- KPI Cards Row -->
+           <div class="kpi-grid" v-if="adminMetrics">
+              <div class="kpi-card users">
+                 <div class="kpi-icon">👥</div>
+                 <div class="kpi-content">
+                    <div class="kpi-value">{{ adminMetrics.users.total }}</div>
+                    <div class="kpi-label">{{ t('admin.metrics.totalUsers') }}</div>
+                    <div class="kpi-trend positive" v-if="adminMetrics.users.recentSignups > 0">
+                       <span class="trend-icon">↑</span> +{{ adminMetrics.users.recentSignups }} {{ t('admin.metrics.thisWeek') }}
+                    </div>
+                 </div>
+              </div>
+
+              <div class="kpi-card subscriptions">
+                 <div class="kpi-icon">💳</div>
+                 <div class="kpi-content">
+                    <div class="kpi-value">{{ adminMetrics.subscriptions.active }}</div>
+                    <div class="kpi-label">{{ t('admin.metrics.activeSubscriptions') }}</div>
+                    <div class="kpi-trend neutral">
+                       {{ adminMetrics.users.total > 0 ? Math.round((adminMetrics.subscriptions.active / adminMetrics.users.total) * 100) : 0 }}% {{ t('admin.metrics.conversion') }}
+                    </div>
+                 </div>
+              </div>
+
+              <div class="kpi-card servers">
+                 <div class="kpi-icon">🖥️</div>
+                 <div class="kpi-content">
+                    <div class="kpi-value">{{ adminMetrics.infrastructure.servers }}</div>
+                    <div class="kpi-label">{{ t('admin.metrics.connectedServers') }}</div>
+                    <div class="kpi-trend neutral">
+                       {{ adminMetrics.infrastructure.apps }} {{ t('admin.metrics.appsDeployed') }}
+                    </div>
+                 </div>
+              </div>
+
+              <div class="kpi-card revenue">
+                 <div class="kpi-icon">💰</div>
+                 <div class="kpi-content">
+                    <div class="kpi-value">{{ adminMetrics.revenue.mrrFormatted }}</div>
+                    <div class="kpi-label">{{ t('admin.metrics.mrr') }}</div>
+                    <div class="kpi-trend positive" v-if="adminMetrics.revenue.mrr > 0">
+                       <span class="trend-icon">↑</span> {{ t('admin.metrics.activeBilling') }}
+                    </div>
+                    <div class="kpi-trend neutral" v-else>
+                       {{ t('admin.metrics.noPaidSubs') }}
+                    </div>
+                 </div>
+              </div>
+           </div>
+
+           <!-- Charts Row -->
+           <div class="charts-grid" v-if="adminMetrics">
+              <!-- User Distribution Chart -->
+              <div class="glass-card chart-card">
+                 <h3 class="chart-title">{{ t('admin.metrics.userDistribution') }}</h3>
+                 <div class="donut-chart-container">
+                    <svg class="donut-chart" viewBox="0 0 100 100">
+                       <!-- Background circle -->
+                       <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" stroke-width="12"/>
+                       <!-- Free users -->
+                       <circle cx="50" cy="50" r="40" fill="none" stroke="#3b82f6" stroke-width="12"
+                          :stroke-dasharray="getFreeUsersArc()"
+                          stroke-dashoffset="0"
+                          transform="rotate(-90 50 50)"
+                          class="donut-segment"/>
+                       <!-- Paid users -->
+                       <circle cx="50" cy="50" r="40" fill="none" stroke="#10b981" stroke-width="12"
+                          :stroke-dasharray="getPaidUsersArc()"
+                          :stroke-dashoffset="'-' + getFreeUsersOffset()"
+                          transform="rotate(-90 50 50)"
+                          class="donut-segment"/>
+                    </svg>
+                    <div class="donut-center">
+                       <div class="donut-total">{{ adminMetrics.users.total }}</div>
+                       <div class="donut-label">{{ t('admin.metrics.users') }}</div>
+                    </div>
+                 </div>
+                 <div class="chart-legend">
+                    <div class="legend-item">
+                       <span class="legend-dot free"></span>
+                       <span>{{ t('admin.metrics.free') }}: {{ adminMetrics.users.total - adminMetrics.subscriptions.active }}</span>
+                    </div>
+                    <div class="legend-item">
+                       <span class="legend-dot paid"></span>
+                       <span>{{ t('admin.metrics.paid') }}: {{ adminMetrics.subscriptions.active }}</span>
+                    </div>
+                 </div>
+              </div>
+
+              <!-- Infrastructure Chart -->
+              <div class="glass-card chart-card">
+                 <h3 class="chart-title">{{ t('admin.metrics.infrastructureOverview') }}</h3>
+                 <div class="bar-chart">
+                    <div class="bar-item">
+                       <div class="bar-label">{{ t('admin.metrics.servers') }}</div>
+                       <div class="bar-container">
+                          <div class="bar-fill servers" :style="{ width: getBarWidth(adminMetrics.infrastructure.servers, Math.max(adminMetrics.infrastructure.servers, adminMetrics.infrastructure.apps, 1) * 1.5) }"></div>
+                       </div>
+                       <div class="bar-value">{{ adminMetrics.infrastructure.servers }}</div>
+                    </div>
+                    <div class="bar-item">
+                       <div class="bar-label">{{ t('admin.metrics.applications') }}</div>
+                       <div class="bar-container">
+                          <div class="bar-fill apps" :style="{ width: getBarWidth(adminMetrics.infrastructure.apps, Math.max(adminMetrics.infrastructure.servers, adminMetrics.infrastructure.apps, 1) * 1.5) }"></div>
+                       </div>
+                       <div class="bar-value">{{ adminMetrics.infrastructure.apps }}</div>
+                    </div>
+                    <div class="bar-item">
+                       <div class="bar-label">{{ t('admin.metrics.domains') }}</div>
+                       <div class="bar-container">
+                          <div class="bar-fill domains" :style="{ width: getBarWidth(proxies.length, Math.max(adminMetrics.infrastructure.servers, adminMetrics.infrastructure.apps, proxies.length, 1) * 1.5) }"></div>
+                       </div>
+                       <div class="bar-value">{{ proxies.length }}</div>
+                    </div>
+                 </div>
+              </div>
+
+              <!-- Revenue Gauge -->
+              <div class="glass-card chart-card">
+                 <h3 class="chart-title">{{ t('admin.metrics.revenueMetrics') }}</h3>
+                 <div class="revenue-display">
+                    <div class="revenue-main">
+                       <div class="revenue-amount">{{ adminMetrics.revenue.mrrFormatted }}</div>
+                       <div class="revenue-period">per month</div>
+                    </div>
+                    <div class="revenue-stats">
+                       <div class="stat-row">
+                          <span class="stat-label">ARR (Annual)</span>
+                          <span class="stat-value">{{ formatCurrency(adminMetrics.revenue.mrr * 12) }}</span>
+                       </div>
+                       <div class="stat-row">
+                          <span class="stat-label">Avg. per User</span>
+                          <span class="stat-value">{{ adminMetrics.subscriptions.active > 0 ? formatCurrency(adminMetrics.revenue.mrr / adminMetrics.subscriptions.active) : '0,00 €' }}</span>
+                       </div>
+                       <div class="stat-row">
+                          <span class="stat-label">Conversion Rate</span>
+                          <span class="stat-value">{{ adminMetrics.users.total > 0 ? Math.round((adminMetrics.subscriptions.active / adminMetrics.users.total) * 100) : 0 }}%</span>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+           </div>
+
+           <!-- Quick Stats -->
+           <div class="glass-card quick-stats" v-if="adminMetrics">
+              <h3 class="chart-title">Quick Stats</h3>
+              <div class="stats-row">
+                 <div class="stat-item">
+                    <span class="stat-icon">📈</span>
+                    <div class="stat-content">
+                       <div class="stat-number">{{ adminMetrics.users.recentSignups }}</div>
+                       <div class="stat-desc">New signups (7 days)</div>
+                    </div>
+                 </div>
+                 <div class="stat-item">
+                    <span class="stat-icon">🎯</span>
+                    <div class="stat-content">
+                       <div class="stat-number">{{ adminMetrics.users.total > 0 ? (adminMetrics.infrastructure.apps / adminMetrics.users.total).toFixed(1) : 0 }}</div>
+                       <div class="stat-desc">Apps per user</div>
+                    </div>
+                 </div>
+                 <div class="stat-item">
+                    <span class="stat-icon">⚡</span>
+                    <div class="stat-content">
+                       <div class="stat-number">{{ adminMetrics.infrastructure.servers > 0 ? (adminMetrics.infrastructure.apps / adminMetrics.infrastructure.servers).toFixed(1) : 0 }}</div>
+                       <div class="stat-desc">Apps per server</div>
+                    </div>
+                 </div>
+                 <div class="stat-item">
+                    <span class="stat-icon">🌐</span>
+                    <div class="stat-content">
+                       <div class="stat-number">{{ proxies.length }}</div>
+                       <div class="stat-desc">Active domains</div>
+                    </div>
+                 </div>
+              </div>
+           </div>
+        </div>
+
+        <!-- ADMIN SUPPORT VIEW -->
+        <div v-else-if="activeMenu === 'admin-support'" class="admin-view support-admin">
+           <h1 class="gradient-text">{{ t('support.admin.title') }}</h1>
+
+           <!-- Support Metrics -->
+           <div class="support-metrics" v-if="supportMetrics">
+              <div class="metric-card open">
+                 <div class="metric-value">{{ supportMetrics.openTickets }}</div>
+                 <div class="metric-label">{{ t('support.statuses.open') }}</div>
+              </div>
+              <div class="metric-card progress">
+                 <div class="metric-value">{{ supportMetrics.inProgressTickets }}</div>
+                 <div class="metric-label">{{ t('support.statuses.inProgress') }}</div>
+              </div>
+              <div class="metric-card resolved">
+                 <div class="metric-value">{{ supportMetrics.resolvedTickets }}</div>
+                 <div class="metric-label">{{ t('support.statuses.resolved') }}</div>
+              </div>
+              <div class="metric-card unread">
+                 <div class="metric-value">{{ supportMetrics.unreadMessages }}</div>
+                 <div class="metric-label">{{ t('support.newLabel') }}</div>
+              </div>
+              <div class="metric-card new">
+                 <div class="metric-value">{{ supportMetrics.newThisWeek }}</div>
+                 <div class="metric-label">{{ t('time.weeksAgo', 1).replace('1 ', '') }}</div>
+              </div>
+           </div>
+
+           <!-- Tabs -->
+           <div class="support-tabs">
+              <button :class="{ active: !showCannedResponseModal }" @click="showCannedResponseModal = false; loadAdminTickets()">{{ t('support.tickets') }}</button>
+              <button :class="{ active: showCannedResponseModal }" @click="showCannedResponseModal = true; loadCannedResponses()">{{ t('support.admin.cannedResponses') }}</button>
+           </div>
+
+           <!-- Ticket Filters -->
+           <div class="ticket-filters glass-card">
+              <select v-model="adminTicketFilters.status" @change="loadAdminTickets()" class="filter-select">
+                 <option value="">{{ t('common.all') }} {{ t('support.status') }}</option>
+                 <option value="open">{{ t('support.statuses.open') }}</option>
+                 <option value="pending">{{ t('support.statuses.pending') }}</option>
+                 <option value="in_progress">{{ t('support.statuses.inProgress') }}</option>
+                 <option value="resolved">{{ t('support.statuses.resolved') }}</option>
+                 <option value="closed">{{ t('support.statuses.closed') }}</option>
+              </select>
+              <select v-model="adminTicketFilters.category" @change="loadAdminTickets()" class="filter-select">
+                 <option value="">{{ t('common.all') }} {{ t('support.category') }}</option>
+                 <option value="general">{{ t('support.categories.general') }}</option>
+                 <option value="billing">{{ t('support.categories.billing') }}</option>
+                 <option value="technical">{{ t('support.categories.technical') }}</option>
+                 <option value="feature_request">{{ t('support.categories.featureRequest') }}</option>
+                 <option value="bug_report">{{ t('support.categories.bugReport') }}</option>
+              </select>
+              <select v-model="adminTicketFilters.priority" @change="loadAdminTickets()" class="filter-select">
+                 <option value="">{{ t('common.all') }} {{ t('support.priority') }}</option>
+                 <option value="low">{{ t('support.priorities.low') }}</option>
+                 <option value="normal">{{ t('support.priorities.normal') }}</option>
+                 <option value="high">{{ t('support.priorities.high') }}</option>
+                 <option value="urgent">{{ t('support.priorities.urgent') }}</option>
+              </select>
+           </div>
+
+           <div class="admin-support-layout">
+              <!-- Tickets List -->
+              <div class="admin-tickets-panel glass-card">
+                 <h3>{{ t('support.tickets') }}</h3>
+                 <div v-if="adminTickets.length === 0" class="empty-state">
+                    <p>{{ t('support.noTickets') }}</p>
+                 </div>
+                 <div v-else class="admin-tickets-list">
+                    <div
+                       v-for="ticket in adminTickets"
+                       :key="ticket.id"
+                       class="admin-ticket-item"
+                       :class="{ active: selectedTicket?.id === ticket.id }"
+                       @click="loadTicketDetails(ticket.id)"
+                    >
+                       <div class="ticket-row-header">
+                          <span :class="['ticket-status', getTicketStatusClass(ticket.status)]">{{ ticket.status }}</span>
+                          <span :class="['ticket-priority', getPriorityClass(ticket.priority)]">{{ ticket.priority }}</span>
+                          <span v-if="ticket.unreadCount > 0" class="unread-badge">{{ ticket.unreadCount }}</span>
+                       </div>
+                       <div class="ticket-subject">{{ ticket.subject }}</div>
+                       <div class="ticket-user">
+                          <span class="user-email">{{ ticket.userEmail }}</span>
+                          <span class="user-name">{{ ticket.userName }}</span>
+                       </div>
+                       <div class="ticket-meta">
+                          <span>{{ getCategoryLabel(ticket.category) }}</span>
+                          <span>{{ formatDate(ticket.lastMessageAt || ticket.createdAt) }}</span>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+
+              <!-- Ticket Detail / Chat -->
+              <div class="admin-chat-panel glass-card" :class="{ expanded: expandedAdminChat }">
+                 <div v-if="!selectedTicket" class="empty-state">
+                    <p>{{ t('support.selectConversationDesc') }}</p>
+                 </div>
+                 <div v-else class="admin-chat-content">
+                    <div class="admin-chat-header">
+                       <div>
+                          <h3>{{ selectedTicket.subject }}</h3>
+                          <div class="chat-meta">
+                             <select :value="selectedTicket.status" @change="updateTicketStatus(selectedTicket.id, ($event.target as HTMLSelectElement).value)" class="status-select">
+                                <option value="open">{{ t('support.statuses.open') }}</option>
+                                <option value="pending">{{ t('support.statuses.pending') }}</option>
+                                <option value="in_progress">{{ t('support.statuses.inProgress') }}</option>
+                                <option value="resolved">{{ t('support.statuses.resolved') }}</option>
+                                <option value="closed">{{ t('support.statuses.closed') }}</option>
+                             </select>
+                             <span :class="['ticket-priority', getPriorityClass(selectedTicket.priority)]">{{ selectedTicket.priority }}</span>
+                             <span>{{ getCategoryLabel(selectedTicket.category) }}</span>
+                          </div>
+                       </div>
+                       <button class="expand-btn" @click="expandedAdminChat = !expandedAdminChat" :title="expandedAdminChat ? 'Réduire' : 'Agrandir'">
+                          {{ expandedAdminChat ? '⊖' : '⊕' }}
+                       </button>
+                    </div>
+
+                    <div class="chat-messages admin-messages">
+                       <div
+                          v-for="msg in ticketMessages"
+                          :key="msg.id"
+                          :class="['message', msg.senderType === 'user' ? 'message-user' : 'message-support', msg.isInternal ? 'message-internal' : '']"
+                       >
+                          <div class="message-header">
+                             <span class="message-sender">
+                                <template v-if="msg.senderType === 'user'">{{ msg.senderName || t('support.senderYou') }}</template>
+                                <template v-else-if="msg.senderType === 'ai'">🤖 {{ t('support.senderAi') }}</template>
+                                <template v-else-if="msg.senderType === 'system'">⚙️ {{ t('support.senderSystem') }}</template>
+                                <template v-else>{{ msg.senderName || t('support.senderSupport') }}</template>
+                                <span v-if="msg.isInternal" class="internal-badge">{{ t('support.admin.internal') }}</span>
+                             </span>
+                             <span class="message-time">{{ formatDate(msg.createdAt) }}</span>
+                          </div>
+                          <div class="message-content">{{ msg.content }}</div>
+                       </div>
+                    </div>
+
+                    <!-- Attachments Section -->
+                    <div v-if="ticketAttachments.length > 0" class="chat-attachments">
+                       <div class="attachments-header">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                             <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                          </svg>
+                          <span>{{ t('support.attachments') }} ({{ ticketAttachments.length }})</span>
+                       </div>
+                       <div class="attachments-grid">
+                          <div v-for="att in ticketAttachments" :key="att.id" class="attachment-item" @click="downloadAttachment(att)">
+                             <div class="attachment-icon">
+                                <svg v-if="att.mimeType?.startsWith('image/')" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                                </svg>
+                                <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                                </svg>
+                             </div>
+                             <div class="attachment-info">
+                                <span class="attachment-name">{{ att.fileName }}</span>
+                                <span class="attachment-size">{{ formatFileSize(att.fileSize) }}</span>
+                             </div>
+                             <div class="attachment-download">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                             </div>
+                          </div>
+                       </div>
+                    </div>
+
+                    <!-- Canned Responses Quick Insert -->
+                    <div v-if="cannedResponses.length > 0" class="canned-quick">
+                       <span>Quick:</span>
+                       <button v-for="cr in cannedResponses.slice(0, 3)" :key="cr.id" @click="insertCannedResponse(cr)" class="canned-btn">
+                          {{ cr.title }}
+                       </button>
+                    </div>
+
+                    <!-- Admin Reply Box -->
+                    <div class="admin-reply-box">
+                       <textarea v-model="newMessage" :placeholder="t('support.typeMessage')" rows="3"></textarea>
+                       <div class="reply-actions">
+                          <label class="file-upload-btn">
+                             <input type="file" multiple @change="uploadTicketFile" accept="image/*,.pdf,.txt,.zip" hidden />
+                             <span>📎</span>
+                          </label>
+                          <button class="secondary" @click="sendAdminReply(true)" :disabled="sendingMessage || !newMessage.trim()">
+                             {{ t('support.admin.internal') }}
+                          </button>
+                          <button class="primary-btn" @click="sendAdminReply(false)" :disabled="sendingMessage || !newMessage.trim()">
+                             {{ sendingMessage ? t('common.loading') : t('support.sendMessage') }}
+                          </button>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+           </div>
+
+           <!-- Canned Responses Management Modal -->
+           <div v-if="showCannedResponseModal" class="canned-responses-section glass-card" style="margin-top: 2rem;">
+              <div class="section-header">
+                 <h3>{{ t('support.admin.cannedResponses') }}</h3>
+                 <button class="primary-btn small" @click="openNewCannedResponse()">+ {{ t('support.admin.newResponse') }}</button>
+              </div>
+              <div class="canned-list">
+                 <div v-for="cr in cannedResponses" :key="cr.id" class="canned-item">
+                    <div class="canned-info">
+                       <strong>{{ cr.title }}</strong>
+                       <span v-if="cr.isAutoResponse" class="auto-badge">Auto</span>
+                       <span v-if="cr.category" class="category-badge">{{ cr.category }}</span>
+                    </div>
+                    <div class="canned-preview">{{ cr.content.substring(0, 100) }}...</div>
+                    <div class="canned-actions">
+                       <button class="action-btn" @click="openEditCannedResponse(cr)">✏️</button>
+                       <button class="action-btn danger" @click="deleteCannedResponse(cr.id)">🗑️</button>
+                    </div>
+                 </div>
+              </div>
+           </div>
+
+           <!-- Edit/Create Canned Response Modal -->
+           <div v-if="showCannedForm" class="modal-overlay" @click.self="showCannedForm = false; editingCannedResponse = null">
+              <div class="modal-card" style="max-width: 600px;">
+                 <h2>{{ editingCannedResponse ? t('support.admin.editResponse') : t('support.admin.newResponse') }}</h2>
+                 <div class="form-group">
+                    <label>{{ t('support.admin.responseTitle') }}</label>
+                    <input v-model="cannedResponseForm.title" type="text" class="form-input" />
+                 </div>
+                 <div class="form-group">
+                    <label>{{ t('support.admin.responseContent') }}</label>
+                    <textarea v-model="cannedResponseForm.content" rows="5" class="form-textarea"></textarea>
+                 </div>
+                 <div class="form-row">
+                    <div class="form-group">
+                       <label>{{ t('support.category') }} ({{ t('common.optional') }})</label>
+                       <select v-model="cannedResponseForm.category" class="form-select">
+                          <option value="">{{ t('common.all') }}</option>
+                          <option value="general">{{ t('support.categories.general') }}</option>
+                          <option value="billing">{{ t('support.categories.billing') }}</option>
+                          <option value="technical">{{ t('support.categories.technical') }}</option>
+                       </select>
+                    </div>
+                    <div class="form-group">
+                       <label>Sort Order</label>
+                       <input v-model.number="cannedResponseForm.sortOrder" type="number" class="form-input" />
+                    </div>
+                 </div>
+                 <div class="form-group">
+                    <label>{{ t('support.admin.keywords') }}</label>
+                    <input v-model="cannedResponseForm.keywords" type="text" :placeholder="t('support.admin.keywordsPlaceholder')" class="form-input" />
+                 </div>
+                 <div class="form-group checkbox">
+                    <label>
+                       <input type="checkbox" v-model="cannedResponseForm.isAutoResponse" />
+                       {{ t('support.admin.autoResponse') }}
+                    </label>
+                 </div>
+                 <div class="modal-actions">
+                    <button class="secondary" @click="showCannedForm = false; editingCannedResponse = null">{{ t('common.cancel') }}</button>
+                    <button class="primary-btn" @click="saveCannedResponse">{{ t('common.save') }}</button>
+                 </div>
+              </div>
+           </div>
+        </div>
+
         <!-- INFRASTRUCTURE VIEW -->
         <div v-else-if="activeMenu === 'infrastructure'">
            <!-- Connect New Node -->
            <div v-if="selectedServerId === 'pending'" class="onboarding-view">
               <div class="connect-header">
-                <button class="back-btn" @click="selectedServerId = null; resetSSHSession()">← Back</button>
-                <h1 class="gradient-text">Connect New Node</h1>
+                <button class="back-btn" @click="selectedServerId = null; resetSSHSession()">← {{ t('common.back') }}</button>
+                <h1 class="gradient-text">{{ t('infrastructure.connectServer') }}</h1>
               </div>
 
               <!-- Tab Navigation -->
@@ -1600,73 +4118,106 @@ function toggleConsoleFilter(type: string) {
                 <button
                   :class="['tab-btn', { active: connectTab === 'quick' }]"
                   @click="connectTab = 'quick'; if (!token) generateToken()"
-                >Quick Install</button>
+                >{{ t('infrastructure.quickInstall') }}</button>
                 <button
                   :class="['tab-btn', { active: connectTab === 'assisted' }]"
                   @click="connectTab = 'assisted'"
-                >Assisted Setup</button>
+                >{{ t('infrastructure.assistedInstall') }}</button>
               </div>
 
               <!-- Quick Install Tab -->
-              <div v-if="connectTab === 'quick' && token" class="glass-card onboarding-box">
-                <p class="quick-install-desc">Run this command on your Debian/Ubuntu server:</p>
-                <div class="terminal-mini" @click="copyCommand">
-                  <code class="code-line"><span class="prompt">$</span> curl -sSL {{ baseUrl }}/install.sh | bash -s -- --token <span class="token">{{ token }}</span> --url {{ baseUrl }}</code>
-                  <span class="copy-hint">Click to copy</span>
-                </div>
-                <div class="status-waiting"><div class="loader"></div> Waiting for connection...</div>
-                <div class="requirements-inline">
-                  <span>Requirements:</span> Debian/Ubuntu, root or sudo access, internet connectivity
-                </div>
+              <div v-if="connectTab === 'quick'" class="glass-card onboarding-box">
+                <!-- Token generated successfully -->
+                <template v-if="token">
+                  <p class="quick-install-desc">{{ t('infrastructure.runCommand') }}</p>
+                  <div class="terminal-mini" @click="copyCommand">
+                    <code class="code-line"><span class="prompt">$</span> curl -sSL {{ baseUrl }}/install.sh | bash -s -- --token <span class="token">{{ token }}</span> --url {{ baseUrl }}</code>
+                    <span class="copy-hint">{{ t('infrastructure.copyCommand') }}</span>
+                  </div>
+                  <div class="status-waiting"><div class="loader"></div> {{ t('infrastructure.connecting') }}</div>
+                  <div class="requirements-inline">
+                    <span>Requirements:</span> Debian/Ubuntu, root or sudo access, internet connectivity
+                  </div>
+                </template>
+                <!-- Limit reached error -->
+                <template v-else-if="tokenError">
+                  <div class="limit-error-box">
+                    <div class="limit-icon">🚫</div>
+                    <h3>{{ t('errors.limitExceeded') }}</h3>
+                    <p>{{ tokenError.message }}</p>
+                    <button class="premium-btn" @click="activeMenu = 'billing'">
+                      {{ t('billing.upgrade') }}
+                    </button>
+                  </div>
+                </template>
+                <!-- Loading state -->
+                <template v-else-if="loading">
+                  <div class="status-waiting"><div class="loader"></div> {{ t('common.loading') }}</div>
+                </template>
+                <!-- Initial state - trigger token generation -->
+                <template v-else>
+                  <div class="status-waiting">
+                    <button class="premium-btn" @click="generateToken">Generate Installation Token</button>
+                  </div>
+                </template>
               </div>
 
               <!-- Assisted Setup Tab -->
               <div v-else-if="connectTab === 'assisted'" class="glass-card assisted-setup-box">
+                <!-- Limit reached error -->
+                <div v-if="tokenError" class="limit-error-box">
+                  <div class="limit-icon">🚫</div>
+                  <h3>{{ t('errors.serverLimitReached') }}</h3>
+                  <p>{{ tokenError.message }}</p>
+                  <button class="premium-btn" @click="activeMenu = 'billing'">
+                    {{ t('billing.upgradePlan') }}
+                  </button>
+                </div>
                 <!-- Idle/Form State -->
-                <div v-if="sshSession.status === 'idle'" class="ssh-form">
-                  <p class="assisted-desc">Enter your server SSH credentials:</p>
+                <div v-else-if="sshSession.status === 'idle'" class="ssh-form">
+                  <p class="assisted-desc">{{ t('infrastructure.assistedDesc') }}</p>
 
                   <div class="ssh-fields">
                     <div class="form-row">
                       <div class="form-group flex-grow">
-                        <label>Server Address</label>
+                        <label>{{ t('infrastructure.serverAddress') }}</label>
                         <input v-model="sshForm.host" placeholder="192.168.1.100 or hostname" />
                       </div>
                       <div class="form-group port-field">
-                        <label>Port</label>
+                        <label>{{ t('infrastructure.port') }}</label>
                         <input v-model.number="sshForm.port" type="number" />
                       </div>
                     </div>
 
                     <div class="form-group">
-                      <label>Username</label>
+                      <label>{{ t('infrastructure.username') }}</label>
                       <input v-model="sshForm.username" placeholder="root" />
                     </div>
 
                     <div class="form-group">
-                      <label>Authentication</label>
+                      <label>{{ t('infrastructure.authentication') }}</label>
                       <div class="auth-toggle">
                         <button
                           :class="['auth-btn', { active: sshForm.authType === 'password' }]"
                           @click="sshForm.authType = 'password'"
-                        >Password</button>
+                        >{{ t('infrastructure.passwordAuth') }}</button>
                         <button
                           :class="['auth-btn', { active: sshForm.authType === 'key' }]"
                           @click="sshForm.authType = 'key'"
-                        >SSH Key</button>
+                        >{{ t('infrastructure.sshKey') }}</button>
                       </div>
                     </div>
 
                     <div v-if="sshForm.authType === 'password'" class="form-group">
-                      <label>Password</label>
-                      <input v-model="sshForm.password" type="password" placeholder="Enter SSH password" />
+                      <label>{{ t('infrastructure.passwordAuth') }}</label>
+                      <input v-model="sshForm.password" type="password" :placeholder="t('infrastructure.enterPassword')" />
                     </div>
 
                     <div v-else class="form-group">
-                      <label>Private Key</label>
+                      <label>{{ t('infrastructure.privateKey') }}</label>
                       <textarea
                         v-model="sshForm.privateKey"
-                        placeholder="Paste your private key here..."
+                        :placeholder="t('infrastructure.pastePrivateKey')"
                         rows="3"
                         class="key-textarea"
                       ></textarea>
@@ -1676,12 +4227,12 @@ function toggleConsoleFilter(type: string) {
                   <div class="ssh-options">
                     <label class="checkbox-label">
                       <input type="checkbox" v-model="sshForm.verbose" />
-                      <span>Show detailed output</span>
+                      <span>{{ t('infrastructure.showDetailedOutput') }}</span>
                     </label>
                   </div>
 
                   <button class="premium-btn full-width" @click="startSSHInstallation">
-                    🚀 Start Installation
+                    🚀 {{ t('infrastructure.startInstallation') }}
                   </button>
 
                   <div class="privacy-notice-inline">
@@ -1770,9 +4321,9 @@ function toggleConsoleFilter(type: string) {
            <!-- Infrastructure Overview -->
            <div v-else-if="!selectedServerId" class="infra-overview">
               <div class="infra-header">
-                 <h1 class="gradient-text">Infrastructure</h1>
+                 <h1 class="gradient-text">{{ t('nav.infrastructure') }}</h1>
                  <button class="add-node-btn" @click="selectedServerId = 'pending'; generateToken()">
-                    <span>+</span> Add Node
+                    <span>+</span> {{ t('infrastructure.connectServer') }}
                  </button>
               </div>
 
@@ -1780,19 +4331,19 @@ function toggleConsoleFilter(type: string) {
               <div class="infra-stats">
                  <div class="stat-card">
                     <span class="stat-value">{{ servers.length }}</span>
-                    <span class="stat-label">Total Nodes</span>
+                    <span class="stat-label">{{ t('infrastructure.servers') }}</span>
                  </div>
                  <div class="stat-card">
                     <span class="stat-value success">{{ servers.filter(s => s.status === 'online').length }}</span>
-                    <span class="stat-label">Online</span>
+                    <span class="stat-label">{{ t('infrastructure.online') }}</span>
                  </div>
                  <div class="stat-card">
                     <span class="stat-value">{{ apps.length }}</span>
-                    <span class="stat-label">Applications</span>
+                    <span class="stat-label">{{ t('nav.applications') }}</span>
                  </div>
                  <div class="stat-card">
                     <span class="stat-value">{{ proxies.length }}</span>
-                    <span class="stat-label">Domains</span>
+                    <span class="stat-label">{{ t('nav.domains') }}</span>
                  </div>
               </div>
 
@@ -1807,30 +4358,30 @@ function toggleConsoleFilter(type: string) {
                     <div class="node-card-header">
                        <div class="node-icon" :class="server.status"></div>
                        <div class="node-info">
-                          <span class="node-id">{{ server.id.slice(0, 12) }}</span>
-                          <span :class="['node-status', server.status]">{{ server.status }}</span>
+                          <span class="node-id">{{ server.alias || server.id.slice(0, 12) }}</span>
+                          <span :class="['node-status', server.status]">{{ t('infrastructure.' + server.status) }}</span>
                        </div>
                     </div>
                     <div class="node-card-stats">
                        <div class="node-stat">
                           <span class="node-stat-value">{{ apps.filter(a => a.nodeId === server.id).length }}</span>
-                          <span class="node-stat-label">Apps</span>
+                          <span class="node-stat-label">{{ t('nav.applications') }}</span>
                        </div>
                        <div class="node-stat">
                           <span class="node-stat-value">{{ proxies.filter(p => p.nodeId === server.id).length }}</span>
-                          <span class="node-stat-label">Domains</span>
+                          <span class="node-stat-label">{{ t('nav.domains') }}</span>
                        </div>
                     </div>
                     <div class="node-card-action">
-                       <span>View Details →</span>
+                       <span>{{ t('common.details') }} →</span>
                     </div>
                  </div>
 
                  <!-- Empty State -->
                  <div v-if="servers.length === 0" class="empty-infra">
                     <div class="empty-icon">🖥️</div>
-                    <p>No nodes connected yet</p>
-                    <button class="premium-btn" @click="selectedServerId = 'pending'; generateToken()">Connect First Node</button>
+                    <p>{{ t('infrastructure.noServers') }}</p>
+                    <button class="premium-btn" @click="selectedServerId = 'pending'; generateToken()">{{ t('infrastructure.connectFirstServer') }}</button>
                  </div>
               </div>
            </div>
@@ -1838,30 +4389,49 @@ function toggleConsoleFilter(type: string) {
            <!-- Node Details -->
            <div v-else-if="activeServer" class="grid-layout">
               <div class="node-detail-header">
-                 <button class="back-btn" @click="selectedServerId = null">← Back</button>
-                 <h1 class="gradient-text">Node Details</h1>
+                 <button class="back-btn" @click="selectedServerId = null">← {{ t('common.back') }}</button>
+                 <h1 class="gradient-text">{{ activeServer.alias || t('infrastructure.serverDetails') }}</h1>
+                 <div class="alias-editor">
+                    <template v-if="!editingAlias">
+                       <button class="edit-alias-btn" @click="editingAlias = true; newAlias = activeServer.alias || ''">
+                          {{ activeServer.alias ? '✏️' : '+ ' + t('infrastructure.setAlias') }}
+                       </button>
+                    </template>
+                    <template v-else>
+                       <input
+                          v-model="newAlias"
+                          type="text"
+                          :placeholder="t('infrastructure.aliasPlaceholder')"
+                          class="alias-input"
+                          @keyup.enter="saveAlias"
+                          @keyup.escape="editingAlias = false"
+                       />
+                       <button class="save-alias-btn" @click="saveAlias">✓</button>
+                       <button class="cancel-alias-btn" @click="editingAlias = false">✗</button>
+                    </template>
+                 </div>
               </div>
 
               <!-- Status Bar - Full Width -->
               <div class="glass-card status-bar">
                  <div class="status-item">
-                    <span class="status-label">Status</span>
-                    <span :class="['status-value', serverStatus === 'online' ? 'success' : 'error']">{{ serverStatus }}</span>
+                    <span class="status-label">{{ t('common.status') }}</span>
+                    <span :class="['status-value', serverStatus === 'online' ? 'success' : 'error']">{{ t('infrastructure.' + serverStatus) }}</span>
                  </div>
                  <div class="status-item">
-                    <span class="status-label">Uptime</span>
+                    <span class="status-label">{{ t('infrastructure.uptime') }}</span>
                     <span class="status-value">99.9%</span>
                  </div>
                  <div class="status-item">
-                    <span class="status-label">Node ID</span>
+                    <span class="status-label">{{ t('infrastructure.serverId') }}</span>
                     <span class="status-value mono">{{ activeServer.id.slice(0, 12) }}</span>
                  </div>
                  <div class="status-item">
-                    <span class="status-label">Apps</span>
+                    <span class="status-label">{{ t('nav.applications') }}</span>
                     <span class="status-value">{{ activeApps.length }}</span>
                  </div>
                  <div class="status-item">
-                    <span class="status-label">Domains</span>
+                    <span class="status-label">{{ t('nav.domains') }}</span>
                     <span class="status-value">{{ activeProxies.length }}</span>
                  </div>
               </div>
@@ -1870,12 +4440,12 @@ function toggleConsoleFilter(type: string) {
                  <!-- Left Column: Services + Applications -->
                  <div class="glass-card provision-card">
                     <!-- Applications Header with Add button and Services dropdown -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                       <div style="display: flex; align-items: center; gap: 8px;">
-                          <h3 style="margin: 0;">Applications</h3>
+                    <div class="card-header-row">
+                       <div class="card-title-group">
+                          <h3>Applications</h3>
                           <span class="badge-mini">{{ activeApps.length }}</span>
                        </div>
-                       <div style="display: flex; gap: 8px; align-items: center;">
+                       <div class="card-actions-group">
                           <button class="add-app-btn" @click="newApp.serverId = activeServer?.id; showAddAppModal = true" title="Add application">+</button>
                           <div class="services-dropdown-wrapper">
                           <button class="services-toggle-btn" @click.stop="openServiceMenu = openServiceMenu === 'services' ? null : 'services'">
@@ -1903,8 +4473,8 @@ function toggleConsoleFilter(type: string) {
                        </div>
                     </div>
                     </div>
-                    <div v-if="activeApps.length === 0" class="empty-msg" style="padding: 12px 0;">No applications on this node.</div>
-                    <div v-else class="apps-list" style="max-height: 250px; overflow-y: auto;">
+                    <div v-if="activeApps.length === 0" class="empty-msg">No applications on this node.</div>
+                    <div v-else class="apps-list">
                        <div v-for="app in activeApps" :key="app.id" class="app-row">
                           <div class="app-info">
                              <span class="app-name">{{ app.name }}</span>
@@ -1923,15 +4493,15 @@ function toggleConsoleFilter(type: string) {
                  <!-- Right Column: Domains -->
                  <div class="glass-card provision-card">
                     <!-- Domains Header -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                       <div style="display: flex; align-items: center; gap: 8px;">
-                          <h3 style="margin: 0;">Domains</h3>
+                    <div class="card-header-row">
+                       <div class="card-title-group">
+                          <h3>Domains</h3>
                           <span class="badge-mini">{{ activeProxies.length }}</span>
                        </div>
                        <button class="add-app-btn" @click="showAddDomainModal = true" title="Add domain">+</button>
                     </div>
-                    <div v-if="activeProxies.length === 0" class="empty-msg" style="padding: 12px 0;">No domains configured.</div>
-                    <div v-else class="proxies-list" style="max-height: 250px; overflow-y: auto;">
+                    <div v-if="activeProxies.length === 0" class="empty-msg">No domains configured.</div>
+                    <div v-else class="proxies-list">
                        <div v-for="p in activeProxies" :key="p.id" class="proxy-item">
                           <div class="proxy-info">
                              <span class="proxy-domain">{{ p.domain }}</span>
@@ -1987,7 +4557,79 @@ function toggleConsoleFilter(type: string) {
 .sidebar { width: 280px; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; padding: 24px; position: fixed; height: 100vh; background: #1a1f2e; }
 .logo { display: flex; align-items: center; gap: 12px; font-size: 1.2rem; font-weight: 800; margin-bottom: 32px; color: #fff; }
 .logo-icon { width: 28px; height: 28px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); border-radius: 6px; }
-.nav-label { font-size: 0.65rem; color: rgba(255,255,255,0.4); font-weight: 800; letter-spacing: 0.1em; margin: 24px 0 12px 12px; }
+/* Nav Sections - Collapsible */
+.nav-section {
+  margin-bottom: 4px;
+}
+
+.nav-label {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.4);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  margin: 12px 0 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-right: 12px;
+}
+
+.nav-label.clickable {
+  cursor: pointer;
+  transition: color 0.2s;
+  user-select: none;
+}
+
+.nav-label.clickable:hover {
+  color: rgba(255,255,255,0.7);
+}
+
+.nav-label.admin-label {
+  color: #f59e0b;
+}
+
+.nav-label.admin-label:hover {
+  color: #fbbf24;
+}
+
+.collapse-icon {
+  font-size: 0.7rem;
+  transition: transform 0.2s;
+}
+
+.collapse-icon.collapsed {
+  transform: rotate(-90deg);
+}
+
+.server-count {
+  background: rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+  font-size: 0.6rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.management-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.management-section .server-list {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 8px;
+  min-height: 60px;
+}
+
+.server-list {
+  min-height: 40px;
+}
 nav a { text-decoration: none; color: rgba(255,255,255,0.6); padding: 10px 16px; border-radius: 8px; font-size: 0.85rem; display: block; margin-bottom: 4px; transition: 0.2s; }
 nav a:hover, nav a.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
 .main-wrapper { flex: 1; margin-left: 280px; background: #f5f7fa; }
@@ -2124,7 +4766,7 @@ nav a:hover, nav a.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
   .status-bar { flex-wrap: wrap; justify-content: center; }
 }
 
-.apps-list { display: flex; flex-direction: column; gap: 8px; }
+.apps-list { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
 .app-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #f5f7fa; border-radius: 8px; border: 1px solid #e2e8f0; transition: 0.2s; }
 .app-row:hover { border-color: #3b82f6; }
 .app-info { display: flex; flex-direction: column; gap: 2px; }
@@ -2153,7 +4795,39 @@ nav a:hover, nav a.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
 
 /* Provisioning & Services */
 .provision-card { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
-.provision-card h3 { margin: 0 0 8px 0; font-size: 1.1rem; color: #0f172a; font-weight: 700; }
+.provision-card h3 { margin: 0; font-size: 1.1rem; color: #0f172a; font-weight: 700; }
+
+/* Card Header Row - reusable component */
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.card-title-group h3 {
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-actions-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .form-group { display: flex; flex-direction: column; gap: 8px; }
 .form-group label { font-size: 0.8rem; color: #64748b; font-weight: 500; }
 .form-group input, .form-group select {
@@ -2168,7 +4842,7 @@ nav a:hover, nav a.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
 }
 .form-group input:focus, .form-group select:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
 
-.proxies-list { display: flex; flex-direction: column; gap: 12px; }
+.proxies-list { display: flex; flex-direction: column; gap: 12px; max-height: 300px; overflow-y: auto; }
 .proxy-item {
   display: flex;
   justify-content: space-between;
@@ -2397,6 +5071,348 @@ nav a:hover, nav a.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
   align-items: center;
   justify-content: center;
   z-index: 1000;
+}
+
+/* Onboarding Overlay */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.onboarding-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 40px;
+  max-width: 580px;
+  width: 100%;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.onboarding-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.onboarding-logo {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: white;
+  margin: 0 auto 20px;
+}
+
+.onboarding-header h2 {
+  color: #0f172a;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.onboarding-header p {
+  color: #64748b;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.onboarding-form .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.onboarding-form .form-group {
+  margin-bottom: 16px;
+}
+
+.onboarding-form .form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.onboarding-form .form-group input,
+.onboarding-form .form-group select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  color: #111827 !important;
+  background: #ffffff !important;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-text-fill-color: #111827 !important;
+}
+
+.onboarding-form .form-group input:-webkit-autofill,
+.onboarding-form .form-group input:-webkit-autofill:hover,
+.onboarding-form .form-group input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #111827 !important;
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+  box-shadow: 0 0 0px 1000px #ffffff inset !important;
+  background-color: #ffffff !important;
+}
+
+.onboarding-form .form-group input:focus,
+.onboarding-form .form-group select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.onboarding-form .form-group input::placeholder {
+  color: #9ca3af !important;
+  -webkit-text-fill-color: #9ca3af !important;
+}
+
+.onboarding-form .error-message {
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+}
+
+.onboarding-submit {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+  margin-top: 8px;
+}
+
+.onboarding-submit:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.onboarding-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.onboarding-footer {
+  text-align: center;
+  margin-top: 20px;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.onboarding-footer a {
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.onboarding-footer a:hover {
+  text-decoration: underline;
+}
+
+/* Legal Checkboxes */
+.legal-section {
+  margin: 24px 0 16px;
+  padding: 20px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.checkbox-label:last-child {
+  margin-bottom: 0;
+}
+
+.checkbox-label input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkmark {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  background: #ffffff;
+  border: 2px solid #d1d5db;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.checkbox-label input[type="checkbox"]:checked ~ .checkmark {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.checkbox-label input[type="checkbox"]:checked ~ .checkmark::after {
+  content: '✓';
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.checkbox-label:hover .checkmark {
+  border-color: #3b82f6;
+}
+
+.checkbox-text {
+  font-size: 0.85rem;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.checkbox-text a {
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.checkbox-text a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .onboarding-card {
+    padding: 24px;
+  }
+
+  .onboarding-form .form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+
+.modal-box {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-box h3 {
+  color: #0f172a;
+  margin: 0 0 1.5rem 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.modal-box .form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.modal-box .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.modal-box .form-group label {
+  font-size: 0.85rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+.modal-box .form-group input,
+.modal-box .form-group select {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #1e293b;
+  font-size: 0.9rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.modal-box .form-group input:focus,
+.modal-box .form-group select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+}
+
+.modal-box .form-group input::placeholder {
+  color: #94a3b8;
+}
+
+.modal-box .checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.modal-box .checkbox-group input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #3b82f6;
+}
+
+.modal-box .checkbox-group label {
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.modal-box .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.modal-box .secondary-btn {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 20px;
+  color: #475569;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.modal-box .secondary-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
 }
 
 @keyframes pulse {
@@ -3063,6 +6079,63 @@ nav a:hover, nav a.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
   color: #0f172a;
 }
 
+/* Alias Editor */
+.alias-editor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.edit-alias-btn {
+  padding: 6px 12px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 6px;
+  color: #6366f1;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.edit-alias-btn:hover {
+  background: rgba(99, 102, 241, 0.2);
+}
+.alias-input {
+  padding: 6px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  width: 180px;
+}
+.alias-input:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+.save-alias-btn, .cancel-alias-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.save-alias-btn {
+  background: #10b981;
+  color: white;
+}
+.save-alias-btn:hover {
+  background: #059669;
+}
+.cancel-alias-btn {
+  background: #f1f5f9;
+  color: #64748b;
+}
+.cancel-alias-btn:hover {
+  background: #e2e8f0;
+}
+
 .onboarding-view { margin-top: 40px; }
 .onboarding-box {
   margin-top: 24px;
@@ -3072,11 +6145,38 @@ nav a:hover, nav a.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
   gap: 24px;
   align-items: center;
 }
-.sidebar-footer { border-top: 1px solid rgba(255,255,255,0.1); padding: 20px; }
-.user-profile { display: flex; gap: 12px; align-items: center; }
-.avatar-mini { width: 32px; height: 32px; background: rgba(255,255,255,0.1); border-radius: 50%; background-size: cover; border: 1px solid rgba(255,255,255,0.2); }
-.user-info p { font-size: 0.8rem; font-weight: 600; color: #fff; margin: 0; }
+.sidebar-footer { border-top: 1px solid rgba(255,255,255,0.1); padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+/* Language Selector */
+.language-selector-wrapper { position: relative; }
+.language-selector { display: flex; gap: 8px; align-items: center; cursor: pointer; padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; transition: all 0.2s; }
+.language-selector:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+.lang-flag { font-size: 1.1rem; }
+.lang-name { font-size: 0.8rem; color: rgba(255,255,255,0.8); flex: 1; }
+.language-dropdown { position: absolute; bottom: 100%; left: 0; right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 8px; box-shadow: 0 -4px 20px rgba(0,0,0,0.3); overflow: hidden; z-index: 100; }
+.language-dropdown .dropdown-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.85rem; transition: background-color 0.15s; }
+.language-dropdown .dropdown-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+.language-dropdown .dropdown-item.active { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+.language-dropdown .lang-flag { font-size: 1rem; }
+
+.user-profile-wrapper { position: relative; }
+.user-profile { display: flex; gap: 12px; align-items: center; cursor: pointer; padding: 8px; margin: -8px; border-radius: 8px; transition: background-color 0.2s; }
+.user-profile:hover { background: rgba(255,255,255,0.05); }
+.avatar-mini { width: 32px; height: 32px; background: rgba(255,255,255,0.1); border-radius: 50%; background-size: cover; border: 1px solid rgba(255,255,255,0.2); flex-shrink: 0; }
+.user-info { flex: 1; min-width: 0; }
+.user-info p { font-size: 0.8rem; font-weight: 600; color: #fff; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .user-info span { font-size: 0.7rem; color: rgba(255,255,255,0.5); }
+.user-email { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dropdown-arrow { font-size: 0.7rem; color: rgba(255,255,255,0.4); transition: transform 0.2s; margin-left: auto; }
+.dropdown-arrow.open { transform: rotate(180deg); }
+
+/* User Dropdown Menu */
+.user-dropdown { position: absolute; bottom: 100%; left: 0; right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 8px; box-shadow: 0 -4px 20px rgba(0,0,0,0.3); overflow: hidden; z-index: 100; }
+.dropdown-item { display: flex; align-items: center; gap: 10px; padding: 12px 16px; color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.85rem; transition: background-color 0.15s; }
+.dropdown-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+.dropdown-icon { font-size: 1rem; width: 20px; text-align: center; }
+.dropdown-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 4px 0; }
+.logout-item:hover { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
 
 .console-mini-card {
   display: flex;
@@ -3446,7 +6546,7 @@ nav a:hover, nav a.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.empty-msg { color: #94a3b8; text-align: center; padding: 24px; font-size: 0.9rem; }
+.empty-msg { color: #94a3b8; text-align: center; padding: 16px 12px; font-size: 0.9rem; }
 
 /* SSH Assisted Installation Styles */
 .connect-header {
@@ -3890,22 +6990,1764 @@ nav a:hover, nav a.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
 
 /* Quick Install Enhancements */
 .quick-install-desc {
-  color: #94a3b8;
-  font-size: 0.9rem;
+  color: #475569;
+  font-size: 0.95rem;
   margin: 0 0 16px 0;
+  text-align: center;
 }
 
 .requirements-inline {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #334155;
+  border-top: 1px solid #e2e8f0;
   color: #64748b;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
+  text-align: center;
 }
 
 .requirements-inline span {
+  color: #334155;
+  font-weight: 600;
+}
+
+.status-waiting {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #475569;
+  font-size: 0.9rem;
+  padding: 1rem;
+}
+
+.loader {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Limit Error Box */
+.limit-error-box {
+  text-align: center;
+  padding: 2rem;
+}
+
+.limit-error-box .limit-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.limit-error-box h3 {
+  color: #dc2626;
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+}
+
+.limit-error-box p {
+  color: #64748b;
+  margin: 0 0 1.5rem 0;
+  font-size: 0.95rem;
+}
+
+/* ============================================ */
+/* SUPPORT TICKET STYLES - Enhanced UX Design */
+/* ============================================ */
+
+.support-view {
+  padding: 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+  background: #f8fafc;
+  min-height: 100%;
+}
+
+.support-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.support-header-content h1 {
+  margin: 0;
+  font-size: 2rem;
+  color: #1e293b;
+}
+
+.support-subtitle {
+  color: #64748b;
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+}
+
+.new-ticket-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
+.new-ticket-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);
+}
+
+.new-ticket-btn:active {
+  transform: translateY(0);
+}
+
+/* Support Layout - Two Panel Design */
+.support-layout {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 1.5rem;
+  height: calc(100vh - 220px);
+  min-height: 500px;
+}
+
+/* Tickets Panel */
+.tickets-panel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.tickets-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.tickets-panel-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.ticket-count {
+  background: #dbeafe;
+  color: #2563eb;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Empty Tickets State */
+.empty-tickets {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+.empty-icon {
   color: #94a3b8;
+  margin-bottom: 1rem;
+}
+
+.empty-title {
+  color: #334155;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+
+.empty-description {
+  color: #64748b;
+  font-size: 0.85rem;
+  margin: 0;
+  max-width: 200px;
+}
+
+/* Tickets List */
+.tickets-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.tickets-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tickets-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tickets-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+/* Ticket Item */
+.ticket-item {
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 0.5rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  position: relative;
+}
+
+.ticket-item:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateX(4px);
+}
+
+.ticket-item.active {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
+}
+
+.ticket-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 60%;
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 0 4px 4px 0;
+}
+
+.ticket-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+/* Status Badges with Dots */
+.ticket-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.status-open {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.status-open .status-dot { background: #3b82f6; }
+
+.status-pending {
+  background: #fef3c7;
+  color: #b45309;
+}
+.status-pending .status-dot { background: #f59e0b; }
+
+.status-progress {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+.status-progress .status-dot { background: #a855f7; }
+
+.status-resolved {
+  background: #d1fae5;
+  color: #047857;
+}
+.status-resolved .status-dot { background: #10b981; animation: none; }
+
+.status-closed {
+  background: #f1f5f9;
+  color: #475569;
+}
+.status-closed .status-dot { background: #64748b; animation: none; }
+
+/* Unread Badge */
+.unread-badge {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  font-size: 0.65rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-weight: 600;
+  animation: unreadPulse 2s infinite;
+}
+
+@keyframes unreadPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); }
+}
+
+.ticket-subject {
   font-weight: 500;
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+  color: #1e293b;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ticket-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ticket-meta span {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.ticket-category-tag {
+  font-size: 0.7rem;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 0.25rem 0.6rem;
+  border-radius: 5px;
+  text-transform: capitalize;
+}
+
+.ticket-date {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* Priority Badges */
+.ticket-priority-badge {
+  padding: 0.25rem 0.6rem;
+  border-radius: 5px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.priority-urgent {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.priority-high {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.priority-normal {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.priority-low {
+  background: #d1fae5;
+  color: #047857;
+}
+
+/* Chat Panel */
+.chat-panel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+/* Empty Chat State */
+.empty-chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+.empty-chat-icon {
+  color: #94a3b8;
+  margin-bottom: 1.5rem;
+  opacity: 0.6;
+}
+
+.empty-chat-title {
+  color: #334155;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+
+.empty-chat-description {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin: 0;
+  max-width: 280px;
+}
+
+/* Chat Content */
+.chat-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chat-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.chat-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.chat-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.3;
+}
+
+.chat-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Chat Messages */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+  background: #fafafa;
+}
+
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+/* Message Wrapper */
+.message-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 75%;
+}
+
+.message-wrapper.message-user-wrapper {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+/* Message Bubble */
+.message-bubble {
+  padding: 1rem 1.25rem;
+  border-radius: 16px;
+  position: relative;
+  animation: messageSlide 0.3s ease;
+}
+
+@keyframes messageSlide {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-user {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border-bottom-right-radius: 4px;
+  box-shadow: 0 2px 12px rgba(59, 130, 246, 0.25);
+}
+
+.message-support {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-bottom-left-radius: 4px;
+  color: #334155;
+}
+
+.message-ai {
+  background: linear-gradient(135deg, #f3e8ff 0%, #ede9fe 100%);
+  border: 1px solid #ddd6fe;
+  color: #5b21b6;
+}
+
+.message-system {
+  background: #f1f5f9;
+  border: 1px dashed #cbd5e1;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.message-bubble-header {
+  margin-bottom: 0.5rem;
+}
+
+.message-sender {
+  font-weight: 600;
+  font-size: 0.8rem;
+  opacity: 0.9;
+}
+
+.message-text {
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-size: 0.95rem;
+}
+
+.message-timestamp {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  margin-top: 0.5rem;
+  text-align: right;
+}
+
+.message-user .message-timestamp {
+  opacity: 0.7;
+}
+
+/* Attachments Section */
+.chat-attachments {
+  padding: 0.5rem 1rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.attachments-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.attachments-header svg { width: 12px; height: 12px; }
+
+.attachments-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.75rem;
+}
+
+.attachment-item:hover {
+  background: #f8fafc;
+  border-color: #3b82f6;
+}
+
+.attachment-icon {
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.attachment-icon svg { width: 14px; height: 14px; }
+
+.attachment-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.attachment-name {
+  font-size: 0.7rem;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attachment-size {
+  font-size: 0.6rem;
+  color: #64748b;
+}
+
+.attachment-download {
+  color: #64748b;
+  transition: color 0.2s;
+}
+
+.attachment-download svg {
+  width: 12px;
+  height: 12px;
+}
+
+.attachment-item:hover .attachment-download {
+  color: #60a5fa;
+}
+
+/* Chat Input Area */
+.chat-input-area {
+  padding: 1rem 1.5rem 1.25rem;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.chat-input-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.chat-input-wrapper:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.chat-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #1e293b;
+  font-size: 0.95rem;
+  font-family: inherit;
+  padding: 0.5rem 0.75rem;
+  resize: none;
+  max-height: 120px;
+  line-height: 1.5;
+}
+
+.chat-input:focus {
+  outline: none;
+}
+
+.chat-input::placeholder {
+  color: #94a3b8;
+}
+
+.chat-input-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.attach-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.attach-btn:hover {
+  background: #f1f5f9;
+  color: #3b82f6;
+}
+
+.send-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.send-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+}
+
+.send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sending-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.input-hint {
+  font-size: 0.7rem;
+  color: #64748b;
+  margin: 0.5rem 0 0 0.5rem;
+}
+
+/* Ticket Closed Notice */
+.ticket-closed-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  color: #475569;
+  background: #f1f5f9;
+  border-top: 1px solid #e2e8f0;
+  font-size: 0.9rem;
+}
+
+/* New Ticket Modal */
+.new-ticket-modal {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 580px;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+  animation: modalSlide 0.3s ease;
+}
+
+@keyframes modalSlide {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 1.75rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.modal-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.modal-body {
+  padding: 1.5rem 1.75rem;
+  overflow-y: auto;
+  max-height: calc(90vh - 180px);
+}
+
+.modal-body .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.modal-body .form-group {
+  margin-bottom: 1.25rem;
+}
+
+.modal-body .form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #475569;
+  margin-bottom: 0.5rem;
+}
+
+.modal-body .form-input,
+.modal-body .form-select,
+.modal-body .form-textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  color: #1e293b;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.modal-body .form-input:focus,
+.modal-body .form-select:focus,
+.modal-body .form-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.modal-body .form-input::placeholder,
+.modal-body .form-textarea::placeholder {
+  color: #94a3b8;
+}
+
+.modal-body .form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.5rem;
+  cursor: pointer;
+}
+
+.modal-body .form-textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.6;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1.25rem 1.75rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.cancel-btn {
+  padding: 0.75rem 1.5rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  color: #475569;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.submit-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
+.submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);
+}
+
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Admin Support Styles */
+.support-metrics {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.metric-card {
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  min-width: 120px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+.metric-card.open { border-color: #93c5fd; background: #eff6ff; }
+.metric-card.progress { border-color: #d8b4fe; background: #faf5ff; }
+.metric-card.resolved { border-color: #86efac; background: #f0fdf4; }
+.metric-card.unread { border-color: #fca5a5; background: #fef2f2; }
+.metric-card.new { border-color: #fcd34d; background: #fffbeb; }
+
+.metric-value { font-size: 1.5rem; font-weight: 700; }
+.metric-card.open .metric-value { color: #1d4ed8; }
+.metric-card.progress .metric-value { color: #7c3aed; }
+.metric-card.resolved .metric-value { color: #047857; }
+.metric-card.unread .metric-value { color: #dc2626; }
+.metric-card.new .metric-value { color: #b45309; }
+
+.metric-label { font-size: 0.75rem; color: #475569; margin-top: 0.25rem; }
+
+.support-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.support-tabs button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.support-tabs button.active {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+.ticket-filters {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.filter-select {
+  padding: 0.5rem 1rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #1e293b;
+  min-width: 150px;
+}
+
+.admin-support-layout {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  gap: 1.5rem;
+  height: calc(100vh - 320px);
+  min-height: 500px;
+}
+
+.admin-tickets-panel, .admin-chat-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  min-height: 0;
+}
+
+.admin-tickets-panel h3, .admin-chat-panel h3 {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.admin-tickets-list { overflow-y: auto; flex: 1; padding: 0.5rem; background: #f8fafc; }
+
+.admin-ticket-item {
+  padding: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 0.5rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.admin-ticket-item:hover { background: #f8fafc; }
+.admin-ticket-item.active { background: #eff6ff; border-color: #3b82f6; }
+
+.ticket-row-header { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
+
+.ticket-user {
+  font-size: 0.8rem;
+  color: #475569;
+  margin-bottom: 0.5rem;
+}
+
+.ticket-user .user-email { font-weight: 500; color: #1e293b; }
+.ticket-user .user-name { margin-left: 0.5rem; color: #64748b; }
+
+.admin-chat-content { display: flex; flex-direction: column; height: 100%; min-height: 0; flex: 1; }
+.admin-chat-header { padding: 1rem 1.25rem; border-bottom: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: space-between; align-items: flex-start; }
+.admin-chat-header h3 { margin: 0 0 0.75rem 0; font-size: 1.1rem; font-weight: 600; color: #1e293b; }
+.admin-chat-header .chat-meta { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+
+.expand-btn {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #475569;
+  flex-shrink: 0;
+}
+.expand-btn:hover { background: #e2e8f0; color: #1e293b; }
+
+/* Expanded chat panel */
+.admin-chat-panel.expanded {
+  position: fixed;
+  top: 20px;
+  left: calc(280px + 20px);
+  right: 20px;
+  bottom: 20px;
+  z-index: 1000;
+  border-radius: 16px;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.25);
+  background: #ffffff;
+}
+
+.admin-chat-panel.expanded::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 280px;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: -1;
+}
+.admin-chat-header .chat-meta span { font-size: 0.8rem; color: #475569; }
+
+.status-select {
+  padding: 6px 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #1e293b;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.status-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.admin-messages {
+  flex: 1;
+  overflow-y: auto;
+  background: #fafafa;
+  padding: 1rem;
+  min-height: 200px;
+}
+
+/* Admin message specific styles - override chat bubble styles */
+.admin-messages .message {
+  padding: 1rem;
+  border-radius: 12px;
+  margin-bottom: 0.75rem;
+  max-width: 85%;
+}
+
+.admin-messages .message-user {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  margin-left: auto;
+  border-bottom-right-radius: 4px;
+}
+
+.admin-messages .message-support {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #1e293b;
+  margin-right: auto;
+  border-bottom-left-radius: 4px;
+}
+
+.admin-messages .message-internal {
+  background: #fef3c7;
+  border: 1px dashed #f59e0b;
+  color: #92400e;
+}
+
+.admin-messages .message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  gap: 1rem;
+}
+
+.admin-messages .message-sender {
+  font-weight: 600;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-messages .message-user .message-sender {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.admin-messages .message-support .message-sender {
+  color: #1e293b;
+}
+
+.admin-messages .message-time {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+.admin-messages .message-content {
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
+
+.admin-messages .internal-badge {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.canned-quick {
+  padding: 0.5rem 1rem;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #475569;
+  flex-wrap: wrap;
+  background: #f8fafc;
+}
+
+.canned-btn {
+  padding: 4px 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  color: #475569;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.canned-btn:hover { background: #f1f5f9; border-color: #3b82f6; color: #1d4ed8; }
+
+.admin-reply-box { padding: 1rem; border-top: 1px solid #e2e8f0; background: #ffffff; }
+.admin-reply-box textarea {
+  width: 100%;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem;
+  color: #1e293b;
+  resize: none;
+  font-family: inherit;
+  margin-bottom: 0.75rem;
+}
+
+.admin-reply-box textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.reply-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.file-upload-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.file-upload-btn:hover {
+  background: #e2e8f0;
+  border-color: #3b82f6;
+}
+
+.reply-actions .secondary {
+  padding: 0.6rem 1rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #475569;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reply-actions .secondary:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.reply-actions .secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.reply-actions .primary-btn {
+  padding: 0.6rem 1.25rem;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reply-actions .primary-btn:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.reply-actions .primary-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.canned-responses-section { padding: 1.5rem; background: #ffffff; }
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.section-header h3 { margin: 0; color: #1e293b; }
+
+.canned-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.canned-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.canned-info { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; color: #1e293b; }
+.canned-preview { grid-column: 1 / -1; font-size: 0.85rem; color: #475569; }
+
+.auto-badge {
+  background: #d1fae5;
+  color: #047857;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.category-badge {
+  background: #f1f5f9;
+  color: #475569;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+}
+
+.canned-actions { display: flex; gap: 0.5rem; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.form-group.checkbox label { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+.form-group.checkbox input[type="checkbox"] { width: auto; }
+
+/* ============================================ */
+/* SUPPORT RESPONSIVE STYLES */
+/* ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .support-view {
+    padding: 20px;
+  }
+
+  .support-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    gap: 1rem;
+  }
+
+  .tickets-panel {
+    max-height: 350px;
+  }
+
+  .chat-panel {
+    min-height: 500px;
+  }
+
+  .admin-support-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .admin-tickets-panel {
+    max-height: 300px;
+  }
+
+  .message-wrapper {
+    max-width: 85%;
+  }
+
+  .new-ticket-modal {
+    max-width: 95%;
+    margin: 1rem;
+  }
+}
+
+/* Mobile (max-width: 767px) */
+@media (max-width: 767px) {
+  .support-view {
+    padding: 16px;
+  }
+
+  .support-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .support-header-content h1 {
+    font-size: 1.5rem;
+  }
+
+  .support-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .new-ticket-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 0.875rem 1rem;
+  }
+
+  .support-layout {
+    gap: 1rem;
+  }
+
+  .tickets-panel {
+    max-height: 280px;
+    border-radius: 12px;
+  }
+
+  .tickets-panel-header {
+    padding: 1rem 1.25rem;
+  }
+
+  .tickets-panel-header h3 {
+    font-size: 1rem;
+  }
+
+  .tickets-list {
+    padding: 0.5rem;
+  }
+
+  .ticket-item {
+    padding: 0.875rem 1rem;
+    border-radius: 10px;
+  }
+
+  .ticket-item:hover {
+    transform: none;
+  }
+
+  .ticket-item.active::before {
+    width: 3px;
+  }
+
+  .ticket-subject {
+    font-size: 0.9rem;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+  }
+
+  .chat-panel {
+    min-height: 450px;
+    border-radius: 12px;
+  }
+
+  .empty-chat {
+    padding: 2rem 1.5rem;
+  }
+
+  .empty-chat-icon svg {
+    width: 48px;
+    height: 48px;
+  }
+
+  .empty-chat-title {
+    font-size: 1rem;
+  }
+
+  .empty-chat-description {
+    font-size: 0.85rem;
+  }
+
+  .chat-header {
+    padding: 1rem 1.25rem;
+  }
+
+  .chat-title {
+    font-size: 1rem;
+  }
+
+  .chat-badges {
+    gap: 0.4rem;
+  }
+
+  .ticket-status-badge,
+  .ticket-priority-badge,
+  .ticket-category-tag {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.5rem;
+  }
+
+  .chat-messages {
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+
+  .message-wrapper {
+    max-width: 90%;
+  }
+
+  .message-bubble {
+    padding: 0.875rem 1rem;
+    border-radius: 14px;
+  }
+
+  .message-text {
+    font-size: 0.9rem;
+  }
+
+  .message-sender {
+    font-size: 0.75rem;
+  }
+
+  .message-timestamp {
+    font-size: 0.65rem;
+  }
+
+  .chat-attachments {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .attachment-item {
+    min-width: 100%;
+    max-width: 100%;
+  }
+
+  .attachments-grid {
+    gap: 0.3rem;
+  }
+
+  .chat-input-area {
+    padding: 0.875rem 1rem 1rem;
+  }
+
+  .chat-input-wrapper {
+    border-radius: 10px;
+    padding: 0.375rem;
+  }
+
+  .chat-input {
+    font-size: 0.9rem;
+    padding: 0.375rem 0.625rem;
+  }
+
+  .attach-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .send-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+  }
+
+  .input-hint {
+    display: none;
+  }
+
+  .ticket-closed-notice {
+    font-size: 0.8rem;
+    padding: 0.875rem 1rem;
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+
+  /* Modal responsive */
+  .new-ticket-modal {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 16px 16px 0 0;
+    margin: 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+
+  .modal-header {
+    padding: 1.25rem 1.25rem;
+  }
+
+  .modal-header h2 {
+    font-size: 1.15rem;
+  }
+
+  .modal-body {
+    padding: 1.25rem;
+    max-height: calc(100vh - 160px);
+  }
+
+  .modal-body .form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .modal-body .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .modal-body .form-input,
+  .modal-body .form-select,
+  .modal-body .form-textarea {
+    padding: 0.875rem 1rem;
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+
+  .modal-footer {
+    padding: 1rem 1.25rem;
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+  }
+
+  .cancel-btn,
+  .submit-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 0.875rem 1rem;
+  }
+}
+
+/* Small Mobile (max-width: 374px) */
+@media (max-width: 374px) {
+  .support-view {
+    padding: 12px;
+  }
+
+  .support-header-content h1 {
+    font-size: 1.35rem;
+  }
+
+  .tickets-panel {
+    max-height: 240px;
+  }
+
+  .chat-panel {
+    min-height: 400px;
+  }
+
+  .ticket-item {
+    padding: 0.75rem;
+  }
+
+  .ticket-status-badge {
+    font-size: 0.6rem;
+  }
+
+  .ticket-subject {
+    font-size: 0.85rem;
+  }
+
+  .message-bubble {
+    padding: 0.75rem 0.875rem;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .ticket-item:hover {
+    transform: none;
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .ticket-item:active {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .ticket-item.active:hover {
+    background: rgba(59, 130, 246, 0.12);
+  }
+
+  .new-ticket-btn:hover {
+    transform: none;
+  }
+
+  .new-ticket-btn:active {
+    transform: scale(0.98);
+  }
+
+  .send-btn:hover:not(:disabled) {
+    transform: none;
+  }
+
+  .send-btn:active:not(:disabled) {
+    transform: scale(0.95);
+  }
+
+  .attachment-item:hover {
+    transform: none;
+  }
+
+  .attachment-item:active {
+    background: rgba(255, 255, 255, 0.1);
+  }
 }
 </style>
 
@@ -4086,4 +8928,2551 @@ nav a:hover, nav a.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
 
 /* Service Status Tag */
 .service-status-tag { background: rgba(16,185,129,0.1) !important; color: #10b981 !important; }
+
+/* ==================== BILLING STYLES (ENHANCED) ==================== */
+.billing-view { padding: 20px; max-width: 1200px; margin: 0 auto; }
+
+.billing-header { text-align: center; margin-bottom: 2rem; }
+.billing-subtitle { color: #64748b; margin-top: 0.5rem; font-size: 1.1rem; }
+
+/* Current Plan Card */
+.current-plan-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+}
+
+.current-plan-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.current-plan-icon {
+  font-size: 2.5rem;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.current-plan-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 0.25rem;
+}
+
+.subscription-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.subscription-status.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.subscription-status.inactive {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.subscription-status.past-due {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.manage-billing-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #475569;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.manage-billing-btn:hover {
+  background: #f8fafc;
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+/* Usage Section Enhanced */
+.usage-section {
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.usage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.usage-header h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1.1rem;
+}
+
+.billing-period {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.usage-grid-enhanced {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.usage-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  transition: all 0.2s;
+}
+
+.usage-card.warning {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+.usage-card.critical {
+  border-color: #ef4444;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+}
+
+.usage-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.usage-icon { font-size: 1.25rem; }
+
+.usage-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #475569;
+}
+
+.usage-numbers {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.usage-current {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.usage-separator {
+  font-size: 1rem;
+  color: #94a3b8;
+}
+
+.usage-max {
+  font-size: 1rem;
+  color: #64748b;
+}
+
+.usage-bar-enhanced {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.usage-fill-enhanced {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.usage-card.warning .usage-fill-enhanced {
+  background: linear-gradient(90deg, #f59e0b, #f97316);
+}
+
+.usage-card.critical .usage-fill-enhanced {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+.usage-warning-text {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #f59e0b;
+}
+
+.usage-card.critical .usage-warning-text {
+  color: #dc2626;
+}
+
+/* Upgrade Suggestion Banner */
+.upgrade-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 2rem;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1px solid #93c5fd;
+}
+
+.upgrade-icon { font-size: 2rem; }
+
+.upgrade-content h4 {
+  margin: 0 0 0.25rem 0;
+  color: #1e40af;
+  font-size: 1rem;
+}
+
+.upgrade-content p {
+  margin: 0;
+  color: #3b82f6;
+  font-size: 0.9rem;
+}
+
+.upgrade-now-btn {
+  margin-left: auto;
+  padding: 0.5rem 1rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.upgrade-now-btn:hover { background: #2563eb; }
+
+/* Plans Section */
+.plans-section { margin-top: 2rem; }
+
+.plans-title {
+  text-align: center;
+  font-size: 1.5rem;
+  color: #1e293b;
+  margin: 0 0 0.5rem 0;
+}
+
+.plans-subtitle {
+  text-align: center;
+  color: #64748b;
+  margin: 0 0 2rem 0;
+  font-size: 0.95rem;
+}
+
+.plans-grid-enhanced {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* Enhanced Plan Card */
+.plan-card-enhanced {
+  position: relative;
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 2rem 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.plan-card-enhanced:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+}
+
+.plan-card-enhanced.current {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 50%);
+}
+
+.plan-card-enhanced.popular {
+  border-color: #8b5cf6;
+  box-shadow: 0 8px 30px rgba(139, 92, 246, 0.15);
+}
+
+.plan-card-enhanced.recommended {
+  transform: scale(1.02);
+}
+
+/* Plan Badges */
+.plan-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.35rem 1rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.current-badge {
+  background: #3b82f6;
+  color: white;
+}
+
+.popular-badge {
+  background: linear-gradient(135deg, #8b5cf6, #a855f7);
+  color: white;
+}
+
+.value-badge {
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: white;
+}
+
+/* Plan Card Header */
+.plan-card-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  padding-top: 0.5rem;
+}
+
+.plan-name {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+  color: #1e293b;
+}
+
+.plan-tagline {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+/* Plan Pricing */
+.plan-pricing {
+  text-align: center;
+  padding: 1.5rem 0;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 1.5rem;
+}
+
+.price-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+}
+
+.price-main .currency {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 0.5rem;
+}
+
+.price-main .amount {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1;
+}
+
+.price-main .cents {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 0.5rem;
+}
+
+.price-period {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+
+.price-yearly {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.yearly-price {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.savings-badge {
+  background: #dcfce7;
+  color: #166534;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Plan Features */
+.plan-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem 0;
+}
+
+.plan-features li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.plan-features li:last-child { border-bottom: none; }
+
+.feature-icon { font-size: 1rem; }
+
+.feature-text {
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+/* CTA Buttons */
+.plan-cta-btn {
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+}
+
+.plan-cta-btn.cta-current {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: default;
+}
+
+.plan-cta-btn.cta-upgrade {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: white;
+  border: none;
+}
+
+.plan-cta-btn.cta-upgrade:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.plan-cta-btn.cta-downgrade {
+  background: white;
+  color: #64748b;
+  border-color: #e2e8f0;
+}
+
+.plan-cta-btn.cta-downgrade:hover {
+  border-color: #94a3b8;
+  color: #475569;
+}
+
+.plan-cta-btn:disabled {
+  cursor: default;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Legacy classes kept for backward compatibility */
+.usage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.usage-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.usage-label {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.usage-bar {
+  height: 8px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.usage-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.usage-text {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.plan-card {
+  padding: 1.5rem;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.plan-card:hover {
+  transform: translateY(-2px);
+}
+
+.plan-card.current {
+  border-color: #3b82f6;
+}
+
+.plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.plan-header h4 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.plan-price .price {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #3b82f6;
+}
+
+.plan-price .period {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.plan-desc {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.plan-limits {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem 0;
+}
+
+.plan-limits li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.plan-limits li:last-child {
+  border-bottom: none;
+}
+
+/* ==================== MANAGED SERVERS STYLES ==================== */
+.managed-servers-view { padding: 20px; }
+
+.managed-servers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.server-card {
+  padding: 1.5rem;
+  transition: transform 0.2s;
+}
+
+.server-card:hover {
+  transform: translateY(-2px);
+}
+
+.server-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.provider-icon-large {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(139,92,246,0.2));
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+.server-info h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+}
+
+.server-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.detail-row .label {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.detail-row .value {
+  color: #e2e8f0;
+  font-size: 0.9rem;
+}
+
+.detail-row .value.monospace {
+  font-family: monospace;
+  background: rgba(0,0,0,0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.server-actions {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.action-btn.danger {
+  background: rgba(239,68,68,0.1);
+  color: #ef4444;
+}
+
+.action-btn.danger:hover {
+  background: rgba(239,68,68,0.2);
+}
+
+.provider-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.provider-badge.configured {
+  background: rgba(16,185,129,0.1);
+}
+
+.provider-badge .provider-icon {
+  font-weight: 700;
+  color: #3b82f6;
+}
+
+.provider-badge .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.provider-badge .status-dot.online {
+  background: #10b981;
+}
+
+.provider-badge .status-dot.offline {
+  background: #ef4444;
+}
+
+.status-pending { color: #f59e0b; background: rgba(245,158,11,0.1); }
+.status-online { color: #10b981; background: rgba(16,185,129,0.1); }
+.status-offline { color: #ef4444; background: rgba(239,68,68,0.1); }
+.status-error { color: #ef4444; background: rgba(239,68,68,0.1); }
+.status-unknown { color: #94a3b8; background: rgba(148,163,184,0.1); }
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: #64748b;
+}
+
+.empty-state p {
+  margin: 0;
+  color: #64748b;
+}
+
+.empty-state h3 {
+  margin: 0 0 0.5rem 0;
+  color: #334155;
+}
+
+/* Admin ticket badges (without -badge suffix) */
+.ticket-status, .ticket-priority {
+  padding: 0.25rem 0.6rem;
+  border-radius: 5px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.ticket-status.status-open { background: #dbeafe; color: #1d4ed8; }
+.ticket-status.status-pending { background: #fef3c7; color: #b45309; }
+.ticket-status.status-progress { background: #f3e8ff; color: #7c3aed; }
+.ticket-status.status-resolved { background: #d1fae5; color: #047857; }
+.ticket-status.status-closed { background: #f1f5f9; color: #475569; }
+
+.ticket-priority.priority-urgent { background: #fee2e2; color: #dc2626; }
+.ticket-priority.priority-high { background: #fef3c7; color: #b45309; }
+.ticket-priority.priority-normal { background: #f1f5f9; color: #475569; }
+.ticket-priority.priority-low { background: #d1fae5; color: #047857; }
+
+/* ==================== SETTINGS STYLES ==================== */
+.settings-view { padding: 20px; max-width: 900px; margin: 0 auto; }
+.settings-subtitle { color: #64748b; margin-top: 0.5rem; font-size: 1rem; }
+
+.settings-section { margin-bottom: 2rem; }
+.section-title { font-size: 1.1rem; font-weight: 600; color: #0f172a; margin-bottom: 1rem; }
+
+.settings-card { padding: 1.5rem; }
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.setting-item.full-width { grid-column: span 2; }
+.setting-item label { font-size: 0.8rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.25rem; }
+.setting-item p { font-size: 0.95rem; color: #0f172a; margin: 0; }
+.setting-item p.mono { font-family: monospace; font-size: 0.85rem; color: #64748b; }
+
+.legal-info { display: flex; flex-direction: column; gap: 1rem; }
+.legal-item { display: flex; align-items: flex-start; gap: 1rem; }
+.legal-icon { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0; }
+.legal-icon.accepted { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.legal-details { flex: 1; }
+.legal-details strong { font-size: 0.9rem; color: #0f172a; display: block; }
+.legal-details span { font-size: 0.8rem; color: #64748b; }
+
+.gdpr-actions { display: flex; flex-direction: column; gap: 1.5rem; }
+.gdpr-action { display: flex; justify-content: space-between; align-items: center; gap: 2rem; }
+.gdpr-info { flex: 1; }
+.gdpr-info strong { font-size: 0.95rem; color: #0f172a; display: block; margin-bottom: 0.25rem; }
+.gdpr-info p { font-size: 0.85rem; color: #64748b; margin: 0; }
+.gdpr-divider { height: 1px; background: #e2e8f0; }
+.danger-zone { padding: 1rem; background: rgba(239, 68, 68, 0.05); border-radius: 8px; margin: -0.5rem; }
+
+.action-btn-outline {
+  padding: 10px 20px;
+  background: white;
+  border: 1px solid #3b82f6;
+  color: #3b82f6;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.action-btn-outline:hover:not(:disabled) { background: #3b82f6; color: white; }
+.action-btn-outline:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.action-btn-danger {
+  padding: 10px 20px;
+  background: white;
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.action-btn-danger:hover { background: #ef4444; color: white; }
+
+.role-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+.role-badge.admin { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+.role-badge.user { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+
+@media (max-width: 768px) {
+  .settings-grid { grid-template-columns: 1fr; }
+  .setting-item.full-width { grid-column: span 1; }
+  .gdpr-action { flex-direction: column; align-items: flex-start; gap: 1rem; }
+}
+
+/* ==================== ADMIN STYLES ==================== */
+.admin-view { padding: 20px; }
+.admin-view.support-admin { background: #f8fafc; min-height: 100%; }
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.admin-table th {
+  font-weight: 600;
+  color: #64748b;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  background: #f8fafc;
+}
+
+.admin-table td {
+  color: #1e293b;
+}
+
+.admin-table tr:hover td {
+  background: #f8fafc;
+}
+
+.role-select {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 12px;
+  color: #334155;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.role-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+}
+
+.plan-badge {
+  background: rgba(16,185,129,0.1);
+  color: #059669;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.onboarding-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.onboarding-badge.complete { background: rgba(16,185,129,0.1); color: #059669; }
+.onboarding-badge.pending { background: rgba(245,158,11,0.1); color: #d97706; }
+
+/* User Details Modal */
+.user-details-modal { max-width: 700px; width: 100%; }
+.user-details-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+.detail-section h4 { font-size: 0.85rem; font-weight: 600; color: #64748b; text-transform: uppercase; margin: 0 0 0.75rem 0; padding-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; }
+.detail-row { display: flex; justify-content: space-between; padding: 0.4rem 0; font-size: 0.9rem; }
+.detail-row .label { color: #64748b; }
+.detail-row .value { color: #0f172a; font-weight: 500; }
+.detail-row .value.mono { font-family: monospace; font-size: 0.8rem; color: #64748b; }
+
+@media (max-width: 600px) {
+  .user-details-grid { grid-template-columns: 1fr; }
+}
+
+/* Admin action buttons - for light backgrounds */
+.admin-view .action-btn {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 12px;
+  color: #334155;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.admin-view .action-btn:hover {
+  background: #f1f5f9;
+  border-color: #3b82f6;
+  color: #1e293b;
+}
+
+.admin-view .action-btn.danger {
+  border-color: rgba(239,68,68,0.4);
+  color: #dc2626;
+  background: rgba(239,68,68,0.05);
+}
+
+.admin-view .action-btn.danger:hover {
+  background: rgba(239,68,68,0.1);
+  border-color: #ef4444;
+}
+
+.plans-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.plan-stats {
+  display: flex;
+  gap: 1.5rem;
+  margin: 1rem 0;
+  color: #64748b;
+}
+
+.plan-stats strong {
+  color: #059669;
+  font-weight: 700;
+}
+
+.plan-limits-compact {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.plan-limits-compact span {
+  background: #f1f5f9;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  font-weight: 500;
+}
+
+.badge-default {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  margin-left: 8px;
+  font-weight: 600;
+}
+
+/* ==================== METRICS DASHBOARD STYLES ==================== */
+.metrics-dashboard {
+  padding: 20px;
+}
+
+/* KPI Cards Grid */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.kpi-card {
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  border: 1px solid #334155;
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.kpi-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+}
+
+.kpi-card.users { border-left: 4px solid #3b82f6; }
+.kpi-card.subscriptions { border-left: 4px solid #8b5cf6; }
+.kpi-card.servers { border-left: 4px solid #06b6d4; }
+.kpi-card.revenue { border-left: 4px solid #10b981; }
+
+.kpi-icon {
+  font-size: 2.5rem;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.1);
+}
+
+.kpi-card.users .kpi-icon { background: rgba(59,130,246,0.25); }
+.kpi-card.subscriptions .kpi-icon { background: rgba(139,92,246,0.25); }
+.kpi-card.servers .kpi-icon { background: rgba(6,182,212,0.25); }
+.kpi-card.revenue .kpi-icon { background: rgba(16,185,129,0.25); }
+
+.kpi-content {
+  flex: 1;
+}
+
+.kpi-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  line-height: 1.2;
+}
+
+.kpi-label {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+
+.kpi-trend {
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.kpi-trend.positive { color: #10b981; }
+.kpi-trend.negative { color: #ef4444; }
+.kpi-trend.neutral { color: #64748b; }
+
+.kpi-trend .trend-icon {
+  font-weight: 700;
+}
+
+/* Charts Grid */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.chart-card {
+  padding: 1.5rem;
+  min-height: 300px;
+}
+
+.chart-title {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #3b82f6;
+}
+
+/* Donut Chart */
+.donut-chart-container {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  margin: 0 auto 1.5rem;
+}
+
+.donut-chart {
+  width: 100%;
+  height: 100%;
+}
+
+.donut-segment {
+  transition: stroke-dasharray 0.5s ease;
+}
+
+.donut-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.donut-total {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.donut-label {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.chart-legend {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.legend-dot.free { background: #3b82f6; }
+.legend-dot.paid { background: #10b981; }
+
+/* Bar Chart */
+.bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1rem 0;
+}
+
+.bar-item {
+  display: grid;
+  grid-template-columns: 100px 1fr 50px;
+  align-items: center;
+  gap: 1rem;
+}
+
+.bar-label {
+  font-size: 0.9rem;
+  color: #94a3b8;
+}
+
+.bar-container {
+  height: 24px;
+  background: #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 12px;
+  transition: width 0.5s ease;
+}
+
+.bar-fill.servers { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+.bar-fill.apps { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+.bar-fill.domains { background: linear-gradient(90deg, #10b981, #34d399); }
+
+.bar-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e293b;
+  text-align: right;
+}
+
+/* Revenue Display */
+.revenue-display {
+  padding: 1rem 0;
+}
+
+.revenue-main {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.15));
+  border-radius: 16px;
+  border: 1px solid rgba(16,185,129,0.3);
+}
+
+.revenue-amount {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #10b981;
+  line-height: 1.2;
+}
+
+.revenue-period {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+}
+
+.revenue-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: #f1f5f9;
+  border-radius: 8px;
+}
+
+.stat-label {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.stat-value {
+  color: #1e293b;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+/* Quick Stats */
+.quick-stats {
+  padding: 1.5rem;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 12px;
+  transition: background 0.2s;
+  border: 1px solid #e2e8f0;
+}
+
+.stat-item:hover {
+  background: #f1f5f9;
+}
+
+.stat-icon {
+  font-size: 1.5rem;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59,130,246,0.15);
+  border-radius: 10px;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.stat-desc {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+/* Legacy metric classes for backward compatibility */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.metric-card {
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.metric-card.highlight {
+  background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1));
+  border-color: rgba(59,130,246,0.3);
+}
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.metric-label {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.metric-sub {
+  color: #10b981;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input:not([type]) {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid #475569;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #e2e8f0;
+  font-size: 0.9rem;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.secondary-btn {
+  background: transparent;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  padding: 10px 20px;
+  color: #e2e8f0;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.secondary-btn:hover {
+  background: rgba(255,255,255,0.05);
+  border-color: #64748b;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN - MOBILE & TABLET
+   ============================================ */
+
+/* Mobile Overlay for Sidebar */
+.mobile-overlay {
+  display: none;
+}
+
+/* Hamburger Button - Hidden by default */
+.hamburger-btn {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.hamburger-btn:hover {
+  background: #f1f5f9;
+}
+
+.hamburger-line {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: #334155;
+  border-radius: 2px;
+  transition: transform 0.3s, opacity 0.3s;
+}
+
+/* ==================== TABLET STYLES (768px - 1024px) ==================== */
+@media (max-width: 1024px) {
+  /* Reduce content padding */
+  .content {
+    padding: 24px;
+  }
+
+  .top-bar {
+    padding: 0 24px;
+  }
+
+  /* Grids: 2 columns on tablet */
+  .dashboard-grid,
+  .node-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .infra-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .nodes-grid,
+  .apps-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  /* MCP Grid adjustments */
+  .mcp-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .mcp-tokens-card {
+    grid-column: span 1;
+  }
+
+  .mcp-setup-card {
+    grid-row: span 1;
+  }
+
+  /* Plans grid */
+  .plans-grid-enhanced {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* KPI grid */
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  /* Charts grid */
+  .charts-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  /* Status bar wrap */
+  .status-bar {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .status-item {
+    flex: 1 1 calc(50% - 16px);
+    min-width: 100px;
+  }
+
+  /* Admin table scrollable */
+  .admin-view .glass-card {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-table {
+    min-width: 700px;
+  }
+
+  /* Audit log grid */
+  .audit-row {
+    grid-template-columns: 70px 100px 80px 1fr;
+    gap: 8px;
+    padding: 10px 12px;
+    font-size: 0.8rem;
+  }
+
+  /* Usage grid */
+  .usage-grid-enhanced {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  /* Quick stats */
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
+/* ==================== MOBILE STYLES (320px - 767px) ==================== */
+@media (max-width: 767px) {
+  /* CRITICAL: Prevent horizontal overflow */
+  .dashboard-layout,
+  .main-wrapper,
+  .content,
+  .grid-layout {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  /* All cards must fit viewport */
+  .glass-card,
+  .provision-card,
+  .status-bar,
+  .console-mini-card,
+  .terminal-card {
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto;
+  }
+
+  /* Show hamburger button */
+  .hamburger-btn {
+    display: flex;
+  }
+
+  /* Mobile overlay active */
+  .mobile-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    z-index: 90;
+    animation: fadeIn 0.2s ease;
+  }
+
+  /* Sidebar becomes off-canvas menu */
+  .sidebar {
+    position: fixed;
+    left: -300px;
+    top: 0;
+    width: 280px;
+    height: 100vh;
+    z-index: 100;
+    transition: left 0.3s ease;
+    box-shadow: none;
+  }
+
+  .sidebar.mobile-open {
+    left: 0;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Main wrapper takes full width */
+  .main-wrapper {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  /* Top bar mobile adjustments */
+  .top-bar {
+    padding: 0 16px;
+    height: 56px;
+  }
+
+  /* Reduced content padding */
+  .content {
+    padding: 12px;
+  }
+
+  /* Gradient text smaller */
+  .gradient-text {
+    font-size: 1.3rem;
+  }
+
+  /* Grids: Single column */
+  .dashboard-grid,
+  .node-detail-grid,
+  .mcp-grid,
+  .plans-grid-enhanced,
+  .managed-servers-grid,
+  .plans-admin-grid,
+  .charts-grid,
+  .kpi-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Provision cards mobile */
+  .provision-card {
+    padding: 16px;
+  }
+
+  .provision-card h3 {
+    font-size: 1rem;
+  }
+
+  .infra-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+  }
+
+  .nodes-grid,
+  .apps-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Status bar vertical on mobile */
+  .status-bar {
+    flex-direction: column;
+    padding: 12px;
+    gap: 0;
+  }
+
+  .status-item {
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+    padding: 10px 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .status-item:last-child {
+    border-bottom: none;
+  }
+
+  .status-label {
+    font-size: 0.85rem;
+  }
+
+  .status-value {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .status-value.mono {
+    font-size: 0.85rem;
+    word-break: break-all;
+    text-align: right;
+    max-width: 50%;
+  }
+
+  /* App row mobile - stack vertically */
+  .app-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .app-row .app-info {
+    width: 100%;
+  }
+
+  .app-name {
+    font-size: 1rem;
+  }
+
+  .app-meta {
+    font-size: 0.8rem;
+  }
+
+  .app-row .app-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .app-row .app-actions .action-btn.small {
+    min-height: 40px;
+    min-width: 40px;
+    padding: 10px 12px;
+    font-size: 1rem;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .app-row .icon-btn {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 8px;
+    font-size: 1.1rem;
+  }
+
+  /* Proxy item mobile - stack */
+  .proxy-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .proxy-domain {
+    font-size: 1rem;
+  }
+
+  .proxy-target {
+    font-size: 0.85rem;
+  }
+
+  .proxy-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .proxy-actions .ssl-badge {
+    font-size: 1.2rem;
+  }
+
+  .proxy-actions .icon-btn {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  /* Apps list and Proxies list */
+  .apps-list,
+  .proxies-list {
+    max-height: none !important;
+  }
+
+  /* Console mini card mobile */
+  .console-mini-card {
+    padding: 12px;
+  }
+
+  .console-mini-header {
+    font-size: 0.9rem;
+  }
+
+  .console-mini-body {
+    font-size: 0.75rem;
+    min-height: 100px;
+    max-height: 150px;
+  }
+
+  .mini-line {
+    font-size: 0.7rem;
+  }
+
+  /* Node detail header mobile */
+  .node-detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .node-detail-header .back-btn {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
+
+  /* Services dropdown mobile */
+  .services-dropdown-wrapper {
+    position: static;
+  }
+
+  .services-dropdown-menu {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    border-radius: 16px 16px 0 0;
+    padding: 20px;
+    z-index: 200;
+  }
+
+  .service-row {
+    padding: 14px 0;
+  }
+
+  .svc-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 1.1rem;
+  }
+
+  /* Add app button mobile */
+  .add-app-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
+
+  /* Card header row mobile */
+  .card-header-row {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .card-title-group {
+    width: 100%;
+  }
+
+  .card-title-group h3 {
+    font-size: 1.1rem;
+  }
+
+  .card-actions-group {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .services-toggle-btn {
+    padding: 10px 14px;
+    font-size: 0.9rem;
+  }
+
+  /* Modals full width on mobile */
+  .modal-card,
+  .modal-box,
+  .deploy-modal-card,
+  .restore-modal-card,
+  .token-modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    max-height: 90vh;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+
+  .modal-overlay {
+    align-items: flex-end;
+  }
+
+  /* Expanded console modal */
+  .expanded-console-card {
+    width: 100%;
+    height: 100vh;
+    border-radius: 0;
+  }
+
+  /* Form elements touch-friendly (min 44px) */
+  .form-group input,
+  .form-group select,
+  .form-group textarea,
+  .modal-card input,
+  .modal-card select,
+  .modal-card textarea,
+  .login-form input,
+  .ssh-form input,
+  .ssh-form textarea,
+  .restore-manual input {
+    min-height: 48px;
+    padding: 14px 16px;
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+
+  /* Buttons minimum tap target 44px */
+  .premium-btn,
+  .primary-btn,
+  .secondary-btn,
+  .action-btn,
+  .github-btn,
+  .tab-btn,
+  .auth-btn,
+  .filter-btn,
+  .toggle-btn,
+  .clear-btn,
+  .plan-cta-btn {
+    min-height: 48px;
+    padding: 14px 20px;
+    font-size: 0.95rem;
+  }
+
+  .action-btn.small {
+    min-height: 40px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+  }
+
+  .svc-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .icon-btn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px;
+  }
+
+  .add-app-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Login screen mobile */
+  .login-card {
+    width: 100%;
+    max-width: 100%;
+    margin: 16px;
+    padding: 24px;
+    border-radius: 16px;
+  }
+
+  .login-logo {
+    font-size: 1.6rem;
+  }
+
+  .auth-tabs {
+    gap: 16px;
+  }
+
+  /* App card actions grid on mobile */
+  .app-actions {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .app-actions .action-btn:nth-child(n+3) {
+    grid-column: span 1;
+  }
+
+  /* App row mobile layout */
+  .app-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .app-actions {
+    width: 100%;
+  }
+
+  /* Proxy item mobile */
+  .proxy-item {
+    padding: 12px;
+  }
+
+  /* Table horizontal scroll wrapper */
+  .admin-view .glass-card {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-table {
+    min-width: 600px;
+    font-size: 0.85rem;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 10px 12px;
+    white-space: nowrap;
+  }
+
+  /* Audit table responsive */
+  .audit-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .audit-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .audit-row:hover {
+    border-radius: 0;
+  }
+
+  .log-time {
+    font-size: 0.7rem;
+    color: #64748b;
+  }
+
+  .log-details {
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  /* Console view mobile */
+  .console-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+
+  .console-controls {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .filter-group {
+    flex-wrap: wrap;
+  }
+
+  .console-line {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .console-timestamp,
+  .console-stream {
+    display: inline;
+    margin-right: 8px;
+  }
+
+  /* Terminal mini card */
+  .console-mini-card {
+    height: auto;
+    min-height: 200px;
+  }
+
+  .terminal-mini {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+
+  .code-line {
+    margin-right: 0;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+
+  .copy-hint {
+    align-self: flex-end;
+  }
+
+  /* MCP page mobile */
+  .mcp-tokens-card {
+    grid-column: span 1;
+  }
+
+  .mcp-setup-card {
+    grid-row: span 1;
+  }
+
+  .code-block {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .code-block pre {
+    font-size: 0.7rem;
+    min-width: max-content;
+  }
+
+  .tools-list {
+    gap: 8px;
+  }
+
+  .tool-item {
+    padding: 10px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .tool-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .tool-name {
+    font-size: 0.8rem;
+    word-break: break-all;
+  }
+
+  .tool-desc {
+    font-size: 0.7rem;
+  }
+
+  .tool-tag {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+  }
+
+  .tokens-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .tokens-header .premium-btn {
+    width: 100%;
+  }
+
+  .token-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .revoke-btn {
+    width: 100%;
+  }
+
+  /* MCP config path - wrap on mobile */
+  .config-path {
+    word-break: break-all;
+    font-size: 0.7rem;
+    padding: 8px 10px;
+  }
+
+  /* Token info mobile */
+  .token-prefix {
+    font-size: 0.75rem;
+    word-break: break-all;
+  }
+
+  .token-meta {
+    font-size: 0.7rem;
+  }
+
+  /* MCP step content overflow */
+  .mcp-step {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .step-number {
+    align-self: flex-start;
+  }
+
+  .step-content {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  /* Billing page mobile */
+  .current-plan-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .manage-billing-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .usage-grid-enhanced {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .usage-card {
+    padding: 14px 16px;
+  }
+
+  .upgrade-suggestion {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .upgrade-now-btn {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  /* Plan card mobile */
+  .plan-card-enhanced {
+    padding: 1.5rem 1rem;
+  }
+
+  .plan-card-enhanced.recommended {
+    transform: none;
+  }
+
+  .plan-badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.75rem;
+  }
+
+  .price-main .amount {
+    font-size: 2.5rem;
+  }
+
+  /* SSH form mobile */
+  .ssh-form .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .ssh-form .port-field {
+    width: 100%;
+  }
+
+  .auth-toggle {
+    flex-direction: column;
+  }
+
+  /* Connect tabs mobile */
+  .connect-tabs {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  /* Infrastructure header mobile */
+  .infra-header,
+  .connect-header,
+  .node-detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .add-node-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* KPI cards mobile */
+  .kpi-card {
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+
+  .kpi-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 1.5rem;
+  }
+
+  .kpi-value {
+    font-size: 1.5rem;
+  }
+
+  .kpi-label {
+    font-size: 0.85rem;
+  }
+
+  /* Bar chart mobile */
+  .bar-item {
+    grid-template-columns: 80px 1fr 40px;
+    gap: 8px;
+  }
+
+  .bar-label {
+    font-size: 0.8rem;
+  }
+
+  /* Stats row mobile */
+  .stats-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .stat-item {
+    padding: 12px;
+  }
+
+  /* Onboarding box mobile */
+  .onboarding-box,
+  .assisted-setup-box {
+    padding: 20px 16px;
+  }
+
+  /* Quick install desc */
+  .quick-install-desc {
+    font-size: 0.9rem;
+  }
+
+  /* Progress steps mobile */
+  .progress-steps {
+    gap: 8px;
+  }
+
+  .progress-step {
+    font-size: 0.85rem;
+  }
+
+  /* SSH terminal mobile */
+  .ssh-terminal {
+    height: 150px;
+    font-size: 0.75rem;
+  }
+
+  /* Deploy modal mobile */
+  .deploy-modal-card {
+    height: 80vh;
+  }
+
+  .deploy-modal-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .deploy-status-badge {
+    align-self: flex-start;
+  }
+
+  .deploy-console {
+    font-size: 0.75rem;
+    padding: 12px;
+  }
+
+  /* Restore modal mobile */
+  .restore-tabs {
+    padding: 0 12px;
+  }
+
+  .restore-tabs button {
+    padding: 10px 8px;
+    font-size: 0.8rem;
+  }
+
+  .restore-item {
+    padding: 10px 12px;
+  }
+
+  .restore-manual {
+    padding: 20px 16px;
+  }
+
+  /* Form grid single column on mobile */
+  .form-grid,
+  .modal-box .form-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .form-group[style*="grid-column: span 2"] {
+    grid-column: span 1 !important;
+  }
+
+  /* Modal actions stack on mobile */
+  .modal-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .modal-actions button {
+    width: 100%;
+  }
+
+  /* Chart legend mobile */
+  .chart-legend {
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
+
+  /* Donut chart smaller */
+  .donut-chart-container {
+    width: 150px;
+    height: 150px;
+  }
+
+  .donut-total {
+    font-size: 1.5rem;
+  }
+
+  /* Revenue display mobile */
+  .revenue-amount {
+    font-size: 2rem;
+  }
+
+  .revenue-main {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+}
+
+/* ==================== EXTRA SMALL MOBILE (320px - 374px) ==================== */
+@media (max-width: 374px) {
+  .content {
+    padding: 12px;
+  }
+
+  .gradient-text {
+    font-size: 1.2rem;
+  }
+
+  .infra-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card {
+    padding: 10px;
+  }
+
+  .stat-value {
+    font-size: 1.25rem;
+  }
+
+  .login-card {
+    padding: 20px 16px;
+    margin: 8px;
+  }
+
+  .plan-card-enhanced {
+    padding: 1.25rem 0.75rem;
+  }
+
+  .price-main .amount {
+    font-size: 2rem;
+  }
+
+  .kpi-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.25rem;
+  }
+
+  .kpi-value {
+    font-size: 1.25rem;
+  }
+
+  .code-block pre {
+    font-size: 0.65rem;
+  }
+
+  .terminal-mini {
+    font-size: 0.8rem;
+  }
+
+  .tool-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .tool-tag {
+    margin-top: 4px;
+  }
+}
+
+/* ==================== LANDSCAPE MOBILE ADJUSTMENTS ==================== */
+@media (max-width: 767px) and (orientation: landscape) {
+  .modal-card,
+  .modal-box,
+  .deploy-modal-card,
+  .restore-modal-card {
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .login-screen {
+    overflow-y: auto;
+  }
+
+  .login-card {
+    margin: 16px auto;
+    border-radius: 16px;
+  }
+}
+
+/* ==================== TOUCH DEVICE OPTIMIZATIONS ==================== */
+@media (hover: none) and (pointer: coarse) {
+  /* Remove hover effects that don't work well on touch */
+  .glass-card:hover {
+    transform: none;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+  }
+
+  .node-card:hover,
+  .app-card:hover,
+  .plan-card-enhanced:hover {
+    transform: none;
+  }
+
+  /* Ensure all interactive elements have visible active states */
+  .premium-btn:active,
+  .primary-btn:active,
+  .action-btn:active {
+    transform: scale(0.98);
+  }
+
+  /* Add tap highlight */
+  nav a:active,
+  .server-item:active {
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
+/* ==================== HIGH DPI / RETINA ADJUSTMENTS ==================== */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .hamburger-line {
+    height: 2px;
+  }
+}
+
+/* ==================== PRINT STYLES ==================== */
+@media print {
+  .sidebar,
+  .hamburger-btn,
+  .mobile-overlay,
+  .modal-overlay {
+    display: none !important;
+  }
+
+  .main-wrapper {
+    margin-left: 0 !important;
+  }
+
+  .content {
+    padding: 0;
+  }
+}
 </style>

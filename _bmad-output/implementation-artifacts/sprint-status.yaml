@@ -72,4 +72,6 @@ development_status:
 
   epic-6: done  # Onboarding & UX
   6-1-assisted-ssh-installation: done  # Web-based SSH installer with xterm.js
+  6-2-internationalization-i18n: done  # 5 languages (EN, FR, DE, ES, IT) + vue-i18n
+  6-3-server-alias-feature: done  # User-friendly server names + MCP integration
   epic-6-retrospective: optional

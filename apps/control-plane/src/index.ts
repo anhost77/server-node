@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import websocket from '@fastify/websocket';
 import staticFiles from '@fastify/static';
 import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -25,7 +26,36 @@ function getLocalIpAddress(): string {
 import { db } from './db/index.js';
 import * as schema from './db/schema.js';
 import { sshManager, type SSHCredentials } from './ssh/SSHSessionManager.js';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, or, sql, desc } from 'drizzle-orm';
+// Billing imports
+import {
+    stripe,
+    isStripeConfigured,
+    getPublishableKey,
+    formatAmount,
+    createCheckoutSession,
+    createPortalSession,
+    verifyWebhookSignature,
+    handleWebhookEvent,
+    getUserSubscription,
+    getActivePlans,
+    assignSubscription,
+    getSubscriptionStatus,
+    checkUsageLimit,
+    incrementUsage,
+    getUsageReport,
+    createDefaultFreePlan
+} from './billing/index.js';
+// VPS Providers imports
+import {
+    getProviderStatuses,
+    getAllPlans as getVPSPlans,
+    getAllRegions as getVPSRegions,
+    provisionServer,
+    deleteProvisionedServer,
+    getServerStatus,
+    type Provider
+} from './providers/index.js';
 import cookie from '@fastify/cookie';
 import bcrypt from 'bcryptjs';
 
@@ -41,6 +71,30 @@ fastify.register(cors, { origin: true, credentials: true });
 fastify.register(cookie);
 fastify.register(staticFiles, { root: path.join(__dirname, '../public'), prefix: '/' });
 fastify.register(websocket);
+fastify.register(multipart, {
+    limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB max file size
+        files: 5 // Max 5 files per request
+    }
+});
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, '../uploads/tickets');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Raw body parser for Stripe webhooks
+fastify.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
+    try {
+        // Store raw body for webhook signature verification
+        (req as any).rawBody = body;
+        const json = JSON.parse(body as string);
+        done(null, json);
+    } catch (err: any) {
+        done(err, undefined);
+    }
+});
 
 // Multi-tenant Authentication Middleware
 import { createHash, randomBytes } from 'crypto';
@@ -412,6 +466,18 @@ const MCP_TOOLS = [
             },
         },
     },
+    {
+        name: "set_server_alias",
+        description: "Set a user-friendly alias/name for a server",
+        inputSchema: {
+            type: "object",
+            properties: {
+                serverId: { type: "string", description: "Server ID to update" },
+                alias: { type: "string", description: "The alias to set (leave empty to remove)" }
+            },
+            required: ["serverId"],
+        },
+    },
 ];
 
 async function handleMcpToolCall(userId: string, toolName: string, args: any) {
@@ -424,6 +490,10 @@ async function handleMcpToolCall(userId: string, toolName: string, args: any) {
                 return {
                     id: s.id,
                     shortId: s.id.slice(0, 12),
+                    alias: s.alias || null,
+                    displayName: s.alias || s.hostname || s.id.slice(0, 12),
+                    hostname: s.hostname,
+                    ip: s.ip,
                     status: active ? 'online' : 'offline',
                     registeredAt: s.registeredAt
                 };
@@ -459,6 +529,12 @@ async function handleMcpToolCall(userId: string, toolName: string, args: any) {
                 return { content: [{ type: "text", text: `App not found: ${appName}` }], isError: true };
             }
 
+            // Check deploy limit
+            const limitCheck = await checkUsageLimit(userId, 'deploy');
+            if (!limitCheck.allowed && !dryRun) {
+                return { content: [{ type: "text", text: `Daily deploy limit reached (${limitCheck.current}/${limitCheck.limit}). Please upgrade your plan.` }], isError: true };
+            }
+
             if (dryRun) {
                 return {
                     content: [{ type: "text", text: `[DRY RUN] Would deploy "${app.name}" from ${app.repoUrl} @ ${commitHash}` }],
@@ -468,6 +544,8 @@ async function handleMcpToolCall(userId: string, toolName: string, args: any) {
             // Trigger actual deployment via WebSocket to agent
             const sent = await sendToAgentById(app.nodeId, { type: 'DEPLOY', appId: app.id, commitHash }, userId);
             if (sent) {
+                // Increment deploy counter
+                await incrementUsage(userId, 'deploy');
                 return {
                     content: [{ type: "text", text: `Deployment triggered for "${app.name}" @ ${commitHash}` }],
                 };
@@ -536,6 +614,16 @@ async function handleMcpToolCall(userId: string, toolName: string, args: any) {
             const active = Array.from(agentSessions.values()).find(sess => sess.nodeId === targetServer!.id && sess.authorized);
             if (!active) {
                 return { content: [{ type: "text", text: `Server ${targetServer.id.slice(0, 12)} is offline. Cannot provision domain.` }], isError: true };
+            }
+
+            // Check if domain already exists (update) or new (check limit)
+            const existingDomain = await db.select().from(schema.proxies).where(and(eq(schema.proxies.nodeId, targetServer.id), eq(schema.proxies.domain, domain))).get();
+            if (!existingDomain) {
+                // Check domain limit for new domains only
+                const limitCheck = await checkUsageLimit(userId, 'domain');
+                if (!limitCheck.allowed) {
+                    return { content: [{ type: "text", text: `Domain limit reached (${limitCheck.current}/${limitCheck.limit}). Please upgrade your plan to add more domains.` }], isError: true };
+                }
             }
 
             // Find app if appName provided
@@ -839,6 +927,37 @@ async function handleMcpToolCall(userId: string, toolName: string, args: any) {
             };
         }
 
+        case "set_server_alias": {
+            const { serverId, alias } = args;
+
+            if (!serverId) {
+                return { content: [{ type: "text", text: `Server ID is required.` }], isError: true };
+            }
+
+            // Find server
+            const servers = await db.select().from(schema.nodes).where(eq(schema.nodes.ownerId, userId)).all();
+            const targetServer = servers.find(s => s.id === serverId || s.id.startsWith(serverId));
+
+            if (!targetServer) {
+                return { content: [{ type: "text", text: `Server not found: ${serverId}` }], isError: true };
+            }
+
+            // Update the alias
+            const newAlias = alias?.trim() || null;
+            await db.update(schema.nodes)
+                .set({ alias: newAlias })
+                .where(eq(schema.nodes.id, targetServer.id))
+                .run();
+
+            const displayName = newAlias || targetServer.hostname || targetServer.id.slice(0, 12);
+            return {
+                content: [{ type: "text", text: newAlias
+                    ? `Server "${targetServer.id.slice(0, 12)}" alias set to "${newAlias}". It will now be displayed as "${displayName}".`
+                    : `Server "${targetServer.id.slice(0, 12)}" alias removed.`
+                }],
+            };
+        }
+
         default:
             return { content: [{ type: "text", text: `Unknown tool: ${toolName}` }], isError: true };
     }
@@ -892,8 +1011,22 @@ fastify.get('/api/apps', async (req) => {
     return await db.select().from(schema.apps).where(eq(schema.apps.ownerId, userId)).all();
 });
 
-fastify.post('/api/apps', async (req) => {
+fastify.post('/api/apps', async (req, reply) => {
     const userId = (req as any).userId;
+
+    // Check app limit
+    const limitCheck = await checkUsageLimit(userId, 'app');
+    if (!limitCheck.allowed) {
+        return reply.status(403).send({
+            error: 'LIMIT_EXCEEDED',
+            resource: 'app',
+            current: limitCheck.current,
+            limit: limitCheck.limit,
+            message: limitCheck.message,
+            upgradeUrl: '/billing'
+        });
+    }
+
     const body = req.body as any;
     const app = {
         id: randomUUID(),
@@ -924,6 +1057,20 @@ fastify.delete('/api/apps/:id', async (req) => {
 fastify.post('/api/apps/:id/deploy', async (req, reply) => {
     const userId = (req as any).userId;
     const { id } = (req.params as any);
+
+    // Check deploy limit
+    const limitCheck = await checkUsageLimit(userId, 'deploy');
+    if (!limitCheck.allowed) {
+        return reply.status(403).send({
+            error: 'LIMIT_EXCEEDED',
+            resource: 'deploy',
+            current: limitCheck.current,
+            limit: limitCheck.limit,
+            message: limitCheck.message,
+            upgradeUrl: '/billing'
+        });
+    }
+
     const { commitHash } = (req.body as any) || { commitHash: 'main' };
     const app = await db.select().from(schema.apps).where(and(eq(schema.apps.id, id), eq(schema.apps.ownerId, userId))).get();
     if (!app) return reply.status(404).send({ error: 'App not found' });
@@ -936,6 +1083,8 @@ fastify.post('/api/apps/:id/deploy', async (req, reply) => {
     }, userId);
 
     if (ok) {
+        // Increment deploy counter
+        await incrementUsage(userId, 'deploy');
         addActivityLog(userId, 'app_deploy_triggered', { name: app.name }, app.nodeId, 'info');
         return { status: 'triggered' };
     }
@@ -956,8 +1105,22 @@ fastify.post('/api/apps/:id/:action', async (req, reply) => {
     return ok ? { status: 'triggered' } : reply.status(503).send({ error: 'Target agent offline' });
 });
 
-fastify.post('/api/servers/token', async (req) => {
+fastify.post('/api/servers/token', async (req, reply) => {
     const userId = (req as any).userId;
+
+    // Check server limit
+    const limitCheck = await checkUsageLimit(userId, 'server');
+    if (!limitCheck.allowed) {
+        return reply.status(403).send({
+            error: 'LIMIT_EXCEEDED',
+            resource: 'server',
+            current: limitCheck.current,
+            limit: limitCheck.limit,
+            message: limitCheck.message,
+            upgradeUrl: '/billing'
+        });
+    }
+
     const token = randomUUID();
     await db.insert(schema.registrationTokens).values({ id: token, ownerId: userId, expiresAt: Date.now() + 600000 }).run();
     return { token };
@@ -968,6 +1131,33 @@ fastify.get('/api/servers/verify-token/:token', async (req, reply) => {
     const data = await db.select().from(schema.registrationTokens).where(eq(schema.registrationTokens.id, token)).get();
     if (data && data.expiresAt > Date.now()) return { valid: true };
     return reply.status(401).send({ valid: false });
+});
+
+// Update server alias
+fastify.patch('/api/servers/:serverId/alias', async (req, reply) => {
+    const userId = (req as any).userId;
+    const { serverId } = req.params as any;
+    const { alias } = req.body as any;
+
+    // Find the server and verify ownership
+    const server = await db.select().from(schema.nodes)
+        .where(and(
+            eq(schema.nodes.ownerId, userId),
+            or(eq(schema.nodes.id, serverId), sql`${schema.nodes.id} LIKE ${serverId + '%'}`)
+        ))
+        .get();
+
+    if (!server) {
+        return reply.status(404).send({ error: 'Server not found' });
+    }
+
+    // Update the alias
+    await db.update(schema.nodes)
+        .set({ alias: alias || null })
+        .where(eq(schema.nodes.id, server.id))
+        .run();
+
+    return { success: true, alias: alias || null };
 });
 
 // WebSocket Handlers
@@ -1006,6 +1196,25 @@ fastify.register(async function (fastify) {
 
                 // Combined Deploy + Domain Provision
                 if (msg.type === 'DEPLOY_WITH_DOMAIN') {
+                    // Check limits before proceeding
+                    const appLimit = await checkUsageLimit(userId, 'app');
+                    if (!appLimit.allowed) {
+                        socket.send(JSON.stringify({ type: 'ERROR', message: `App limit reached (${appLimit.current}/${appLimit.limit}). Please upgrade your plan.` }));
+                        return;
+                    }
+
+                    const deployLimit = await checkUsageLimit(userId, 'deploy');
+                    if (!deployLimit.allowed) {
+                        socket.send(JSON.stringify({ type: 'ERROR', message: `Daily deploy limit reached (${deployLimit.current}/${deployLimit.limit}). Please upgrade your plan.` }));
+                        return;
+                    }
+
+                    const domainLimit = await checkUsageLimit(userId, 'domain');
+                    if (!domainLimit.allowed) {
+                        socket.send(JSON.stringify({ type: 'ERROR', message: `Domain limit reached (${domainLimit.current}/${domainLimit.limit}). Please upgrade your plan.` }));
+                        return;
+                    }
+
                     // 1. Create the app in database
                     const appId = randomUUID();
                     const app = {
@@ -1032,6 +1241,8 @@ fastify.register(async function (fastify) {
                     }, userId);
 
                     if (deployOk) {
+                        // Increment deploy counter
+                        await incrementUsage(userId, 'deploy');
                         addActivityLog(userId, 'app_deploy_triggered', { name: app.name }, nodeId, 'info');
 
                         // 3. Provision domain (after a short delay for app to start)
@@ -1067,6 +1278,18 @@ fastify.register(async function (fastify) {
                 }
 
                 if (['PROVISION_DOMAIN', 'SERVICE_ACTION', 'APP_ACTION', 'DELETE_PROXY'].includes(msg.type)) {
+                    // Check domain limit for PROVISION_DOMAIN
+                    if (msg.type === 'PROVISION_DOMAIN') {
+                        const existingDomain = await db.select().from(schema.proxies).where(and(eq(schema.proxies.nodeId, nodeId), eq(schema.proxies.domain, msg.domain))).get();
+                        if (!existingDomain) {
+                            const limitCheck = await checkUsageLimit(userId, 'domain');
+                            if (!limitCheck.allowed) {
+                                socket.send(JSON.stringify({ type: 'ERROR', message: `Domain limit reached (${limitCheck.current}/${limitCheck.limit}). Please upgrade your plan.` }));
+                                return;
+                            }
+                        }
+                    }
+
                     const ok = await sendToAgentById(nodeId, msg, userId);
                     if (ok && msg.type === 'SERVICE_ACTION') {
                         addActivityLog(userId, 'service_action', { service: msg.service, action: msg.action }, nodeId, 'info');
@@ -1224,6 +1447,78 @@ fastify.get('/api/auth/me', async (req, reply) => {
     const userId = (req as any).userId;
     if (!userId) return reply.status(401).send({ error: 'No user' });
     return await db.select().from(schema.users).where(eq(schema.users.id, userId)).get();
+});
+
+// ==================== GDPR USER DATA ROUTES ====================
+
+// Export user data (GDPR Article 20 - Right to data portability)
+fastify.get('/api/user/export-data', async (req, reply) => {
+    const userId = (req as any).userId;
+    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+
+    // Collect all user data
+    const userData = await db.select().from(schema.users).where(eq(schema.users.id, userId)).get();
+    const userNodes = await db.select().from(schema.nodes).where(eq(schema.nodes.ownerId, userId)).all();
+    const userApps = await db.select().from(schema.apps).where(eq(schema.apps.ownerId, userId)).all();
+    const userProxies = await db.select().from(schema.proxies).where(eq(schema.proxies.ownerId, userId)).all();
+    const userSubscriptions = await db.select().from(schema.subscriptions).where(eq(schema.subscriptions.userId, userId)).all();
+    const userInvoices = await db.select().from(schema.invoices).where(eq(schema.invoices.userId, userId)).all();
+    const userActivityLogs = await db.select().from(schema.activityLogs).where(eq(schema.activityLogs.ownerId, userId)).all();
+    const userManagedServers = await db.select().from(schema.managedServers).where(eq(schema.managedServers.userId, userId)).all();
+
+    // Remove sensitive fields
+    if (userData) {
+        delete (userData as any).passwordHash;
+        delete (userData as any).mcpToken;
+    }
+
+    const exportData = {
+        exportDate: new Date().toISOString(),
+        user: userData,
+        nodes: userNodes,
+        applications: userApps,
+        proxies: userProxies,
+        subscriptions: userSubscriptions,
+        invoices: userInvoices,
+        activityLogs: userActivityLogs,
+        managedServers: userManagedServers
+    };
+
+    reply.header('Content-Type', 'application/json');
+    reply.header('Content-Disposition', `attachment; filename="serverflow-data-${userId}.json"`);
+    return JSON.stringify(exportData, null, 2);
+});
+
+// Delete user account (GDPR Article 17 - Right to erasure)
+fastify.delete('/api/user/delete-account', async (req, reply) => {
+    const userId = (req as any).userId;
+    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+
+    try {
+        // Delete all user data (cascade should handle most, but be explicit)
+        await db.delete(schema.activityLogs).where(eq(schema.activityLogs.ownerId, userId)).run();
+        await db.delete(schema.invoices).where(eq(schema.invoices.userId, userId)).run();
+        await db.delete(schema.usageRecords).where(eq(schema.usageRecords.userId, userId)).run();
+        await db.delete(schema.subscriptions).where(eq(schema.subscriptions.userId, userId)).run();
+        await db.delete(schema.managedServers).where(eq(schema.managedServers.userId, userId)).run();
+        await db.delete(schema.mcpTokens).where(eq(schema.mcpTokens.userId, userId)).run();
+        await db.delete(schema.proxies).where(eq(schema.proxies.ownerId, userId)).run();
+        await db.delete(schema.apps).where(eq(schema.apps.ownerId, userId)).run();
+        await db.delete(schema.nodes).where(eq(schema.nodes.ownerId, userId)).run();
+        await db.delete(schema.registrationTokens).where(eq(schema.registrationTokens.ownerId, userId)).run();
+        await db.delete(schema.accounts).where(eq(schema.accounts.userId, userId)).run();
+        await db.delete(schema.sessions).where(eq(schema.sessions.userId, userId)).run();
+        await db.delete(schema.users).where(eq(schema.users.id, userId)).run();
+
+        // Clear session cookie
+        reply.clearCookie('session_id');
+
+        console.log(`🗑️ Account deleted: ${userId}`);
+        return { success: true, message: 'Account deleted successfully' };
+    } catch (err: any) {
+        console.error('Failed to delete account:', err);
+        return reply.status(500).send({ error: 'Failed to delete account' });
+    }
 });
 
 fastify.get('/api/github/repos', async (req, reply) => {
@@ -1572,5 +1867,1434 @@ fastify.register(async function (fastify) {
         });
     });
 });
+
+// ==================== BILLING ROUTES ====================
+
+// Get available plans (public)
+fastify.get('/api/billing/plans', async () => {
+    const plans = await getActivePlans();
+    return {
+        plans: plans.map(p => ({
+            id: p.id,
+            name: p.name,
+            displayName: p.displayName,
+            description: p.description,
+            priceMonthly: p.priceMonthly,
+            priceYearly: p.priceYearly,
+            priceMonthlyFormatted: formatAmount(p.priceMonthly || 0),
+            priceYearlyFormatted: formatAmount(p.priceYearly || 0),
+            limits: {
+                servers: p.maxServers,
+                apps: p.maxApps,
+                domains: p.maxDomains,
+                deploysPerDay: p.maxDeploysPerDay
+            },
+            features: p.features ? JSON.parse(p.features) : [],
+            isDefault: p.isDefault
+        })),
+        stripeConfigured: isStripeConfigured(),
+        publishableKey: getPublishableKey()
+    };
+});
+
+// Get current subscription
+fastify.get('/api/billing/subscription', async (req) => {
+    const userId = (req as any).userId;
+    return await getSubscriptionStatus(userId);
+});
+
+// Get usage report
+fastify.get('/api/billing/usage', async (req) => {
+    const userId = (req as any).userId;
+    return await getUsageReport(userId);
+});
+
+// Create checkout session
+fastify.post('/api/billing/checkout', async (req, reply) => {
+    const userId = (req as any).userId;
+    const { planId, billingInterval = 'month' } = req.body as any;
+
+    if (!isStripeConfigured()) {
+        return reply.status(400).send({ error: 'Stripe is not configured' });
+    }
+
+    const user = await db.select().from(schema.users).where(eq(schema.users.id, userId)).get();
+    if (!user) {
+        return reply.status(404).send({ error: 'User not found' });
+    }
+
+    try {
+        const session = await createCheckoutSession({
+            userId,
+            email: user.email!,
+            name: user.name || undefined,
+            planId,
+            billingInterval,
+            successUrl: `${process.env.APP_URL || 'http://localhost:5173'}/?billing=success`,
+            cancelUrl: `${process.env.APP_URL || 'http://localhost:5173'}/?billing=canceled`
+        });
+
+        return { url: session?.url };
+    } catch (err: any) {
+        return reply.status(400).send({ error: err.message });
+    }
+});
+
+// Get customer portal URL
+fastify.post('/api/billing/portal', async (req, reply) => {
+    const userId = (req as any).userId;
+
+    if (!isStripeConfigured()) {
+        return reply.status(400).send({ error: 'Stripe is not configured' });
+    }
+
+    const user = await db.select().from(schema.users).where(eq(schema.users.id, userId)).get();
+    if (!user?.stripeCustomerId) {
+        return reply.status(400).send({ error: 'No billing account found' });
+    }
+
+    try {
+        const session = await createPortalSession(
+            user.stripeCustomerId,
+            `${process.env.APP_URL || 'http://localhost:5173'}/`
+        );
+        return { url: session?.url };
+    } catch (err: any) {
+        return reply.status(400).send({ error: err.message });
+    }
+});
+
+// Get invoices
+fastify.get('/api/billing/invoices', async (req) => {
+    const userId = (req as any).userId;
+    const invoices = await db.select()
+        .from(schema.invoices)
+        .where(eq(schema.invoices.userId, userId))
+        .orderBy(desc(schema.invoices.createdAt))
+        .all();
+    return invoices;
+});
+
+// Save billing information (onboarding)
+fastify.post('/api/billing/onboarding', async (req, reply) => {
+    const userId = (req as any).userId;
+    const {
+        billingName,
+        billingEmail,
+        billingCompany,
+        billingAddress,
+        billingCity,
+        billingPostalCode,
+        billingCountry,
+        billingVatNumber,
+        billingPhone,
+        acceptTerms,
+        acceptPrivacy,
+        waiveWithdrawal
+    } = req.body as any;
+
+    // Validate required fields
+    if (!billingName || !billingEmail || !billingAddress || !billingCity || !billingPostalCode || !billingCountry) {
+        return reply.status(400).send({ error: 'Missing required billing fields' });
+    }
+
+    // Validate legal checkboxes
+    if (!acceptTerms || !acceptPrivacy || !waiveWithdrawal) {
+        return reply.status(400).send({ error: 'You must accept all legal agreements' });
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+
+    // Update user billing info
+    await db.update(schema.users)
+        .set({
+            billingName,
+            billingEmail,
+            billingCompany: billingCompany || null,
+            billingAddress,
+            billingCity,
+            billingPostalCode,
+            billingCountry,
+            billingVatNumber: billingVatNumber || null,
+            billingPhone: billingPhone || null,
+            acceptedTermsAt: now,
+            acceptedPrivacyAt: now,
+            waivedWithdrawalAt: now,
+            onboardingCompleted: 1
+        })
+        .where(eq(schema.users.id, userId))
+        .run();
+
+    return { success: true };
+});
+
+// Stripe Webhook (raw body required)
+fastify.post('/api/webhooks/stripe', {
+    config: {
+        rawBody: true
+    }
+}, async (req, reply) => {
+    const signature = req.headers['stripe-signature'] as string;
+    const rawBody = (req as any).rawBody || req.body;
+
+    if (!signature) {
+        return reply.status(400).send({ error: 'Missing signature' });
+    }
+
+    const event = verifyWebhookSignature(
+        typeof rawBody === 'string' ? rawBody : JSON.stringify(rawBody),
+        signature
+    );
+
+    if (!event) {
+        return reply.status(400).send({ error: 'Invalid signature' });
+    }
+
+    try {
+        await handleWebhookEvent(event);
+        return { received: true };
+    } catch (err: any) {
+        console.error('Webhook error:', err);
+        return reply.status(500).send({ error: err.message });
+    }
+});
+
+// ==================== ADMIN ROUTES ====================
+
+// Admin middleware
+async function requireAdmin(req: any, reply: any) {
+    const userId = req.userId;
+    const user = await db.select().from(schema.users).where(eq(schema.users.id, userId)).get();
+    if (!user || user.role !== 'admin') {
+        return reply.status(403).send({ error: 'Admin access required' });
+    }
+}
+
+// List all users
+fastify.get('/api/admin/users', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const users = await db.select({
+        id: schema.users.id,
+        name: schema.users.name,
+        email: schema.users.email,
+        role: schema.users.role,
+        avatarUrl: schema.users.avatarUrl,
+        stripeCustomerId: schema.users.stripeCustomerId,
+        // Billing Information
+        billingEmail: schema.users.billingEmail,
+        billingName: schema.users.billingName,
+        billingCompany: schema.users.billingCompany,
+        billingAddress: schema.users.billingAddress,
+        billingCity: schema.users.billingCity,
+        billingPostalCode: schema.users.billingPostalCode,
+        billingCountry: schema.users.billingCountry,
+        billingVatNumber: schema.users.billingVatNumber,
+        billingPhone: schema.users.billingPhone,
+        // Legal Acceptance
+        acceptedTermsAt: schema.users.acceptedTermsAt,
+        acceptedPrivacyAt: schema.users.acceptedPrivacyAt,
+        waivedWithdrawalAt: schema.users.waivedWithdrawalAt,
+        onboardingCompleted: schema.users.onboardingCompleted,
+        createdAt: schema.users.createdAt
+    }).from(schema.users).all();
+
+    // Get subscription info for each user
+    const usersWithSubs = await Promise.all(users.map(async (user) => {
+        const sub = await db.select()
+            .from(schema.subscriptions)
+            .where(and(
+                eq(schema.subscriptions.userId, user.id),
+                eq(schema.subscriptions.status, 'active')
+            ))
+            .get();
+
+        let planName = 'free';
+        if (sub) {
+            const plan = await db.select().from(schema.plans).where(eq(schema.plans.id, sub.planId)).get();
+            planName = plan?.displayName || sub.planId;
+        }
+
+        return { ...user, plan: planName, subscriptionStatus: sub?.status || 'none' };
+    }));
+
+    return usersWithSubs;
+});
+
+// Get user details
+fastify.get('/api/admin/users/:id', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const { id } = req.params as any;
+    const user = await db.select().from(schema.users).where(eq(schema.users.id, id)).get();
+    if (!user) {
+        return reply.status(404).send({ error: 'User not found' });
+    }
+
+    const subscription = await db.select()
+        .from(schema.subscriptions)
+        .where(eq(schema.subscriptions.userId, id))
+        .get();
+
+    const usage = await getUsageReport(id);
+    const invoices = await db.select()
+        .from(schema.invoices)
+        .where(eq(schema.invoices.userId, id))
+        .orderBy(desc(schema.invoices.createdAt))
+        .limit(10)
+        .all();
+
+    return {
+        user: { ...user, passwordHash: undefined },
+        subscription,
+        usage,
+        invoices
+    };
+});
+
+// Update user
+fastify.patch('/api/admin/users/:id', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const { id } = req.params as any;
+    const updates = req.body as any;
+
+    // Only allow certain fields to be updated
+    const allowedFields = ['name', 'role', 'billingEmail', 'billingName'];
+    const filteredUpdates: any = {};
+    for (const field of allowedFields) {
+        if (updates[field] !== undefined) {
+            filteredUpdates[field] = updates[field];
+        }
+    }
+
+    await db.update(schema.users)
+        .set(filteredUpdates)
+        .where(eq(schema.users.id, id))
+        .run();
+
+    return { success: true };
+});
+
+// Impersonate user (creates a session for the target user)
+fastify.post('/api/admin/users/:id/impersonate', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const adminId = (req as any).userId;
+    const { id: targetUserId } = req.params as any;
+
+    const targetUser = await db.select().from(schema.users).where(eq(schema.users.id, targetUserId)).get();
+    if (!targetUser) {
+        return reply.status(404).send({ error: 'User not found' });
+    }
+
+    // Log the impersonation
+    await addActivityLog(adminId, 'admin_impersonate', {
+        targetUserId,
+        targetEmail: targetUser.email
+    });
+
+    // Create session for target user
+    const sessionId = randomUUID();
+    await db.insert(schema.sessions).values({
+        id: sessionId,
+        userId: targetUserId,
+        expiresAt: Date.now() + 1000 * 60 * 60 // 1 hour only for impersonation
+    }).run();
+
+    reply.setCookie('session_id', sessionId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 // 1 hour
+    });
+
+    return { success: true, user: { ...targetUser, passwordHash: undefined } };
+});
+
+// List all plans
+fastify.get('/api/admin/plans', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    return await db.select().from(schema.plans).orderBy(schema.plans.sortOrder).all();
+});
+
+// Create plan
+fastify.post('/api/admin/plans', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const planData = req.body as any;
+    const id = planData.id || planData.name?.toLowerCase().replace(/\s+/g, '-') || randomUUID();
+
+    await db.insert(schema.plans).values({
+        id,
+        name: planData.name,
+        displayName: planData.displayName || planData.name,
+        description: planData.description,
+        stripePriceIdMonthly: planData.stripePriceIdMonthly,
+        stripePriceIdYearly: planData.stripePriceIdYearly,
+        priceMonthly: planData.priceMonthly || 0,
+        priceYearly: planData.priceYearly || 0,
+        maxServers: planData.maxServers ?? 1,
+        maxApps: planData.maxApps ?? 3,
+        maxDomains: planData.maxDomains ?? 3,
+        maxDeploysPerDay: planData.maxDeploysPerDay ?? 10,
+        features: planData.features ? JSON.stringify(planData.features) : null,
+        isActive: planData.isActive ?? true,
+        isDefault: planData.isDefault ?? false,
+        sortOrder: planData.sortOrder ?? 0
+    }).run();
+
+    return { success: true, id };
+});
+
+// Update plan
+fastify.patch('/api/admin/plans/:id', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const { id } = req.params as any;
+    const updates = req.body as any;
+
+    // Handle features as JSON
+    if (updates.features && Array.isArray(updates.features)) {
+        updates.features = JSON.stringify(updates.features);
+    }
+
+    await db.update(schema.plans)
+        .set(updates)
+        .where(eq(schema.plans.id, id))
+        .run();
+
+    return { success: true };
+});
+
+// Delete plan
+fastify.delete('/api/admin/plans/:id', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const { id } = req.params as any;
+
+    // Check if any subscriptions use this plan
+    const activeSubs = await db.select()
+        .from(schema.subscriptions)
+        .where(and(
+            eq(schema.subscriptions.planId, id),
+            eq(schema.subscriptions.status, 'active')
+        ))
+        .all();
+
+    if (activeSubs.length > 0) {
+        return reply.status(400).send({
+            error: 'Cannot delete plan with active subscriptions',
+            activeSubscriptions: activeSubs.length
+        });
+    }
+
+    await db.delete(schema.plans).where(eq(schema.plans.id, id)).run();
+    return { success: true };
+});
+
+// List all subscriptions
+fastify.get('/api/admin/subscriptions', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const subs = await db.select().from(schema.subscriptions).all();
+
+    const subsWithUsers = await Promise.all(subs.map(async (sub) => {
+        const user = await db.select({
+            id: schema.users.id,
+            email: schema.users.email,
+            name: schema.users.name
+        }).from(schema.users).where(eq(schema.users.id, sub.userId)).get();
+
+        const plan = await db.select({
+            name: schema.plans.name,
+            displayName: schema.plans.displayName
+        }).from(schema.plans).where(eq(schema.plans.id, sub.planId)).get();
+
+        return { ...sub, user, plan };
+    }));
+
+    return subsWithUsers;
+});
+
+// Manually assign subscription
+fastify.patch('/api/admin/subscriptions/:userId', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const { userId } = req.params as any;
+    const { planId, status, periodEnd } = req.body as any;
+
+    const subscription = await assignSubscription(userId, planId, {
+        status,
+        periodEnd
+    });
+
+    await addActivityLog((req as any).userId, 'admin_subscription_update', {
+        targetUserId: userId,
+        planId,
+        status
+    });
+
+    return subscription;
+});
+
+// Admin metrics
+fastify.get('/api/admin/metrics', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    // Total users
+    const usersResult = await db.select({ count: sql<number>`count(*)` })
+        .from(schema.users)
+        .get();
+
+    // Active subscriptions
+    const activeSubsResult = await db.select({ count: sql<number>`count(*)` })
+        .from(schema.subscriptions)
+        .where(eq(schema.subscriptions.status, 'active'))
+        .get();
+
+    // Total servers
+    const serversResult = await db.select({ count: sql<number>`count(*)` })
+        .from(schema.nodes)
+        .get();
+
+    // Total apps
+    const appsResult = await db.select({ count: sql<number>`count(*)` })
+        .from(schema.apps)
+        .get();
+
+    // MRR calculation (sum of monthly prices of active subscriptions)
+    const activeSubs = await db.select()
+        .from(schema.subscriptions)
+        .where(eq(schema.subscriptions.status, 'active'))
+        .all();
+
+    let mrr = 0;
+    for (const sub of activeSubs) {
+        const plan = await db.select().from(schema.plans).where(eq(schema.plans.id, sub.planId)).get();
+        if (plan) {
+            mrr += plan.priceMonthly || 0;
+        }
+    }
+
+    // Recent signups (last 7 days)
+    const weekAgo = Math.floor(Date.now() / 1000) - (7 * 24 * 60 * 60);
+    const recentUsersResult = await db.select({ count: sql<number>`count(*)` })
+        .from(schema.users)
+        .where(sql`${schema.users.createdAt} > ${weekAgo}`)
+        .get();
+
+    return {
+        users: {
+            total: usersResult?.count || 0,
+            recentSignups: recentUsersResult?.count || 0
+        },
+        subscriptions: {
+            active: activeSubsResult?.count || 0
+        },
+        infrastructure: {
+            servers: serversResult?.count || 0,
+            apps: appsResult?.count || 0
+        },
+        revenue: {
+            mrr,
+            mrrFormatted: formatAmount(mrr)
+        }
+    };
+});
+
+// ============ MANAGED SERVERS API ============
+
+// Get provider status
+fastify.get('/api/managed-servers/providers', async () => {
+    return getProviderStatuses();
+});
+
+// Get all VPS plans
+fastify.get('/api/managed-servers/plans', async () => {
+    return await getVPSPlans();
+});
+
+// Get all VPS regions
+fastify.get('/api/managed-servers/regions', async () => {
+    return await getVPSRegions();
+});
+
+// Get user's managed servers
+fastify.get('/api/managed-servers', async (req) => {
+    const userId = (req as any).userId;
+    const servers = await db.select()
+        .from(schema.managedServers)
+        .where(eq(schema.managedServers.userId, userId))
+        .all();
+
+    return servers;
+});
+
+// Provision a new managed server
+fastify.post('/api/managed-servers', async (req, reply) => {
+    const userId = (req as any).userId;
+    const { provider, planId, regionId, name } = req.body as {
+        provider: Provider;
+        planId: string;
+        regionId: string;
+        name: string;
+    };
+
+    // Check server limit
+    const limitCheck = await checkUsageLimit(userId, 'server');
+    if (!limitCheck.allowed) {
+        return reply.status(403).send({
+            error: 'LIMIT_EXCEEDED',
+            resource: 'server',
+            current: limitCheck.current,
+            limit: limitCheck.limit,
+            message: limitCheck.message,
+            upgradeUrl: '/billing'
+        });
+    }
+
+    // Create registration token for the new server
+    const agentToken = randomUUID();
+    await db.insert(schema.registrationTokens).values({
+        id: agentToken,
+        ownerId: userId,
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+    }).run();
+
+    // Get control plane URL for cloud-init
+    const controlPlaneUrl = process.env.CONTROL_PLANE_URL || `http://${getLocalIpAddress()}:3000`;
+
+    try {
+        // Provision the server
+        const server = await provisionServer(
+            provider,
+            planId,
+            regionId,
+            name,
+            agentToken,
+            controlPlaneUrl
+        );
+
+        // Save to database
+        const managedServerId = randomUUID();
+        await db.insert(schema.managedServers).values({
+            id: managedServerId,
+            userId,
+            provider,
+            providerServerId: server.providerId,
+            hostname: server.name,
+            serverType: server.plan,
+            providerRegion: regionId,
+            ipAddress: server.ipv4 || null,
+            status: 'provisioning',
+            monthlyCostCents: 0, // Will be updated later
+            provisionedAt: Math.floor(Date.now() / 1000)
+        }).run();
+
+        addActivityLog(userId, 'managed_server_created', { provider, name, plan: planId }, undefined, 'success');
+
+        return {
+            ...server,
+            id: managedServerId, // Override the provider's id with our internal id
+            agentToken,
+            message: 'Server provisioning started. It will connect automatically once ready.'
+        };
+    } catch (error: any) {
+        console.error('Failed to provision server:', error);
+        return reply.status(500).send({
+            error: 'PROVISION_FAILED',
+            message: error.message || 'Failed to provision server'
+        });
+    }
+});
+
+// Get managed server details
+fastify.get('/api/managed-servers/:id', async (req, reply) => {
+    const userId = (req as any).userId;
+    const { id } = req.params as { id: string };
+
+    const server = await db.select()
+        .from(schema.managedServers)
+        .where(and(
+            eq(schema.managedServers.id, id),
+            eq(schema.managedServers.userId, userId)
+        ))
+        .get();
+
+    if (!server) {
+        return reply.status(404).send({ error: 'Server not found' });
+    }
+
+    // Get current status from provider (if providerServerId exists)
+    let providerStatus = null;
+    if (server.providerServerId) {
+        providerStatus = await getServerStatus(server.provider as Provider, server.providerServerId);
+    }
+
+    return {
+        ...server,
+        providerStatus
+    };
+});
+
+// Delete managed server
+fastify.delete('/api/managed-servers/:id', async (req, reply) => {
+    const userId = (req as any).userId;
+    const { id } = req.params as { id: string };
+
+    const server = await db.select()
+        .from(schema.managedServers)
+        .where(and(
+            eq(schema.managedServers.id, id),
+            eq(schema.managedServers.userId, userId)
+        ))
+        .get();
+
+    if (!server) {
+        return reply.status(404).send({ error: 'Server not found' });
+    }
+
+    try {
+        // Delete from provider (if providerServerId exists)
+        if (server.providerServerId) {
+            await deleteProvisionedServer(server.provider as Provider, server.providerServerId);
+        }
+
+        // Delete from database
+        await db.delete(schema.managedServers)
+            .where(eq(schema.managedServers.id, id))
+            .run();
+
+        // Also delete associated node if exists
+        if (server.nodeId) {
+            await db.delete(schema.nodes)
+                .where(eq(schema.nodes.id, server.nodeId))
+                .run();
+        }
+
+        addActivityLog(userId, 'managed_server_deleted', { provider: server.provider, hostname: server.hostname }, undefined, 'info');
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('Failed to delete server:', error);
+        return reply.status(500).send({
+            error: 'DELETE_FAILED',
+            message: error.message || 'Failed to delete server'
+        });
+    }
+});
+
+// ============================================
+// SUPPORT TICKET SYSTEM
+// ============================================
+
+// Helper: Find auto-response based on keywords
+async function findAutoResponse(subject: string, content: string, category: string): Promise<string | null> {
+    const searchText = `${subject} ${content}`.toLowerCase();
+
+    const responses = await db.select()
+        .from(schema.cannedResponses)
+        .where(eq(schema.cannedResponses.isAutoResponse, true))
+        .all();
+
+    for (const response of responses) {
+        // Check category match
+        if (response.category && response.category !== category) continue;
+
+        // Check keywords
+        if (response.keywords) {
+            const keywords = response.keywords.toLowerCase().split(',').map(k => k.trim());
+            const hasMatch = keywords.some(keyword => searchText.includes(keyword));
+            if (hasMatch) {
+                return response.content;
+            }
+        }
+    }
+
+    return null;
+}
+
+// User: List my tickets
+fastify.get('/api/support/tickets', async (req, reply) => {
+    const userId = (req as any).userId;
+    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+
+    const tickets = await db.select({
+        id: schema.supportTickets.id,
+        subject: schema.supportTickets.subject,
+        category: schema.supportTickets.category,
+        priority: schema.supportTickets.priority,
+        status: schema.supportTickets.status,
+        lastMessageAt: schema.supportTickets.lastMessageAt,
+        createdAt: schema.supportTickets.createdAt
+    })
+    .from(schema.supportTickets)
+    .where(eq(schema.supportTickets.userId, userId))
+    .orderBy(desc(schema.supportTickets.lastMessageAt))
+    .all();
+
+    // Count unread messages for each ticket
+    const ticketsWithUnread = await Promise.all(tickets.map(async (ticket) => {
+        const unreadCount = await db.select({ count: sql<number>`count(*)` })
+            .from(schema.ticketMessages)
+            .where(and(
+                eq(schema.ticketMessages.ticketId, ticket.id),
+                sql`${schema.ticketMessages.senderType} != 'user'`,
+                sql`${schema.ticketMessages.readAt} IS NULL`
+            ))
+            .get();
+        return { ...ticket, unreadCount: unreadCount?.count || 0 };
+    }));
+
+    return ticketsWithUnread;
+});
+
+// User: Create a new ticket
+fastify.post('/api/support/tickets', async (req, reply) => {
+    const userId = (req as any).userId;
+    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+
+    const { subject, message, category = 'general', priority = 'normal' } = req.body as any;
+
+    if (!subject?.trim() || !message?.trim()) {
+        return reply.status(400).send({ error: 'Subject and message are required' });
+    }
+
+    const ticketId = randomUUID();
+    const messageId = randomUUID();
+    const now = Math.floor(Date.now() / 1000);
+
+    // Create ticket
+    await db.insert(schema.supportTickets).values({
+        id: ticketId,
+        userId,
+        subject: subject.trim(),
+        category,
+        priority,
+        status: 'open',
+        lastMessageAt: now,
+        createdAt: now
+    }).run();
+
+    // Create initial message
+    await db.insert(schema.ticketMessages).values({
+        id: messageId,
+        ticketId,
+        senderId: userId,
+        senderType: 'user',
+        content: message.trim(),
+        createdAt: now
+    }).run();
+
+    // Check for auto-response
+    const autoResponse = await findAutoResponse(subject, message, category);
+    if (autoResponse) {
+        await db.insert(schema.ticketMessages).values({
+            id: randomUUID(),
+            ticketId,
+            senderId: null,
+            senderType: 'ai',
+            content: autoResponse,
+            createdAt: now + 1
+        }).run();
+
+        await db.update(schema.supportTickets)
+            .set({ lastMessageAt: now + 1 })
+            .where(eq(schema.supportTickets.id, ticketId))
+            .run();
+    }
+
+    addActivityLog(userId, 'support_ticket_created', { ticketId, subject, category });
+
+    return {
+        success: true,
+        ticketId,
+        hasAutoResponse: !!autoResponse
+    };
+});
+
+// User: Get ticket details with messages
+fastify.get('/api/support/tickets/:id', async (req, reply) => {
+    const userId = (req as any).userId;
+    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+
+    const { id } = req.params as any;
+
+    const ticket = await db.select()
+        .from(schema.supportTickets)
+        .where(eq(schema.supportTickets.id, id))
+        .get();
+
+    if (!ticket) {
+        return reply.status(404).send({ error: 'Ticket not found' });
+    }
+
+    // Check ownership (unless admin)
+    const user = await db.select().from(schema.users).where(eq(schema.users.id, userId)).get();
+    if (ticket.userId !== userId && user?.role !== 'admin') {
+        return reply.status(403).send({ error: 'Access denied' });
+    }
+
+    // Get messages (hide internal notes for regular users)
+    const isAdmin = user?.role === 'admin';
+    const messagesQuery = db.select({
+        id: schema.ticketMessages.id,
+        senderId: schema.ticketMessages.senderId,
+        senderType: schema.ticketMessages.senderType,
+        content: schema.ticketMessages.content,
+        isInternal: schema.ticketMessages.isInternal,
+        createdAt: schema.ticketMessages.createdAt
+    })
+    .from(schema.ticketMessages)
+    .where(
+        isAdmin
+            ? eq(schema.ticketMessages.ticketId, id)
+            : and(
+                eq(schema.ticketMessages.ticketId, id),
+                eq(schema.ticketMessages.isInternal, false)
+            )
+    )
+    .orderBy(schema.ticketMessages.createdAt);
+
+    const messages = await messagesQuery.all();
+
+    // Get attachments
+    const attachments = await db.select({
+        id: schema.ticketAttachments.id,
+        messageId: schema.ticketAttachments.messageId,
+        fileName: schema.ticketAttachments.fileName,
+        fileSize: schema.ticketAttachments.fileSize,
+        mimeType: schema.ticketAttachments.mimeType,
+        createdAt: schema.ticketAttachments.createdAt
+    })
+    .from(schema.ticketAttachments)
+    .where(eq(schema.ticketAttachments.ticketId, id))
+    .all();
+
+    // Mark messages as read for user
+    if (ticket.userId === userId) {
+        const now = Math.floor(Date.now() / 1000);
+        await db.update(schema.ticketMessages)
+            .set({ readAt: now })
+            .where(and(
+                eq(schema.ticketMessages.ticketId, id),
+                sql`${schema.ticketMessages.senderType} != 'user'`,
+                sql`${schema.ticketMessages.readAt} IS NULL`
+            ))
+            .run();
+    }
+
+    // Get sender names
+    const senderIds = [...new Set(messages.map(m => m.senderId).filter(Boolean))] as string[];
+    const senders: Record<string, { name: string | null; avatarUrl: string | null }> = {};
+
+    for (const senderId of senderIds) {
+        const sender = await db.select({ name: schema.users.name, avatarUrl: schema.users.avatarUrl })
+            .from(schema.users)
+            .where(eq(schema.users.id, senderId))
+            .get();
+        if (sender) {
+            senders[senderId] = sender;
+        }
+    }
+
+    return {
+        ticket,
+        messages: messages.map(m => ({
+            ...m,
+            senderName: m.senderId ? senders[m.senderId]?.name : (m.senderType === 'ai' ? 'AI Assistant' : 'System'),
+            senderAvatar: m.senderId ? senders[m.senderId]?.avatarUrl : null
+        })),
+        attachments
+    };
+});
+
+// User: Send a message to a ticket
+fastify.post('/api/support/tickets/:id/messages', async (req, reply) => {
+    const userId = (req as any).userId;
+    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+
+    const { id } = req.params as any;
+    const { content } = req.body as any;
+
+    if (!content?.trim()) {
+        return reply.status(400).send({ error: 'Message content is required' });
+    }
+
+    const ticket = await db.select()
+        .from(schema.supportTickets)
+        .where(eq(schema.supportTickets.id, id))
+        .get();
+
+    if (!ticket) {
+        return reply.status(404).send({ error: 'Ticket not found' });
+    }
+
+    if (ticket.userId !== userId) {
+        return reply.status(403).send({ error: 'Access denied' });
+    }
+
+    if (ticket.status === 'closed') {
+        return reply.status(400).send({ error: 'Cannot reply to a closed ticket' });
+    }
+
+    const messageId = randomUUID();
+    const now = Math.floor(Date.now() / 1000);
+
+    await db.insert(schema.ticketMessages).values({
+        id: messageId,
+        ticketId: id,
+        senderId: userId,
+        senderType: 'user',
+        content: content.trim(),
+        createdAt: now
+    }).run();
+
+    // Update ticket last message time and set to open if was resolved
+    await db.update(schema.supportTickets)
+        .set({
+            lastMessageAt: now,
+            status: ticket.status === 'resolved' ? 'open' : ticket.status
+        })
+        .where(eq(schema.supportTickets.id, id))
+        .run();
+
+    return { success: true, messageId };
+});
+
+// User: Upload attachment
+fastify.post('/api/support/tickets/:id/attachments', async (req, reply) => {
+    const userId = (req as any).userId;
+    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+
+    const { id } = req.params as any;
+
+    const ticket = await db.select()
+        .from(schema.supportTickets)
+        .where(eq(schema.supportTickets.id, id))
+        .get();
+
+    if (!ticket) {
+        return reply.status(404).send({ error: 'Ticket not found' });
+    }
+
+    // Check ownership or admin
+    const user = await db.select().from(schema.users).where(eq(schema.users.id, userId)).get();
+    if (ticket.userId !== userId && user?.role !== 'admin') {
+        return reply.status(403).send({ error: 'Access denied' });
+    }
+
+    const files = await req.files();
+    const uploadedFiles: any[] = [];
+
+    for await (const file of files) {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'text/plain', 'application/zip'];
+        if (!allowedTypes.includes(file.mimetype)) {
+            continue; // Skip unsupported file types
+        }
+
+        const attachmentId = randomUUID();
+        const ext = path.extname(file.filename) || '';
+        const storagePath = `tickets/${id}/${attachmentId}${ext}`;
+        const fullPath = path.join(__dirname, '../uploads', storagePath);
+
+        // Ensure directory exists
+        const dir = path.dirname(fullPath);
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+
+        // Save file
+        const buffer = await file.toBuffer();
+        fs.writeFileSync(fullPath, buffer);
+
+        // Save to database
+        await db.insert(schema.ticketAttachments).values({
+            id: attachmentId,
+            ticketId: id,
+            fileName: file.filename,
+            fileSize: buffer.length,
+            mimeType: file.mimetype,
+            storagePath,
+            uploadedBy: userId,
+            createdAt: Math.floor(Date.now() / 1000)
+        }).run();
+
+        uploadedFiles.push({
+            id: attachmentId,
+            fileName: file.filename,
+            fileSize: buffer.length,
+            mimeType: file.mimetype
+        });
+    }
+
+    return { success: true, files: uploadedFiles };
+});
+
+// User: Download attachment
+fastify.get('/api/support/attachments/:id', async (req, reply) => {
+    const userId = (req as any).userId;
+    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+
+    const { id } = req.params as any;
+
+    const attachment = await db.select()
+        .from(schema.ticketAttachments)
+        .where(eq(schema.ticketAttachments.id, id))
+        .get();
+
+    if (!attachment) {
+        return reply.status(404).send({ error: 'Attachment not found' });
+    }
+
+    // Check access via ticket ownership
+    const ticket = await db.select()
+        .from(schema.supportTickets)
+        .where(eq(schema.supportTickets.id, attachment.ticketId))
+        .get();
+
+    const user = await db.select().from(schema.users).where(eq(schema.users.id, userId)).get();
+    if (ticket?.userId !== userId && user?.role !== 'admin') {
+        return reply.status(403).send({ error: 'Access denied' });
+    }
+
+    const fullPath = path.join(__dirname, '../uploads', attachment.storagePath);
+    if (!fs.existsSync(fullPath)) {
+        return reply.status(404).send({ error: 'File not found' });
+    }
+
+    reply.header('Content-Type', attachment.mimeType);
+    reply.header('Content-Disposition', `attachment; filename="${attachment.fileName}"`);
+    return fs.createReadStream(fullPath);
+});
+
+// ============================================
+// ADMIN SUPPORT ENDPOINTS
+// ============================================
+
+// Admin: List all tickets
+fastify.get('/api/admin/support/tickets', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const { status, category, priority, assignedTo } = req.query as any;
+
+    let query = db.select({
+        id: schema.supportTickets.id,
+        userId: schema.supportTickets.userId,
+        subject: schema.supportTickets.subject,
+        category: schema.supportTickets.category,
+        priority: schema.supportTickets.priority,
+        status: schema.supportTickets.status,
+        assignedTo: schema.supportTickets.assignedTo,
+        lastMessageAt: schema.supportTickets.lastMessageAt,
+        createdAt: schema.supportTickets.createdAt
+    })
+    .from(schema.supportTickets)
+    .orderBy(desc(schema.supportTickets.lastMessageAt));
+
+    const tickets = await query.all();
+
+    // Filter in JS for simplicity (could optimize with dynamic where clauses)
+    let filtered = tickets;
+    if (status) filtered = filtered.filter(t => t.status === status);
+    if (category) filtered = filtered.filter(t => t.category === category);
+    if (priority) filtered = filtered.filter(t => t.priority === priority);
+    if (assignedTo) filtered = filtered.filter(t => t.assignedTo === assignedTo);
+
+    // Get user info for each ticket
+    const ticketsWithUsers = await Promise.all(filtered.map(async (ticket) => {
+        const user = await db.select({ name: schema.users.name, email: schema.users.email })
+            .from(schema.users)
+            .where(eq(schema.users.id, ticket.userId))
+            .get();
+
+        const unreadCount = await db.select({ count: sql<number>`count(*)` })
+            .from(schema.ticketMessages)
+            .where(and(
+                eq(schema.ticketMessages.ticketId, ticket.id),
+                eq(schema.ticketMessages.senderType, 'user'),
+                sql`${schema.ticketMessages.readAt} IS NULL`
+            ))
+            .get();
+
+        return {
+            ...ticket,
+            userName: user?.name || 'Unknown',
+            userEmail: user?.email,
+            unreadCount: unreadCount?.count || 0
+        };
+    }));
+
+    return ticketsWithUsers;
+});
+
+// Admin: Update ticket (status, priority, assign)
+fastify.patch('/api/admin/support/tickets/:id', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const adminId = (req as any).userId;
+    const { id } = req.params as any;
+    const { status, priority, assignedTo } = req.body as any;
+
+    const ticket = await db.select()
+        .from(schema.supportTickets)
+        .where(eq(schema.supportTickets.id, id))
+        .get();
+
+    if (!ticket) {
+        return reply.status(404).send({ error: 'Ticket not found' });
+    }
+
+    const updates: any = {};
+    const now = Math.floor(Date.now() / 1000);
+
+    if (status) {
+        updates.status = status;
+        if (status === 'resolved') updates.resolvedAt = now;
+        if (status === 'closed') updates.closedAt = now;
+    }
+    if (priority) updates.priority = priority;
+    if (assignedTo !== undefined) updates.assignedTo = assignedTo || null;
+
+    await db.update(schema.supportTickets)
+        .set(updates)
+        .where(eq(schema.supportTickets.id, id))
+        .run();
+
+    // Add system message for status change
+    if (status && status !== ticket.status) {
+        await db.insert(schema.ticketMessages).values({
+            id: randomUUID(),
+            ticketId: id,
+            senderId: adminId,
+            senderType: 'system',
+            content: `Ticket status changed to "${status}"`,
+            createdAt: now
+        }).run();
+    }
+
+    addActivityLog(adminId, 'support_ticket_updated', { ticketId: id, updates });
+
+    return { success: true };
+});
+
+// Admin: Reply to ticket
+fastify.post('/api/admin/support/tickets/:id/reply', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const adminId = (req as any).userId;
+    const { id } = req.params as any;
+    const { content, isInternal = false } = req.body as any;
+
+    if (!content?.trim()) {
+        return reply.status(400).send({ error: 'Message content is required' });
+    }
+
+    const ticket = await db.select()
+        .from(schema.supportTickets)
+        .where(eq(schema.supportTickets.id, id))
+        .get();
+
+    if (!ticket) {
+        return reply.status(404).send({ error: 'Ticket not found' });
+    }
+
+    const messageId = randomUUID();
+    const now = Math.floor(Date.now() / 1000);
+
+    await db.insert(schema.ticketMessages).values({
+        id: messageId,
+        ticketId: id,
+        senderId: adminId,
+        senderType: 'admin',
+        content: content.trim(),
+        isInternal,
+        createdAt: now
+    }).run();
+
+    // Update ticket
+    const updates: any = { lastMessageAt: now };
+    if (ticket.status === 'open') {
+        updates.status = 'in_progress';
+    }
+    if (!ticket.assignedTo) {
+        updates.assignedTo = adminId;
+    }
+
+    await db.update(schema.supportTickets)
+        .set(updates)
+        .where(eq(schema.supportTickets.id, id))
+        .run();
+
+    // Mark user messages as read
+    await db.update(schema.ticketMessages)
+        .set({ readAt: now })
+        .where(and(
+            eq(schema.ticketMessages.ticketId, id),
+            eq(schema.ticketMessages.senderType, 'user'),
+            sql`${schema.ticketMessages.readAt} IS NULL`
+        ))
+        .run();
+
+    return { success: true, messageId };
+});
+
+// Admin: Get canned responses
+fastify.get('/api/admin/support/canned-responses', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const responses = await db.select()
+        .from(schema.cannedResponses)
+        .orderBy(schema.cannedResponses.sortOrder)
+        .all();
+
+    return responses;
+});
+
+// Admin: Create canned response
+fastify.post('/api/admin/support/canned-responses', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const adminId = (req as any).userId;
+    const { title, content, category, keywords, isAutoResponse = false, sortOrder = 0 } = req.body as any;
+
+    if (!title?.trim() || !content?.trim()) {
+        return reply.status(400).send({ error: 'Title and content are required' });
+    }
+
+    const responseId = randomUUID();
+
+    await db.insert(schema.cannedResponses).values({
+        id: responseId,
+        title: title.trim(),
+        content: content.trim(),
+        category: category || null,
+        keywords: keywords || null,
+        isAutoResponse,
+        sortOrder,
+        createdBy: adminId,
+        createdAt: Math.floor(Date.now() / 1000)
+    }).run();
+
+    return { success: true, id: responseId };
+});
+
+// Admin: Update canned response
+fastify.patch('/api/admin/support/canned-responses/:id', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const { id } = req.params as any;
+    const { title, content, category, keywords, isAutoResponse, sortOrder } = req.body as any;
+
+    const existing = await db.select()
+        .from(schema.cannedResponses)
+        .where(eq(schema.cannedResponses.id, id))
+        .get();
+
+    if (!existing) {
+        return reply.status(404).send({ error: 'Canned response not found' });
+    }
+
+    const updates: any = {};
+    if (title !== undefined) updates.title = title.trim();
+    if (content !== undefined) updates.content = content.trim();
+    if (category !== undefined) updates.category = category || null;
+    if (keywords !== undefined) updates.keywords = keywords || null;
+    if (isAutoResponse !== undefined) updates.isAutoResponse = isAutoResponse;
+    if (sortOrder !== undefined) updates.sortOrder = sortOrder;
+
+    await db.update(schema.cannedResponses)
+        .set(updates)
+        .where(eq(schema.cannedResponses.id, id))
+        .run();
+
+    return { success: true };
+});
+
+// Admin: Delete canned response
+fastify.delete('/api/admin/support/canned-responses/:id', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const { id } = req.params as any;
+
+    await db.delete(schema.cannedResponses)
+        .where(eq(schema.cannedResponses.id, id))
+        .run();
+
+    return { success: true };
+});
+
+// Admin: Support metrics
+fastify.get('/api/admin/support/metrics', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const now = Math.floor(Date.now() / 1000);
+    const dayAgo = now - 86400;
+    const weekAgo = now - 604800;
+
+    // Total tickets by status
+    const openTickets = await db.select({ count: sql<number>`count(*)` })
+        .from(schema.supportTickets)
+        .where(eq(schema.supportTickets.status, 'open'))
+        .get();
+
+    const inProgressTickets = await db.select({ count: sql<number>`count(*)` })
+        .from(schema.supportTickets)
+        .where(eq(schema.supportTickets.status, 'in_progress'))
+        .get();
+
+    const resolvedTickets = await db.select({ count: sql<number>`count(*)` })
+        .from(schema.supportTickets)
+        .where(eq(schema.supportTickets.status, 'resolved'))
+        .get();
+
+    // New tickets this week
+    const newThisWeek = await db.select({ count: sql<number>`count(*)` })
+        .from(schema.supportTickets)
+        .where(sql`${schema.supportTickets.createdAt} >= ${weekAgo}`)
+        .get();
+
+    // Unread messages count
+    const unreadMessages = await db.select({ count: sql<number>`count(*)` })
+        .from(schema.ticketMessages)
+        .where(and(
+            eq(schema.ticketMessages.senderType, 'user'),
+            sql`${schema.ticketMessages.readAt} IS NULL`
+        ))
+        .get();
+
+    return {
+        openTickets: openTickets?.count || 0,
+        inProgressTickets: inProgressTickets?.count || 0,
+        resolvedTickets: resolvedTickets?.count || 0,
+        newThisWeek: newThisWeek?.count || 0,
+        unreadMessages: unreadMessages?.count || 0
+    };
+});
+
+// Initialize default free plan on startup
+createDefaultFreePlan().catch(console.error);
 
 fastify.listen({ port: 3000, host: '0.0.0.0' }).then(() => console.log('🚀 Engine Online'));
