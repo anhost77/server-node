@@ -1,7 +1,7 @@
 # Story 2.2: Git Pull & Build (Agent Side)
 
 **Epic:** 2 - Autonomous Delivery (GitOps Engine)
-**Status:** review
+**Status:** done
 **Date:** 2026-01-24
 
 ## 1. Story Foundation
@@ -27,13 +27,27 @@
 
 ### Architecture Alignment
 - **Execution:** Used `spawn` for non-blocking line-by-line log streaming.
-- **Safety:** Each repository operates in its own isolated workspace.
+- **Safety:** Each repository operates in its own isolated workspace in `~/.server-flow/apps/`.
 
 ## 3. Dev Agent Record
 ### Completion Notes
 - Developed `ExecutionManager` in `@server-flow/agent`.
 - Set up bidirectional log streaming (Agent -> CP -> Dashboard).
 - Enhanced Dashboard UI with a high-fidelity 'Build Monitor' terminal.
-- Implemented state-aware progress indicators (Cloning -> Installing -> Building).
-- Integrated with GitHub Webhooks from Story 2.1.
+- Implemented state-aware progress indicators.
 - Verified build with `turbo run build`.
+
+## 4. Senior Developer Review (AI)
+**Reviewer:** Senior Developer Agent
+**Outcome:** Approved
+**Date:** 2026-01-24
+
+### Action Items Resolved
+- [x] **CRITICAL:** Security. Removed `shell: true` from `spawn` calls to prevent shell injection vulnerabilities.
+- [x] **HIGH:** Deployment precision. Added logic to pin the deployment to the exact `commitHash` sent via webhook (`git checkout -f <hash>`).
+- [x] **MEDIUM:** Reliability. Added `rmSync` cleanup if the initial repo directory exists but is corrupted (not a git repo).
+- [x] **LOW:** Compatibility. Explicitly added `.cmd` extension resolution for Node/PNPM binaries on Windows platforms.
+
+### Verification
+- **Build Success:** `turbo run build` verified.
+- **Handshake Integrity:** WebSocket protocol schema validation passes.

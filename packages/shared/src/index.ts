@@ -36,6 +36,12 @@ export const ServerMessageSchema = z.discriminatedUnion('type', [
     serverId: z.string(),
     repoUrl: z.string(),
     status: z.enum(['cloning', 'installing', 'building', 'success', 'failure'])
+  }),
+  z.object({
+    type: z.literal('PROVISION_DOMAIN'),
+    domain: z.string(),
+    port: z.number(),
+    repoUrl: z.string()
   })
 ]);
 
@@ -52,7 +58,7 @@ export const AgentMessageSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('STATUS_UPDATE'),
     repoUrl: z.string(),
-    status: z.enum(['cloning', 'installing', 'building', 'success', 'failure'])
+    status: z.enum(['cloning', 'installing', 'building', 'success', 'failure', 'provisioning_nginx', 'nginx_ready'])
   })
 ]);
 

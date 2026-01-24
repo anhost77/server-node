@@ -5,7 +5,7 @@ import cors from '@fastify/cors';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID, verify, createHmac, timingSafeEqual } from 'node:crypto';
-import { AgentMessageSchema, ServerMessage } from '@server-flow/shared';
+import { AgentMessageSchema, ServerMessage, ServerMessageSchema } from '@server-flow/shared';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,13 +36,26 @@ const registeredServers = new Map<string, { id: string, pubKey: string, register
 function broadcastToDashboards(msg: ServerMessage) {
     const payload = JSON.stringify(msg);
     dashboardSessions.forEach(socket => {
-        if (socket.readyState === 1) { // OPEN
-            socket.send(payload);
-        }
+        if (socket.readyState === 1) socket.send(payload);
     });
 }
 
-// APIs
+function sendToAgentByRepo(repoUrl: string, msg: ServerMessage) {
+    const payload = JSON.stringify(msg);
+    let sent = false;
+    agentSessions.forEach(session => {
+        if (session.authorized) {
+            const server = registeredServers.get(session.pubKey!);
+            if (server && server.repoUrl === repoUrl) {
+                session.socket.send(payload);
+                sent = true;
+            }
+        }
+    });
+    return sent;
+}
+
+// REST APIs
 fastify.post('/api/servers/token', async () => {
     const token = randomUUID();
     registrationTokens.set(token, { userId: 'default-user', expires: Date.now() + 10 * 60 * 1000 });
@@ -72,22 +85,22 @@ fastify.post('/api/webhooks/github', async (request, reply) => {
     const commitHash = payload.after;
     const branch = payload.ref.replace('refs/heads/', '');
 
+    // Auto-assign repo to first agent for demo if not set
     agentSessions.forEach(session => {
         if (session.authorized) {
             const server = registeredServers.get(session.pubKey!);
-            if (server && (!server.repoUrl || server.repoUrl === repoUrl)) {
-                server.repoUrl = repoUrl;
-                session.socket.send(JSON.stringify({
-                    type: 'DEPLOY',
-                    repoUrl,
-                    commitHash,
-                    branch
-                }));
-            }
+            if (server && !server.repoUrl) server.repoUrl = repoUrl;
         }
     });
 
-    return { received: true };
+    const sent = sendToAgentByRepo(repoUrl, {
+        type: 'DEPLOY',
+        repoUrl,
+        commitHash,
+        branch
+    });
+
+    return { received: true, triggeredAgent: sent };
 });
 
 // WebSocket Handlers
@@ -95,6 +108,22 @@ fastify.register(async function (fastify) {
     fastify.get('/api/dashboard/ws', { websocket: true }, (connection) => {
         const socket = connection.socket;
         dashboardSessions.add(socket);
+
+        socket.on('message', (data: Buffer) => {
+            try {
+                const raw = JSON.parse(data.toString());
+                const parsed = ServerMessageSchema.safeParse(raw); // Dashboard sends "ServerMessage" types (commanding CP)
+                if (!parsed.success) return;
+
+                const msg = parsed.data;
+
+                if (msg.type === 'PROVISION_DOMAIN') {
+                    console.log(`🌐 Dashboard requested provisioning for ${msg.domain}`);
+                    sendToAgentByRepo(msg.repoUrl, msg);
+                }
+            } catch (err) { }
+        });
+
         socket.on('close', () => dashboardSessions.delete(socket));
     });
 
@@ -134,9 +163,7 @@ fastify.register(async function (fastify) {
                     if (isValid) {
                         session.authorized = true;
                         const server = registeredServers.get(session.pubKey);
-                        if (server) {
-                            broadcastToDashboards({ type: 'SERVER_STATUS', serverId: server.id, status: 'online' });
-                        }
+                        if (server) broadcastToDashboards({ type: 'SERVER_STATUS', serverId: server.id, status: 'online' });
                         socket.send(JSON.stringify({ type: 'AUTHORIZED', sessionId: connectionId }));
                     } else {
                         socket.close();
@@ -153,32 +180,16 @@ fastify.register(async function (fastify) {
                     broadcastToDashboards({ type: 'SERVER_STATUS', serverId, status: 'online' });
                     socket.send(JSON.stringify({ type: 'REGISTERED', serverId }));
                 }
-                else if (msg.type === 'LOG_STREAM') {
+                else if (msg.type === 'LOG_STREAM' || msg.type === 'STATUS_UPDATE') {
                     const session = agentSessions.get(connectionId);
                     if (session?.pubKey) {
                         const server = registeredServers.get(session.pubKey);
                         if (server) {
-                            broadcastToDashboards({
-                                type: 'DEPLOY_LOG',
-                                serverId: server.id,
-                                repoUrl: msg.repoUrl,
-                                data: msg.data,
-                                stream: msg.stream
-                            });
-                        }
-                    }
-                }
-                else if (msg.type === 'STATUS_UPDATE') {
-                    const session = agentSessions.get(connectionId);
-                    if (session?.pubKey) {
-                        const server = registeredServers.get(session.pubKey);
-                        if (server) {
-                            broadcastToDashboards({
-                                type: 'DEPLOY_STATUS',
-                                serverId: server.id,
-                                repoUrl: msg.repoUrl,
-                                status: msg.status
-                            });
+                            const forward: any = { ...msg, serverId: server.id };
+                            // Transform Agent-to-CP type to CP-to-Dashboard type if needed
+                            if (msg.type === 'LOG_STREAM') forward.type = 'DEPLOY_LOG';
+                            if (msg.type === 'STATUS_UPDATE') forward.type = 'DEPLOY_STATUS';
+                            broadcastToDashboards(forward);
                         }
                     }
                 }
