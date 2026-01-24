@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import websocket from '@fastify/websocket';
 import staticFiles from '@fastify/static';
+import cors from '@fastify/cors';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID, verify } from 'node:crypto';
@@ -11,6 +12,11 @@ const __dirname = path.dirname(__filename);
 
 const fastify = Fastify({
     logger: true
+});
+
+// Configure CORS for Dashboard
+fastify.register(cors, {
+    origin: true // In production, this should be the dashboard URL
 });
 
 // Serve installer script
@@ -31,10 +37,11 @@ interface Session {
 
 const sessions = new Map<string, Session>();
 const registrationTokens = new Map<string, { userId: string, expires: number }>();
-const registeredServers = new Map<string, { pubKey: string }>(); // PubKey -> ServerInfo
+const registeredServers = new Map<string, { pubKey: string, registeredAt: number }>();
 
 // API: Generate Registration Token
 fastify.post('/api/servers/token', async (request, reply) => {
+    // TODO: Add actual User Auth check here
     const token = randomUUID();
     registrationTokens.set(token, { userId: 'default-user', expires: Date.now() + 10 * 60 * 1000 });
     return { token };
@@ -98,14 +105,15 @@ fastify.register(async function (fastify) {
                 else if (msg.type === 'REGISTER') {
                     const tokenData = registrationTokens.get(msg.token);
                     if (!tokenData || tokenData.expires < Date.now()) {
-                        const response: ServerMessage = { type: 'ERROR', message: 'Invalid token' };
+                        const response: ServerMessage = { type: 'ERROR', message: 'Invalid or expired token' };
                         socket.send(JSON.stringify(response));
                         return;
                     }
 
-                    registeredServers.set(msg.pubKey, { pubKey: msg.pubKey });
+                    registeredServers.set(msg.pubKey, { pubKey: msg.pubKey, registeredAt: Date.now() });
                     registrationTokens.delete(msg.token);
 
+                    console.log(`✨ Server Registered: ${msg.pubKey.substring(0, 30)}...`);
                     const response: ServerMessage = { type: 'REGISTERED', serverId: randomUUID() };
                     socket.send(JSON.stringify(response));
                 }

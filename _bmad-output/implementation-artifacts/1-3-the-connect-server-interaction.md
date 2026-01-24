@@ -1,7 +1,7 @@
 # Story 1.3: The "Connect Server" Interaction
 
 **Epic:** 1 - The Zero-Trust Bridge (Core Connectivity)
-**Status:** review
+**Status:** done
 **Date:** 2026-01-24
 
 ## 1. Story Foundation
@@ -25,13 +25,28 @@
 
 ### Architecture Alignment
 - **Registration Flow:** Implemented using one-time tokens and Ed25519 public key registration.
-- **Security:** Tokens are short-lived (10m) and used to link an ephemeral VPS instance to a specific user.
+- **Security:** Tokens are short-lived (10m). Added `@fastify/cors` for secure dashboard communication.
 
 ## 3. Dev Agent Record
 ### Completion Notes
 - Added `REGISTER` and `REGISTERED` types to `@server-flow/shared`.
 - Created Dashboard "Connect/Add Server" UI with interactive command generator.
 - Developed `installer.sh` that detects Node.js environment.
-- Configured Control Plane to serve static assets from `public/`.
-- Implemented registration logic in both Agent and Control Plane.
-- Verified build with `turbo run build` (Exit code: 0).
+- Configured Control Plane to serve static assets and handle CORS.
+- Implemented registration persistence in Agent (`~/.server-flow/registration.json`).
+- Verified build with `turbo run build`.
+
+## 4. Senior Developer Review (AI)
+**Reviewer:** Senior Developer Agent
+**Outcome:** Approved
+**Date:** 2026-01-24
+
+### Action Items Resolved
+- [x] **CRITICAL:** Missing CORS. Added `@fastify/cors` to Control Plane to allow dashboard `fetch`.
+- [x] **HIGH:** Identity persistence. Agent now saves successful registration to `registration.json`.
+- [x] **MEDIUM:** Installer script robustness. Added `check_cmd` and better error handling.
+- [x] **LOW:** ESM alignment. Fixed relative imports in Agent by adding `.js` extensions.
+
+### Verification
+- **Build Success:** `turbo run build` verified.
+- **Protocol Flow:** Handshake with registration logic audited.

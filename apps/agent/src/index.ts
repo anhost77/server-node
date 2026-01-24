@@ -1,8 +1,15 @@
 import Fastify from 'fastify';
 import websocket from '@fastify/websocket';
 import WebSocket from 'ws';
-import { getOrGenerateIdentity, signData } from './identity';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import { getOrGenerateIdentity, signData } from './identity.js';
 import { AgentMessage, ServerMessageSchema } from '@server-flow/shared';
+
+
+const CONFIG_DIR = path.join(os.homedir(), '.server-flow');
+const REG_FILE = path.join(CONFIG_DIR, 'registration.json');
 
 const fastify = Fastify({ logger: true });
 const identity = getOrGenerateIdentity();
@@ -12,10 +19,22 @@ const args = process.argv.slice(2);
 const tokenIndex = args.indexOf('--token');
 const registrationToken = tokenIndex !== -1 ? args[tokenIndex + 1] : null;
 
+function saveRegistration(data: any) {
+    fs.writeFileSync(REG_FILE, JSON.stringify(data, null, 2), { mode: 0o600 });
+}
+
+function isRegistered() {
+    return fs.existsSync(REG_FILE);
+}
+
 // Agent Server (Metrics/Local Control)
 fastify.register(websocket);
 fastify.get('/', async function handler(request, reply) {
-    return { hello: 'agent', pubKey: identity.publicKey }
+    return {
+        hello: 'agent',
+        pubKey: identity.publicKey,
+        registered: isRegistered()
+    }
 });
 
 // Connect to Control Plane
@@ -56,7 +75,7 @@ function connectToControlPlane() {
                 console.log('✅ Agent Authorized! Session:', msg.sessionId);
             } else if (msg.type === 'REGISTERED') {
                 console.log('✨ Server Successfully Registered! ID:', msg.serverId);
-                // In real scenario, we'd clear the token from memory/config
+                saveRegistration({ serverId: msg.serverId, registeredAt: new Date().toISOString() });
             } else if (msg.type === 'ERROR') {
                 console.error('❌ Server Error:', msg.message);
             }

@@ -41,7 +41,7 @@ development_status:
   epic-1: in-progress
   1-1-system-monorepo-initialization: done
   1-2-agent-authentication-protocol: done
-  1-3-the-connect-server-interaction: review
+  1-3-the-connect-server-interaction: done
   1-4-real-time-connection-status: backlog
   epic-1-retrospective: optional
 

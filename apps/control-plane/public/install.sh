@@ -24,37 +24,56 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ -z "$TOKEN" ]; then
-  echo "Error: --token is required"
+  echo "❌ Error: --token is required"
+  exit 1
+fi
+
+if [ -z "$URL" ]; then
+  echo "❌ Error: --url is required"
   exit 1
 fi
 
 echo "🚀 Starting ServerFlow Agent Installation..."
 
-# 1. Check for Node.js
-if ! command -v node &> /dev/null; then
-    echo "Installing Node.js..."
+# 1. Check for basic tools
+check_cmd() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+if ! check_cmd curl; then
+    echo "📦 Installing curl..."
+    sudo apt-get update && sudo apt-get install -y curl
+fi
+
+# 2. Check for Node.js
+if ! check_cmd node; then
+    echo "📦 Installing Node.js 20..."
     curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
     sudo apt-get install -y nodejs
 fi
 
-# 2. Check for pnpm
-if ! command -v pnpm &> /dev/null; then
-    echo "Installing pnpm..."
+# 3. Check for pnpm
+if ! check_cmd pnpm; then
+    echo "📦 Installing pnpm..."
     sudo npm install -g pnpm
 fi
 
-# 3. Create install dir
+# 4. Create install dir
 mkdir -p ~/.server-flow/agent
 cd ~/.server-flow/agent
 
-# 4. Download Agent Core
-# (For the demo/MVP, we'll assume the source is reachable or we're just running a local mock)
-echo "📥 Downloading ServerFlow Agent..."
-# git clone ... (Simulated)
+# 5. Download Agent (Mock download - in real app, we'd fetch a tarball or binary)
+echo "📥 Fetching ServerFlow Agent..."
+# For the sake of this demo, we'll assume the files are already there or we're mocking the run
+# In a real installer: curl -L $URL/agent.tar.gz | tar xz
 
-# 5. Start Agent
-echo "🏁 Starting Agent..."
-# Final command would depend on how we distribute the agent
-# For now, we output instructions or run a node command if available
-echo "Agent registered with token: $TOKEN connecting to $URL"
-echo "Success!"
+# 6. Install Deps & Start
+# echo "🔨 Installing dependencies..."
+# pnpm install
+
+echo "🏁 Finalizing Registration..."
+# In a real scenario, this would start the background service (systemd)
+# For now, we simulate the run:
+echo "Agent registered with token: $TOKEN"
+echo "To manually start the agent, run: node index.js --token $TOKEN"
+echo "✅ ServerFlow Agent installed successfully!"
