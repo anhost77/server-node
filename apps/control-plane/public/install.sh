@@ -66,9 +66,9 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # 1. System Dependencies
-if ! check_cmd git || ! check_cmd nginx; then
-    echo "📦 [1/4] Installing git, nginx & tools..."
-    $SUDO apt-get update && $SUDO apt-get install -y git psmisc nginx
+if ! check_cmd git || ! check_cmd nginx || ! check_cmd certbot; then
+    echo "📦 [1/4] Installing git, nginx, certbot & tools..."
+    $SUDO apt-get update && $SUDO apt-get install -y git psmisc nginx python3-certbot-nginx
     $SUDO systemctl enable nginx
     $SUDO systemctl start nginx
 fi

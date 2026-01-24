@@ -1,5 +1,43 @@
 [
   {
+    "id": "46bfdd91-3862-42af-aa14-db883185e696",
+    "timestamp": 1769224511075,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "status_update",
+    "details": {
+      "status": "nginx_ready",
+      "repo": "local-test"
+    },
+    "status": "info"
+  },
+  {
+    "id": "ce95b5d9-2188-4106-947a-a6c030867190",
+    "timestamp": 1769224510973,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "status_update",
+    "details": {
+      "status": "provisioning_nginx",
+      "repo": "local-test"
+    },
+    "status": "info"
+  },
+  {
+    "id": "bead825a-1ee0-4b2b-b56a-6bad6ed182ad",
+    "timestamp": 1769224505288,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "2512c609-f631-4d63-a2f5-0adbe8c4999b",
+    "timestamp": 1769224497547,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
     "id": "80924267-0743-437e-abf9-afa772f0daaf",
     "timestamp": 1769224376090,
     "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",

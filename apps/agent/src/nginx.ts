@@ -85,9 +85,19 @@ server {
                 return false;
             }
 
-            // 4. SSL (Attempt only)
-            this.onLog(`🔐 Requesting SSL for ${context.domain}...\n`, 'stdout');
-            await this.runCommand('certbot', ['--nginx', '-d', context.domain, '--non-interactive', '--agree-tos', '-m', 'admin@' + context.domain]);
+            // 4. SSL (Attempt only if certbot exists)
+            this.onLog(`🔐 Checking for Certbot availability...\n`, 'stdout');
+            const hasCertbot = await new Promise(r => {
+                const check = spawn('which', ['certbot']);
+                check.on('close', code => r(code === 0));
+            });
+
+            if (hasCertbot) {
+                this.onLog(`🔐 Requesting SSL for ${context.domain}...\n`, 'stdout');
+                await this.runCommand('certbot', ['--nginx', '-d', context.domain, '--non-interactive', '--agree-tos', '-m', 'admin@' + context.domain]);
+            } else {
+                this.onLog(`⚠️  Certbot not found. Skipping SSL provisioning. (Run install.sh to get it)\n`, 'stdout');
+            }
 
             return true;
         } catch (err: any) {
