@@ -1,6 +1,6 @@
 import Fastify from 'fastify';
 import websocket from '@fastify/websocket';
-import { randomUUID, createVerify } from 'node:crypto';
+import { randomUUID, verify } from 'node:crypto';
 import { AgentMessageSchema, ServerMessage } from '@server-flow/shared';
 
 const fastify = Fastify({
@@ -21,7 +21,6 @@ const sessions = new Map<string, Session>(); // Socket -> Session
 fastify.register(async function (fastify) {
     fastify.get('/api/connect', { websocket: true }, (connection, req) => {
         const socket = connection.socket;
-        // @ts-ignore: fastify socket id not standardized but usable for map key or use req.id
         const connectionId = randomUUID();
 
         console.log('Client connected', connectionId);
@@ -39,13 +38,11 @@ fastify.register(async function (fastify) {
                 const msg = parsed.data;
 
                 if (msg.type === 'CONNECT') {
-                    // Generate Challenge
                     const nonce = randomUUID();
                     sessions.set(connectionId, { nonce, pubKey: msg.pubKey, socket, authorized: false });
 
                     const response: ServerMessage = { type: 'CHALLENGE', nonce };
                     socket.send(JSON.stringify(response));
-                    console.log(`Sent Challenge to ${connectionId}: ${nonce}`);
                 }
                 else if (msg.type === 'RESPONSE') {
                     const session = sessions.get(connectionId);
@@ -54,15 +51,12 @@ fastify.register(async function (fastify) {
                         return;
                     }
 
-                    // Verify Signature
-                    const verify = createVerify(undefined);
-                    verify.update(session.nonce);
-                    verify.end();
-
-                    const isValid = verify.verify(
+                    // Verify Signature for Ed25519
+                    const isValid = verify(
+                        undefined,
+                        Buffer.from(session.nonce),
                         { key: session.pubKey, format: 'pem', type: 'spki' },
-                        msg.signature,
-                        'base64'
+                        Buffer.from(msg.signature, 'base64')
                     );
 
                     if (isValid) {

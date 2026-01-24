@@ -67,6 +67,9 @@ importers:
       '@types/node':
         specifier: ^20.11.19
         version: 20.19.30
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
       tsx:
         specifier: ^4.7.1
         version: 4.21.0

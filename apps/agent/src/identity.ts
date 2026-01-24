@@ -1,4 +1,4 @@
-import { generateKeyPairSync, createSign, createVerify, KeyObject } from 'node:crypto';
+import { generateKeyPairSync, sign } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -31,7 +31,6 @@ export function getOrGenerateIdentity(): AgentConfig {
 
     console.log('Generating new Ed25519 Identity...');
     const { privateKey, publicKey } = generateKeyPairSync('ed25519', {
-        modulusLength: 4096,
         publicKeyEncoding: { type: 'spki', format: 'pem' },
         privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
     });
@@ -42,9 +41,6 @@ export function getOrGenerateIdentity(): AgentConfig {
 }
 
 export function signData(data: string, privateKeyPem: string): string {
-    const sign = createSign(undefined); // Ed25519 doesn't use a hash algorithm
-    sign.update(data);
-    sign.end();
-    // @ts-ignore: node types for ed25519 might be tricky, standard signature
-    return sign.sign(privateKeyPem, 'base64');
+    const signature = sign(undefined, Buffer.from(data), privateKeyPem);
+    return signature.toString('base64');
 }
