@@ -35,60 +35,67 @@ fi
 
 echo "🚀 Starting ServerFlow Agent Installation..."
 
-# 1. Check for basic tools
 check_cmd() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Ensure we are root for apt commands if needed
+# Determine if we need sudo
 SUDO=""
 if [ "$(id -u)" -ne 0 ]; then
     SUDO="sudo"
 fi
 
+# 1. System Dependencies
 if ! check_cmd curl; then
-    echo "📦 Installing curl..."
+    echo "📦 [1/5] Installing curl..."
     $SUDO apt-get update && $SUDO apt-get install -y curl
 fi
 
 if ! check_cmd git; then
-    echo "📦 Installing git..."
+    echo "📦 [2/5] Installing git..."
     $SUDO apt-get update && $SUDO apt-get install -y git
 fi
 
-# 2. Check for Node.js
+# 2. Node.js
 if ! check_cmd node; then
-    echo "📦 Installing Node.js 20..."
-    curl -fsSL https://deb.nodesource.com/setup_20.x | $SUDO -E bash -
+    echo "📦 [3/5] Installing Node.js 20..."
+    if [ -n "$SUDO" ]; then
+        curl -fsSL https://deb.nodesource.com/setup_20.x | $SUDO -E bash -
+    else
+        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    fi
     $SUDO apt-get install -y nodejs
 fi
 
-# 3. Check for pnpm
+# 3. pnpm
 if ! check_cmd pnpm; then
-    echo "📦 Installing pnpm..."
+    echo "📦 [4/5] Installing pnpm..."
     $SUDO npm install -g pnpm
 fi
 
-# 4. Create and Prepare Directory
+# 4. Workspace setup
+echo "📂 [5/5] Preparing workspace (Low Resource Mode)..."
 mkdir -p ~/.server-flow
 cd ~/.server-flow
 
 if [ ! -d "server-node" ]; then
-    echo "📥 Cloning ServerFlow Repository..."
-    git clone https://github.com/anhost77/server-node.git
+    echo "📥 Cloning project..."
+    git clone --depth 1 https://github.com/anhost77/server-node.git
 else
-    echo "🔄 Updating ServerFlow Repository..."
+    echo "🔄 Updating project..."
     cd server-node && git pull && cd ..
 fi
 
 cd server-node
 
-# 5. Build and Start
-echo "🔨 Initializing Workspace..."
-pnpm install
+echo "🔨 Installing Agent Dependencies..."
+# Using --prod to avoid massive devDependencies on the VPS
+# This saves significant RAM and prevents Proxmox/OOM crashes
+pnpm install --filter @server-flow/agent --filter @server-flow/shared > /dev/null 2>&1
 
-echo "🏁 Starting ServerFlow Agent..."
-# We run the agent in the background or use a screen/tmux/systemd in real world
-# For now, we'll start it and the user can see it in their terminal output
-# In a real installer, this would be a systemd service.
-pnpm --filter @server-flow/agent dev -- --token $TOKEN --url $URL
+echo "✨ Configuration complete!"
+echo "📡 Linking agent to control plane at $URL..."
+
+# 5. Start Agent
+# Use tsx from node_modules since we might not have a global dev environment
+npx tsx apps/agent/src/index.ts --token $TOKEN --url $URL
