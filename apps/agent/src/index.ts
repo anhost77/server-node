@@ -20,6 +20,9 @@ const args = process.argv.slice(2);
 const tokenIndex = args.indexOf('--token');
 const registrationToken = tokenIndex !== -1 ? args[tokenIndex + 1] : null;
 
+const urlIndex = args.indexOf('--url');
+const controlPlaneUrl = urlIndex !== -1 ? args[urlIndex + 1] : 'http://localhost:3000';
+
 function saveRegistration(data: any) {
     fs.writeFileSync(REG_FILE, JSON.stringify(data, null, 2), { mode: 0o600 });
 }
@@ -34,10 +37,11 @@ fastify.get('/', async () => ({ hello: 'agent', registered: isRegistered() }));
 
 // Connect Logic
 function connectToControlPlane() {
-    const ws = new WebSocket('ws://localhost:3000/api/connect');
+    const wsBaseUrl = controlPlaneUrl.replace('http', 'ws');
+    const ws = new WebSocket(`${wsBaseUrl}/api/connect`);
 
     ws.on('open', () => {
-        console.log('🔗 Connected to Control Plane');
+        console.log(`🔗 Connected to Control Plane at ${wsBaseUrl}`);
         if (registrationToken) {
             ws.send(JSON.stringify({ type: 'REGISTER', token: registrationToken, pubKey: identity.publicKey }));
         } else {
@@ -66,21 +70,16 @@ function connectToControlPlane() {
             }
             else if (msg.type === 'DEPLOY') {
                 console.log(`🚀 DEPLOY TRIGGERED: ${msg.repoUrl}`);
-
                 const executor = new ExecutionManager((logData, stream) => {
                     ws.send(JSON.stringify({ type: 'LOG_STREAM', data: logData, stream, repoUrl: msg.repoUrl }));
                 });
-
                 ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: 'cloning' }));
-
                 executor.deploy(msg).then(({ success, buildSkipped, healthCheckFailed }) => {
                     let finalStatus = success ? (buildSkipped ? 'build_skipped' : 'success') : 'failure';
-
                     if (healthCheckFailed) {
                         finalStatus = 'rollback';
                         ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: 'health_check_failed' }));
                     }
-
                     ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: finalStatus }));
                 });
             }
@@ -88,7 +87,6 @@ function connectToControlPlane() {
                 const nginx = new NginxManager((logData, stream) => {
                     ws.send(JSON.stringify({ type: 'LOG_STREAM', data: logData, stream, repoUrl: msg.repoUrl }));
                 });
-
                 ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: 'provisioning_nginx' }));
                 nginx.provision(msg).then(success => {
                     ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: success ? 'nginx_ready' : 'failure' }));
@@ -97,12 +95,15 @@ function connectToControlPlane() {
         } catch (err) { }
     });
 
-    ws.on('close', () => setTimeout(connectToControlPlane, 5000));
+    ws.on('close', () => {
+        console.log('Connection lost. Retrying in 5s...');
+        setTimeout(connectToControlPlane, 5000)
+    });
 }
 
 const start = async () => {
     try {
-        await fastify.listen({ port: 3001 });
+        await fastify.listen({ port: 3001, host: '0.0.0.0' });
         connectToControlPlane();
     } catch (err) {
         process.exit(1);

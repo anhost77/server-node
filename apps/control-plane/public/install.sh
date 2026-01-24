@@ -40,40 +40,55 @@ check_cmd() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Ensure we are root for apt commands if needed
+SUDO=""
+if [ "$(id -u)" -ne 0 ]; then
+    SUDO="sudo"
+fi
+
 if ! check_cmd curl; then
     echo "📦 Installing curl..."
-    sudo apt-get update && sudo apt-get install -y curl
+    $SUDO apt-get update && $SUDO apt-get install -y curl
+fi
+
+if ! check_cmd git; then
+    echo "📦 Installing git..."
+    $SUDO apt-get update && $SUDO apt-get install -y git
 fi
 
 # 2. Check for Node.js
 if ! check_cmd node; then
     echo "📦 Installing Node.js 20..."
-    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-    sudo apt-get install -y nodejs
+    curl -fsSL https://deb.nodesource.com/setup_20.x | $SUDO -E bash -
+    $SUDO apt-get install -y nodejs
 fi
 
 # 3. Check for pnpm
 if ! check_cmd pnpm; then
     echo "📦 Installing pnpm..."
-    sudo npm install -g pnpm
+    $SUDO npm install -g pnpm
 fi
 
-# 4. Create install dir
-mkdir -p ~/.server-flow/agent
-cd ~/.server-flow/agent
+# 4. Create and Prepare Directory
+mkdir -p ~/.server-flow
+cd ~/.server-flow
 
-# 5. Download Agent (Mock download - in real app, we'd fetch a tarball or binary)
-echo "📥 Fetching ServerFlow Agent..."
-# For the sake of this demo, we'll assume the files are already there or we're mocking the run
-# In a real installer: curl -L $URL/agent.tar.gz | tar xz
+if [ ! -d "server-node" ]; then
+    echo "📥 Cloning ServerFlow Repository..."
+    git clone https://github.com/anhost77/server-node.git
+else
+    echo "🔄 Updating ServerFlow Repository..."
+    cd server-node && git pull && cd ..
+fi
 
-# 6. Install Deps & Start
-# echo "🔨 Installing dependencies..."
-# pnpm install
+cd server-node
 
-echo "🏁 Finalizing Registration..."
-# In a real scenario, this would start the background service (systemd)
-# For now, we simulate the run:
-echo "Agent registered with token: $TOKEN"
-echo "To manually start the agent, run: node index.js --token $TOKEN"
-echo "✅ ServerFlow Agent installed successfully!"
+# 5. Build and Start
+echo "🔨 Initializing Workspace..."
+pnpm install
+
+echo "🏁 Starting ServerFlow Agent..."
+# We run the agent in the background or use a screen/tmux/systemd in real world
+# For now, we'll start it and the user can see it in their terminal output
+# In a real installer, this would be a systemd service.
+pnpm --filter @server-flow/agent dev -- --token $TOKEN --url $URL
