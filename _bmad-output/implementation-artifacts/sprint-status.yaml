@@ -69,3 +69,7 @@ development_status:
   5-2-team-invitations: backlog  # Post-MVP
   5-3-github-oauth-integration: done
   epic-5-retrospective: optional
+
+  epic-6: done  # Onboarding & UX
+  6-1-assisted-ssh-installation: done  # Web-based SSH installer with xterm.js
+  epic-6-retrospective: optional

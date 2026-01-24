@@ -19,6 +19,35 @@ const consoleContainerMini = ref<HTMLElement | null>(null)
 const consoleContainerLarge = ref<HTMLElement | null>(null)
 const showLargeConsole = ref(false)
 
+// SSH Assisted Installation State
+const connectTab = ref<'quick' | 'assisted'>('quick')
+const sshForm = ref({
+  host: '',
+  port: 22,
+  username: 'root',
+  password: '',
+  privateKey: '',
+  authType: 'password' as 'password' | 'key',
+  verbose: false
+})
+const sshSession = ref<{
+  id: string | null,
+  status: 'idle' | 'connecting' | 'preflight' | 'installing' | 'complete' | 'error',
+  step: number,
+  totalSteps: number,
+  message: string,
+  output: string[]
+}>({
+  id: null,
+  status: 'idle',
+  step: 0,
+  totalSteps: 5,
+  message: '',
+  output: []
+})
+let sshWs: WebSocket | null = null
+const sshTerminalRef = ref<HTMLElement | null>(null)
+
 // Modal Logic
 const showAddAppModal = ref(false)
 const newApp = ref({ name: '', repoUrl: '', serverId: '', port: 3000, env: '' })
@@ -227,10 +256,13 @@ const logContainer = ref<HTMLElement | null>(null)
 const domainName = ref('')
 const appPort = ref(3000)
 
-const baseUrl = window.location.origin.includes(':517') 
-  ? window.location.origin.replace(/:517\d/, ':3000')
+// Backend URL (direct connection for most APIs)
+const baseUrl = window.location.origin.includes(':5173')
+  ? window.location.origin.replace(':5173', ':3000')
   : window.location.origin
 const wsUrl = baseUrl.replace('http', 'ws') + '/api/dashboard/ws'
+
+// SSH auth uses token-based auth (see startSSHInstallation)
 
 let ws: WebSocket | null = null
 
@@ -375,6 +407,158 @@ async function generateToken() {
     selectedServerId.value = 'pending'
     activeMenu.value = 'infrastructure'
   } finally { loading.value = false }
+}
+
+// SSH Assisted Installation Functions
+function resetSSHSession() {
+  sshSession.value = {
+    id: null,
+    status: 'idle',
+    step: 0,
+    totalSteps: 5,
+    message: '',
+    output: []
+  }
+  if (sshWs) {
+    sshWs.close()
+    sshWs = null
+  }
+}
+
+async function startSSHInstallation() {
+  console.log('[SSH] Starting installation...')
+  if (!sshForm.value.host || !sshForm.value.username) {
+    showAlert('Missing Info', 'Please enter server address and username', 'error')
+    return
+  }
+
+  if (sshForm.value.authType === 'password' && !sshForm.value.password) {
+    showAlert('Missing Info', 'Please enter password', 'error')
+    return
+  }
+
+  if (sshForm.value.authType === 'key' && !sshForm.value.privateKey) {
+    showAlert('Missing Info', 'Please paste your SSH private key', 'error')
+    return
+  }
+
+  resetSSHSession()
+  sshSession.value.status = 'connecting'
+  sshSession.value.message = 'Connecting to server...'
+
+  // Get temporary auth token for WebSocket (cookies don't work cross-origin)
+  let sshToken: string
+  try {
+    console.log('[SSH] Fetching token from', `${baseUrl}/api/ssh/token`)
+    const tokenRes = await fetch(`${baseUrl}/api/ssh/token`, {
+      method: 'POST',
+      credentials: 'include'
+    })
+    console.log('[SSH] Token response status:', tokenRes.status)
+    if (!tokenRes.ok) {
+      console.error('[SSH] Token fetch failed:', tokenRes.status, tokenRes.statusText)
+      showAlert('Auth Error', 'Failed to authenticate for SSH session', 'error')
+      resetSSHSession()
+      return
+    }
+    const tokenData = await tokenRes.json()
+    sshToken = tokenData.token
+    console.log('[SSH] Got token:', sshToken.substring(0, 8) + '...')
+  } catch (e) {
+    console.error('[SSH] Token fetch error:', e)
+    showAlert('Connection Error', 'Failed to connect to server', 'error')
+    resetSSHSession()
+    return
+  }
+
+  // Connect via WebSocket with token in URL (cross-origin auth)
+  const sshWsUrl = baseUrl.replace('http', 'ws') + `/api/ssh/session?token=${sshToken}`
+  console.log('[SSH] Connecting WebSocket to', sshWsUrl)
+  sshWs = new WebSocket(sshWsUrl)
+
+  sshWs.onopen = () => {
+    console.log('[SSH] WebSocket connected, sending CONNECT message')
+    // Send connection request
+    sshWs?.send(JSON.stringify({
+      type: 'CONNECT',
+      host: sshForm.value.host,
+      port: sshForm.value.port,
+      username: sshForm.value.username,
+      password: sshForm.value.authType === 'password' ? sshForm.value.password : undefined,
+      privateKey: sshForm.value.authType === 'key' ? sshForm.value.privateKey : undefined,
+      verbose: sshForm.value.verbose,
+      autoInstall: true
+    }))
+  }
+
+  sshWs.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data)
+      console.log('[SSH] Received message:', msg.type, msg)
+
+      switch (msg.type) {
+        case 'CONNECTED':
+          sshSession.value.id = msg.sessionId
+          sshSession.value.status = 'preflight'
+          break
+
+        case 'STATUS':
+          sshSession.value.step = msg.step
+          sshSession.value.totalSteps = msg.total
+          sshSession.value.message = msg.message
+          if (msg.step >= 3) sshSession.value.status = 'installing'
+          break
+
+        case 'OUTPUT':
+          sshSession.value.output.push(msg.data)
+          // Auto-scroll terminal
+          nextTick(() => {
+            if (sshTerminalRef.value) {
+              sshTerminalRef.value.scrollTop = sshTerminalRef.value.scrollHeight
+            }
+          })
+          break
+
+        case 'COMPLETE':
+          sshSession.value.status = 'complete'
+          sshSession.value.message = 'Installation complete!'
+          // Refresh servers list
+          setTimeout(() => refreshData(), 2000)
+          break
+
+        case 'ERROR':
+          console.error('[SSH] Error from server:', msg)
+          sshSession.value.status = 'error'
+          sshSession.value.message = msg.message
+          break
+      }
+    } catch (e) {
+      console.error('[SSH] Message parse error:', e)
+    }
+  }
+
+  sshWs.onerror = (e) => {
+    console.error('[SSH] WebSocket error:', e)
+    sshSession.value.status = 'error'
+    sshSession.value.message = 'WebSocket connection failed'
+  }
+
+  sshWs.onclose = (e) => {
+    console.log('[SSH] WebSocket closed, code:', e.code, 'reason:', e.reason)
+    if (sshSession.value.status !== 'complete' && sshSession.value.status !== 'error') {
+      sshSession.value.status = 'error'
+      sshSession.value.message = 'Connection closed unexpectedly'
+    }
+  }
+}
+
+function cancelSSHInstallation() {
+  if (sshWs) {
+    sshWs.send(JSON.stringify({ type: 'DISCONNECT' }))
+    sshWs.close()
+    sshWs = null
+  }
+  resetSSHSession()
 }
 
 async function triggerProvision() {
@@ -1405,14 +1589,181 @@ function toggleConsoleFilter(type: string) {
         <!-- INFRASTRUCTURE VIEW -->
         <div v-else-if="activeMenu === 'infrastructure'">
            <!-- Connect New Node -->
-           <div v-if="selectedServerId === 'pending' && token" class="onboarding-view">
-              <h1 class="gradient-text">Connect New Node</h1>
-              <div class="glass-card onboarding-box">
+           <div v-if="selectedServerId === 'pending'" class="onboarding-view">
+              <div class="connect-header">
+                <button class="back-btn" @click="selectedServerId = null; resetSSHSession()">← Back</button>
+                <h1 class="gradient-text">Connect New Node</h1>
+              </div>
+
+              <!-- Tab Navigation -->
+              <div class="connect-tabs">
+                <button
+                  :class="['tab-btn', { active: connectTab === 'quick' }]"
+                  @click="connectTab = 'quick'; if (!token) generateToken()"
+                >Quick Install</button>
+                <button
+                  :class="['tab-btn', { active: connectTab === 'assisted' }]"
+                  @click="connectTab = 'assisted'"
+                >Assisted Setup</button>
+              </div>
+
+              <!-- Quick Install Tab -->
+              <div v-if="connectTab === 'quick' && token" class="glass-card onboarding-box">
+                <p class="quick-install-desc">Run this command on your Debian/Ubuntu server:</p>
                 <div class="terminal-mini" @click="copyCommand">
                   <code class="code-line"><span class="prompt">$</span> curl -sSL {{ baseUrl }}/install.sh | bash -s -- --token <span class="token">{{ token }}</span> --url {{ baseUrl }}</code>
                   <span class="copy-hint">Click to copy</span>
                 </div>
-                <div class="status-waiting"><div class="loader"></div> Establishing link...</div>
+                <div class="status-waiting"><div class="loader"></div> Waiting for connection...</div>
+                <div class="requirements-inline">
+                  <span>Requirements:</span> Debian/Ubuntu, root or sudo access, internet connectivity
+                </div>
+              </div>
+
+              <!-- Assisted Setup Tab -->
+              <div v-else-if="connectTab === 'assisted'" class="glass-card assisted-setup-box">
+                <!-- Idle/Form State -->
+                <div v-if="sshSession.status === 'idle'" class="ssh-form">
+                  <p class="assisted-desc">Enter your server SSH credentials:</p>
+
+                  <div class="ssh-fields">
+                    <div class="form-row">
+                      <div class="form-group flex-grow">
+                        <label>Server Address</label>
+                        <input v-model="sshForm.host" placeholder="192.168.1.100 or hostname" />
+                      </div>
+                      <div class="form-group port-field">
+                        <label>Port</label>
+                        <input v-model.number="sshForm.port" type="number" />
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label>Username</label>
+                      <input v-model="sshForm.username" placeholder="root" />
+                    </div>
+
+                    <div class="form-group">
+                      <label>Authentication</label>
+                      <div class="auth-toggle">
+                        <button
+                          :class="['auth-btn', { active: sshForm.authType === 'password' }]"
+                          @click="sshForm.authType = 'password'"
+                        >Password</button>
+                        <button
+                          :class="['auth-btn', { active: sshForm.authType === 'key' }]"
+                          @click="sshForm.authType = 'key'"
+                        >SSH Key</button>
+                      </div>
+                    </div>
+
+                    <div v-if="sshForm.authType === 'password'" class="form-group">
+                      <label>Password</label>
+                      <input v-model="sshForm.password" type="password" placeholder="Enter SSH password" />
+                    </div>
+
+                    <div v-else class="form-group">
+                      <label>Private Key</label>
+                      <textarea
+                        v-model="sshForm.privateKey"
+                        placeholder="Paste your private key here..."
+                        rows="3"
+                        class="key-textarea"
+                      ></textarea>
+                    </div>
+                  </div>
+
+                  <div class="ssh-options">
+                    <label class="checkbox-label">
+                      <input type="checkbox" v-model="sshForm.verbose" />
+                      <span>Show detailed output</span>
+                    </label>
+                  </div>
+
+                  <button class="premium-btn full-width" @click="startSSHInstallation">
+                    🚀 Start Installation
+                  </button>
+
+                  <div class="privacy-notice-inline">
+                    🔒 Credentials are <strong>never stored</strong> - used only for this session
+                  </div>
+                </div>
+
+                <!-- Installing State -->
+                <div v-else class="ssh-progress">
+                  <div class="progress-header">
+                    <h3>Installing ServerFlow Agent</h3>
+                    <button
+                      v-if="sshSession.status !== 'complete'"
+                      class="cancel-btn"
+                      @click="cancelSSHInstallation"
+                    >Cancel</button>
+                  </div>
+
+                  <!-- Progress Steps -->
+                  <div class="progress-steps">
+                    <div
+                      v-for="(step, idx) in [
+                        { name: 'Connected', icon: '🔗' },
+                        { name: 'Pre-flight checks', icon: '✅' },
+                        { name: 'Installing dependencies', icon: '📦' },
+                        { name: 'Configuring agent', icon: '⚙️' },
+                        { name: 'Starting service', icon: '🚀' }
+                      ]"
+                      :key="idx"
+                      :class="['progress-step', {
+                        completed: sshSession.step > idx + 1,
+                        active: sshSession.step === idx + 1,
+                        error: sshSession.status === 'error' && sshSession.step === idx + 1
+                      }]"
+                    >
+                      <span class="step-icon">
+                        <template v-if="sshSession.step > idx + 1">✅</template>
+                        <template v-else-if="sshSession.step === idx + 1 && sshSession.status !== 'error'">
+                          <span class="spinner"></span>
+                        </template>
+                        <template v-else-if="sshSession.status === 'error' && sshSession.step === idx + 1">❌</template>
+                        <template v-else>○</template>
+                      </span>
+                      <span class="step-name">{{ step.name }}</span>
+                    </div>
+                  </div>
+
+                  <!-- Status Message -->
+                  <div :class="['status-message', sshSession.status]">
+                    {{ sshSession.message }}
+                  </div>
+
+                  <!-- Terminal Output -->
+                  <div ref="sshTerminalRef" class="ssh-terminal">
+                    <div v-for="(line, idx) in sshSession.output" :key="idx" class="terminal-line">{{ line }}</div>
+                    <div v-if="sshSession.output.length === 0" class="terminal-placeholder">
+                      Waiting for output...
+                    </div>
+                  </div>
+
+                  <!-- Progress Bar -->
+                  <div class="progress-bar-container">
+                    <div
+                      class="progress-bar-fill"
+                      :style="{ width: ((sshSession.step / sshSession.totalSteps) * 100) + '%' }"
+                    ></div>
+                  </div>
+
+                  <!-- Success Actions -->
+                  <div v-if="sshSession.status === 'complete'" class="success-actions">
+                    <p>✅ Your node has been successfully connected!</p>
+                    <button class="premium-btn" @click="selectedServerId = null; resetSSHSession()">
+                      View Infrastructure
+                    </button>
+                  </div>
+
+                  <!-- Error Actions -->
+                  <div v-if="sshSession.status === 'error'" class="error-actions">
+                    <button class="secondary-btn" @click="resetSSHSession()">Try Again</button>
+                    <button class="secondary-btn" @click="connectTab = 'quick'; if (!token) generateToken()">Use Quick Install</button>
+                  </div>
+                </div>
               </div>
            </div>
 
@@ -3096,6 +3447,466 @@ nav a:hover, nav a.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .empty-msg { color: #94a3b8; text-align: center; padding: 24px; font-size: 0.9rem; }
+
+/* SSH Assisted Installation Styles */
+.connect-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.connect-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  background: #1e293b;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid #334155;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #e2e8f0;
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+}
+
+.assisted-setup-box {
+  margin-top: 24px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ssh-form {
+  max-width: 420px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.assisted-desc {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin: 0;
+  text-align: center;
+}
+
+.ssh-fields {
+  margin-bottom: 8px;
+}
+
+.ssh-form .form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.ssh-form .form-group {
+  margin-bottom: 16px;
+}
+
+.ssh-form .form-group.flex-grow {
+  flex: 1;
+}
+
+.ssh-form .port-field {
+  width: 90px;
+}
+
+.ssh-form label {
+  display: block;
+  margin-bottom: 8px;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.ssh-form input,
+.ssh-form textarea {
+  width: 100%;
+  padding: 12px 14px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.ssh-form input::placeholder,
+.ssh-form textarea::placeholder {
+  color: #475569;
+}
+
+.ssh-form textarea.key-textarea {
+  resize: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.ssh-form input:focus,
+.ssh-form textarea:focus {
+  border-color: #3b82f6;
+  outline: none;
+}
+
+.auth-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.auth-btn {
+  flex: 1;
+  padding: 10px 16px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.85rem;
+}
+
+.auth-btn:hover {
+  border-color: #3b82f6;
+  color: #e2e8f0;
+}
+
+.auth-btn.active {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-color: transparent;
+  color: white;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: #3b82f6;
+}
+
+.checkbox-label span {
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.ssh-options {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.privacy-notice-inline {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #334155;
+  color: #64748b;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.privacy-notice-inline strong {
+  color: #94a3b8;
+}
+
+.full-width {
+  width: 100%;
+}
+
+/* SSH Progress Styles */
+.ssh-progress .progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.ssh-progress h3 {
+  margin: 0;
+  color: #e2e8f0;
+}
+
+.cancel-btn {
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.cancel-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.progress-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.progress-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.progress-step.completed {
+  color: #22c55e;
+}
+
+.progress-step.active {
+  color: #3b82f6;
+}
+
+.progress-step.error {
+  color: #ef4444;
+}
+
+.step-icon {
+  width: 24px;
+  text-align: center;
+}
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #3b82f6;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.status-message {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
+.status-message.connecting,
+.status-message.preflight,
+.status-message.installing {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.status-message.complete {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+}
+
+.status-message.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.ssh-terminal {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 16px;
+  height: 200px;
+  overflow-y: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  margin-bottom: 16px;
+}
+
+.terminal-line {
+  color: #94a3b8;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.terminal-placeholder {
+  color: #475569;
+  font-style: italic;
+}
+
+.progress-bar-container {
+  height: 6px;
+  background: #1e293b;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #22c55e);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.success-actions,
+.error-actions {
+  text-align: center;
+  padding-top: 8px;
+}
+
+.success-actions p {
+  color: #22c55e;
+  margin-bottom: 16px;
+}
+
+.error-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.secondary-btn {
+  padding: 10px 20px;
+  background: transparent;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.secondary-btn:hover {
+  border-color: #3b82f6;
+  color: #e2e8f0;
+}
+
+/* Manual Tab Styles */
+.manual-box h3 {
+  margin: 0 0 8px 0;
+  color: #e2e8f0;
+}
+
+.manual-box > p {
+  color: #94a3b8;
+  margin-bottom: 24px;
+}
+
+.manual-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.manual-step {
+  display: flex;
+  gap: 16px;
+}
+
+.step-number {
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.step-content p {
+  margin: 0 0 8px 0;
+  color: #94a3b8;
+}
+
+.step-content code {
+  display: block;
+  padding: 12px 16px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #22c55e;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+.step-content code.copyable {
+  cursor: pointer;
+}
+
+.step-content code.copyable:hover {
+  border-color: #3b82f6;
+}
+
+.requirements-box {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.requirements-box h4 {
+  margin: 0 0 12px 0;
+  color: #fbbf24;
+  font-size: 0.9rem;
+}
+
+.requirements-box ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.requirements-box li {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+/* Quick Install Enhancements */
+.quick-install-desc {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin: 0 0 16px 0;
+}
+
+.requirements-inline {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #334155;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.requirements-inline span {
+  color: #94a3b8;
+  font-weight: 500;
+}
 </style>
 
 <style scoped>

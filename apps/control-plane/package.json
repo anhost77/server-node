@@ -20,13 +20,15 @@
         "dotenv": "^16.6.1",
         "drizzle-orm": "^0.29.5",
         "fastify": "^4.26.1",
-        "postgres": "^3.4.8"
+        "postgres": "^3.4.8",
+        "ssh2": "^1.17.0"
     },
     "devDependencies": {
         "@types/bcryptjs": "^3.0.0",
         "@types/better-sqlite3": "^7.6.13",
         "@types/node": "^20.11.19",
         "@types/pg": "^8.16.0",
+        "@types/ssh2": "^1.15.5",
         "@types/ws": "^8.18.1",
         "drizzle-kit": "^0.20.18",
         "tar": "^7.5.6",

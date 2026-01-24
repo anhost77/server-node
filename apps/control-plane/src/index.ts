@@ -4,11 +4,27 @@ import staticFiles from '@fastify/static';
 import cors from '@fastify/cors';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { randomUUID, createHmac, timingSafeEqual } from 'node:crypto';
 import { config } from 'dotenv';
+
+// Get local network IP address (for SSH installation)
+function getLocalIpAddress(): string {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name] || []) {
+            // Skip internal (loopback) and non-IPv4 addresses
+            if (iface.family === 'IPv4' && !iface.internal) {
+                return iface.address;
+            }
+        }
+    }
+    return 'localhost';
+}
 import { db } from './db/index.js';
 import * as schema from './db/schema.js';
+import { sshManager, type SSHCredentials } from './ssh/SSHSessionManager.js';
 import { eq, and, sql } from 'drizzle-orm';
 import cookie from '@fastify/cookie';
 import bcrypt from 'bcryptjs';
@@ -1329,6 +1345,232 @@ fastify.post('/api/webhooks/github', async (req, reply) => {
     }
 
     return reply.status(503).send({ error: 'Agent offline', nodeId: targetApp.nodeId });
+});
+
+// ==================== Assisted SSH Installation ====================
+// Rate limiting for SSH connection attempts
+const sshConnectionAttempts = new Map<string, { count: number; resetAt: number }>();
+// Temporary tokens for SSH WebSocket auth (bypass cookie cross-origin issue)
+const sshTokens = new Map<string, { userId: string; expiresAt: number }>();
+
+// Generate a temporary token for SSH WebSocket authentication
+// This endpoint works via HTTP where cookies are sent correctly
+fastify.post('/api/ssh/token', async (req, reply) => {
+    const userId = (req as any).userId;
+    if (!userId) return reply.status(401).send({ error: 'Not authenticated' });
+
+    const token = randomUUID();
+    // Token expires in 30 seconds (just enough time to establish WebSocket)
+    sshTokens.set(token, { userId, expiresAt: Date.now() + 30000 });
+
+    // Cleanup expired tokens periodically
+    for (const [t, data] of sshTokens.entries()) {
+        if (data.expiresAt < Date.now()) sshTokens.delete(t);
+    }
+
+    return { token };
+});
+
+function checkSSHRateLimit(ip: string): boolean {
+    const now = Date.now();
+    const limit = sshConnectionAttempts.get(ip);
+
+    if (!limit || now > limit.resetAt) {
+        sshConnectionAttempts.set(ip, { count: 1, resetAt: now + 60000 }); // 1 minute window
+        return true;
+    }
+
+    if (limit.count >= 5) {
+        return false; // Max 5 attempts per minute
+    }
+
+    limit.count++;
+    return true;
+}
+
+// Initiate SSH connection (returns session ID)
+fastify.post('/api/ssh/connect', async (req, reply) => {
+    const userId = (req as any).userId;
+    if (!userId) return reply.status(401).send({ error: 'Not authenticated' });
+
+    const ip = req.ip;
+    if (!checkSSHRateLimit(ip)) {
+        return reply.status(429).send({ error: 'Too many connection attempts. Wait 1 minute.' });
+    }
+
+    const body = req.body as any;
+    const credentials: SSHCredentials = {
+        host: body.host,
+        port: body.port || 22,
+        username: body.username,
+        password: body.password,
+        privateKey: body.privateKey,
+    };
+
+    // Validate required fields
+    if (!credentials.host || !credentials.username) {
+        return reply.status(400).send({ error: 'Missing host or username' });
+    }
+
+    if (!credentials.password && !credentials.privateKey) {
+        return reply.status(400).send({ error: 'Provide password or private key' });
+    }
+
+    return {
+        status: 'ready',
+        message: 'Connect via WebSocket at /api/ssh/session',
+        credentials: { host: credentials.host, port: credentials.port, username: credentials.username }
+    };
+});
+
+// WebSocket endpoint for SSH sessions
+fastify.register(async function (fastify) {
+    fastify.get('/api/ssh/session', { websocket: true }, async (connection, req) => {
+        // Try cookie-based auth first, then token-based auth (for cross-origin)
+        let userId = (req as any).userId;
+
+        // Check for token in query string (cross-origin WebSocket auth)
+        const url = new URL(req.url, `http://${req.hostname}`);
+        const token = url.searchParams.get('token');
+        if (!userId && token) {
+            const tokenData = sshTokens.get(token);
+            if (tokenData && tokenData.expiresAt > Date.now()) {
+                userId = tokenData.userId;
+                sshTokens.delete(token); // One-time use
+                console.log('🔑 SSH WebSocket auth via token');
+            }
+        }
+
+        if (!userId) {
+            connection.socket.close(4001, 'Not authenticated');
+            return;
+        }
+
+        const socket = connection.socket;
+        let sessionId: string | null = null;
+
+        console.log('🔌 SSH WebSocket connected, userId:', userId);
+
+        socket.on('message', async (data: Buffer) => {
+            try {
+                const msg = JSON.parse(data.toString());
+                console.log('📩 SSH WebSocket message received:', msg.type, msg.host || '');
+
+                // Start SSH connection
+                if (msg.type === 'CONNECT') {
+                    console.log('🔗 Attempting SSH to', msg.host, 'as', msg.username);
+                    const ip = req.ip;
+                    if (!checkSSHRateLimit(ip)) {
+                        socket.send(JSON.stringify({
+                            type: 'ERROR',
+                            code: 'RATE_LIMITED',
+                            message: 'Too many connection attempts. Wait 1 minute.'
+                        }));
+                        return;
+                    }
+
+                    const credentials: SSHCredentials = {
+                        host: msg.host,
+                        port: msg.port || 22,
+                        username: msg.username,
+                        password: msg.password,
+                        privateKey: msg.privateKey,
+                    };
+
+                    if (!credentials.host || !credentials.username) {
+                        socket.send(JSON.stringify({ type: 'ERROR', code: 'INVALID_PARAMS', message: 'Missing host or username' }));
+                        return;
+                    }
+
+                    if (!credentials.password && !credentials.privateKey) {
+                        socket.send(JSON.stringify({ type: 'ERROR', code: 'INVALID_PARAMS', message: 'Provide password or private key' }));
+                        return;
+                    }
+
+                    try {
+                        console.log('🔐 Creating SSH session...');
+                        sessionId = await sshManager.createSession(userId, credentials, socket, msg.verbose || false);
+                        console.log('✅ SSH session created:', sessionId);
+                        socket.send(JSON.stringify({ type: 'CONNECTED', sessionId }));
+
+                        // Run pre-flight checks
+                        console.log('🔍 Running preflight checks...');
+                        const preflightOk = await sshManager.runPreflightChecks(sessionId);
+                        console.log('📋 Preflight result:', preflightOk);
+
+                        if (preflightOk && msg.autoInstall) {
+                            // Generate registration token
+                            const token = randomUUID();
+                            await db.insert(schema.registrationTokens).values({
+                                id: token,
+                                ownerId: userId,
+                                expiresAt: Date.now() + 600000 // 10 min
+                            }).run();
+
+                            // Use the control plane URL from environment or auto-detect local IP
+                            const localIp = getLocalIpAddress();
+                            const controlPlaneUrl = process.env.CONTROL_PLANE_URL || `http://${localIp}:3000`;
+                            console.log('🌐 Control Plane URL for installation:', controlPlaneUrl);
+
+                            // Run installation
+                            await sshManager.runInstallation(sessionId, controlPlaneUrl, token);
+                        }
+                    } catch (err: any) {
+                        console.error('❌ SSH Error:', err.message, err.stack);
+                        if (err.message === 'MAX_SESSIONS_EXCEEDED') {
+                            socket.send(JSON.stringify({
+                                type: 'ERROR',
+                                code: 'MAX_SESSIONS',
+                                message: 'Maximum 3 concurrent SSH sessions allowed'
+                            }));
+                        } else {
+                            socket.send(JSON.stringify({
+                                type: 'ERROR',
+                                code: 'SSH_ERROR',
+                                message: err.message || 'SSH connection failed'
+                            }));
+                        }
+                    }
+                }
+
+                // Manual install trigger (after preflight passed)
+                else if (msg.type === 'START_INSTALL' && sessionId) {
+                    const token = randomUUID();
+                    await db.insert(schema.registrationTokens).values({
+                        id: token,
+                        ownerId: userId,
+                        expiresAt: Date.now() + 600000
+                    }).run();
+
+                    const localIp = getLocalIpAddress();
+                    const controlPlaneUrl = process.env.CONTROL_PLANE_URL || `http://${localIp}:3000`;
+                    console.log('🌐 Control Plane URL for manual installation:', controlPlaneUrl);
+                    await sshManager.runInstallation(sessionId, controlPlaneUrl, token);
+                }
+
+                // Send input to SSH shell
+                else if (msg.type === 'INPUT' && sessionId) {
+                    sshManager.sendInput(sessionId, msg.data);
+                }
+
+                // Cancel/disconnect
+                else if (msg.type === 'DISCONNECT' && sessionId) {
+                    sshManager.endSession(sessionId, userId);
+                    socket.send(JSON.stringify({ type: 'DISCONNECTED' }));
+                }
+
+            } catch (e) {
+                console.error('SSH WebSocket error:', e);
+            }
+        });
+
+        socket.on('close', () => {
+            console.log('🔌 SSH WebSocket closed');
+            if (sessionId) {
+                sshManager.endSession(sessionId, userId);
+            }
+        });
+    });
 });
 
 fastify.listen({ port: 3000, host: '0.0.0.0' }).then(() => console.log('🚀 Engine Online'));

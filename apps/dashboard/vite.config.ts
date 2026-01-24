@@ -9,8 +9,10 @@ export default defineConfig({
         vue(),
     ],
     server: {
-        port: 5200,
-        strictPort: true
+        port: 5173,
+        proxy: {
+            '/api/ssh': 'http://localhost:3000'
+        }
     },
     resolve: {
         alias: {
