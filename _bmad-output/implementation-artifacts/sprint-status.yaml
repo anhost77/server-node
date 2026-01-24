@@ -47,8 +47,8 @@ development_status:
   epic-1-retrospective: done
 
   epic-2: in-progress
-  2-1-git-push-webhook-handler: in-progress
-  2-2-git-pull-build-agent-side: in-progress
+  2-1-git-push-webhook-handler: done  # HMAC verification + auto-deploy
+  2-2-git-pull-build-agent-side: done  # ExecutionManager fully functional
   2-3-nginx-ssl-automation: done
   2-4-app-management-and-secrets: done
   epic-2-retrospective: optional

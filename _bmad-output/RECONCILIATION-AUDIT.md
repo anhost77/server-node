@@ -69,20 +69,21 @@
 ---
 
 ### 5. **Git OAuth & Webhook Integration**
-**Status:** PARTIELLEMENT IMPLÉMENTÉ  
+**Status:** ✅ IMPLÉMENTÉ
 **Implémenté:**
-- ✅ Endpoint `/api/webhooks/github` (basique)
+- [x] Endpoint `/api/webhooks/github` avec HMAC signature
+- [x] OAuth connection avec GitHub
+- [x] Vérification de signature webhook (HMAC sha256)
+- [x] Auto-déploiement sur push (main/master)
+- [x] Activity logging pour webhook deploys
 
-**Manquant:**
-- [ ] OAuth connection avec GitHub/GitLab
-- [ ] Interface pour connecter un repo Git
-- [ ] Vérification de signature webhook (HMAC)
+**Manquant (Post-MVP):**
 - [ ] Support GitLab webhooks
-- [ ] Auto-déploiement sur push (actuellement manuel)
+- [ ] Interface UI pour configurer webhooks
 
-**Spécification BMAD:** 
-- FR5: Git Push triggers deployment
-- Epic 2: "Transform a Git Push into a live HTTPS URL automatically"
+**Spécification BMAD:**
+- FR5: Git Push triggers deployment ✅
+- Epic 2: "Transform a Git Push into a live HTTPS URL automatically" ✅
 
 ---
 
@@ -160,7 +161,7 @@
 | Console Logs | ✅ Fait | ✅ Terminé | Epic 1 |
 | Service Controls | ✅ Fait (Nginx + PM2) | ✅ Terminé | Epic 3 |
 | IA Sysadmin | 🟡 Basique | 🟠 Important | Epic 4 |
-| Git OAuth | 🟡 Partiel | 🟠 Important | Epic 2 |
+| Git OAuth + Webhook | ✅ Fait (HMAC + auto-deploy) | ✅ Terminé | Epic 2 |
 | Hot-Path Diffing | 🟡 Incomplet | 🟢 Nice-to-have | Epic 3 |
 | Audit Logs | 🟡 Basique | 🟢 Nice-to-have | Epic 4 |
 | Teams/RBAC | ❌ Manquant | 🟢 Post-MVP | Epic 5 |
@@ -178,7 +179,7 @@
 
 ### Phase 2: EN COURS
 4. ~~**Brancher les boutons Service Controls**~~ ✅ (Nginx + PM2)
-5. **Git Webhook Complet** - Auto-deploy sur push + HMAC
+5. ~~**Git Webhook Complet**~~ ✅ (HMAC + auto-deploy main/master)
 6. **Améliorer MCP** - Commandes naturelles + Dry-Run mode
 
 ### Phase 3: Fonctionnalités Avancées (Post-MVP)

@@ -5,7 +5,7 @@ import cors from '@fastify/cors';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHmac, timingSafeEqual } from 'node:crypto';
 import { config } from 'dotenv';
 import { db } from './db/index.js';
 import * as schema from './db/schema.js';
@@ -379,6 +379,90 @@ fastify.get('/api/auth/github/callback', async (req: any, reply) => {
     }
     await createSession(userId, reply);
     return reply.redirect(`http://localhost:5173/?gh_token=${tData.access_token}`);
+});
+
+// GitHub Webhook Handler (Auto-deploy on push)
+const WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET || 'dev-webhook-secret';
+
+function verifyGitHubSignature(payload: string, signature: string | undefined): boolean {
+    if (!signature) return false;
+    const expectedSig = 'sha256=' + createHmac('sha256', WEBHOOK_SECRET).update(payload).digest('hex');
+    try {
+        const sigBuffer = Buffer.from(signature);
+        const expectedBuffer = Buffer.from(expectedSig);
+        if (sigBuffer.length !== expectedBuffer.length) return false;
+        return timingSafeEqual(sigBuffer, expectedBuffer);
+    } catch {
+        return false;
+    }
+}
+
+fastify.post('/api/webhooks/github', async (req, reply) => {
+    const signature = req.headers['x-hub-signature-256'] as string | undefined;
+    const event = req.headers['x-github-event'] as string;
+    const payload = JSON.stringify(req.body);
+
+    // Verify HMAC signature
+    if (!verifyGitHubSignature(payload, signature)) {
+        console.warn('⚠️ GitHub webhook: Invalid signature');
+        return reply.status(401).send({ error: 'Invalid signature' });
+    }
+
+    // Only handle push events
+    if (event !== 'push') {
+        return { status: 'ignored', event };
+    }
+
+    const body = req.body as any;
+    const repoUrl = body.repository?.clone_url;
+    const branch = body.ref?.replace('refs/heads/', '');
+    const commitHash = body.after;
+
+    // Only deploy main/master branch
+    if (!['main', 'master'].includes(branch)) {
+        return { status: 'ignored', reason: 'not main branch', branch };
+    }
+
+    console.log(`🔔 GitHub Push: ${repoUrl} @ ${commitHash?.slice(0, 7)}`);
+
+    // Find the app matching this repo
+    const app = await db.select().from(schema.apps).where(eq(schema.apps.repoUrl, repoUrl)).get();
+    if (!app) {
+        // Try matching without .git suffix
+        const altUrl = repoUrl.replace(/\.git$/, '');
+        const altApp = await db.select().from(schema.apps).where(eq(schema.apps.repoUrl, altUrl)).get();
+        if (!altApp) {
+            console.log(`⚠️ No app registered for repo: ${repoUrl}`);
+            return { status: 'no_app_found', repoUrl };
+        }
+    }
+
+    const targetApp = app || await db.select().from(schema.apps).where(eq(schema.apps.repoUrl, repoUrl.replace(/\.git$/, ''))).get();
+    if (!targetApp) {
+        return { status: 'no_app_found', repoUrl };
+    }
+
+    // Find the agent for this app's node
+    let agentFound = false;
+    agentSessions.forEach(session => {
+        if (session.authorized && session.nodeId === targetApp.nodeId) {
+            session.socket.send(JSON.stringify({
+                type: 'DEPLOY',
+                repoUrl: targetApp.repoUrl,
+                commitHash,
+                port: targetApp.port,
+                env: JSON.parse(targetApp.env || '{}')
+            }));
+            agentFound = true;
+        }
+    });
+
+    if (agentFound) {
+        addActivityLog(targetApp.ownerId, 'webhook_deploy', { repo: repoUrl, commit: commitHash?.slice(0, 7) }, targetApp.nodeId, 'info');
+        return { status: 'deploy_triggered', app: targetApp.name, commit: commitHash };
+    }
+
+    return reply.status(503).send({ error: 'Agent offline', nodeId: targetApp.nodeId });
 });
 
 fastify.listen({ port: 3000, host: '0.0.0.0' }).then(() => console.log('🚀 Engine Online'));
