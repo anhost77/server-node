@@ -73,14 +73,18 @@ function connectToControlPlane() {
 
                 ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: 'cloning' }));
 
-                executor.deploy(msg).then(({ success, buildSkipped }) => {
-                    const finalStatus = success ? (buildSkipped ? 'build_skipped' : 'success') : 'failure';
+                executor.deploy(msg).then(({ success, buildSkipped, healthCheckFailed }) => {
+                    let finalStatus = success ? (buildSkipped ? 'build_skipped' : 'success') : 'failure';
+
+                    if (healthCheckFailed) {
+                        finalStatus = 'rollback';
+                        ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: 'health_check_failed' }));
+                    }
+
                     ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: finalStatus }));
                 });
             }
             else if (msg.type === 'PROVISION_DOMAIN') {
-                console.log(`🌐 PROVISIONING DOMAIN: ${msg.domain}`);
-
                 const nginx = new NginxManager((logData, stream) => {
                     ws.send(JSON.stringify({ type: 'LOG_STREAM', data: logData, stream, repoUrl: msg.repoUrl }));
                 });
@@ -90,20 +94,10 @@ function connectToControlPlane() {
                     ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: success ? 'nginx_ready' : 'failure' }));
                 });
             }
-            else if (msg.type === 'ERROR') {
-                console.error('❌ Server Error:', msg.message);
-            }
-        } catch (err) {
-            console.error('Processing error', err);
-        }
+        } catch (err) { }
     });
 
-    ws.on('close', () => {
-        console.log('Disconnected. Retrying in 5s...');
-        setTimeout(connectToControlPlane, 5000);
-    });
-
-    ws.on('error', (err) => console.error('WS Error:', err.message));
+    ws.on('close', () => setTimeout(connectToControlPlane, 5000));
 }
 
 const start = async () => {
@@ -111,7 +105,6 @@ const start = async () => {
         await fastify.listen({ port: 3001 });
         connectToControlPlane();
     } catch (err) {
-        fastify.log.error(err);
         process.exit(1);
     }
 };

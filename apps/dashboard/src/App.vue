@@ -34,9 +34,7 @@ function connectWS() {
       if (msg.type === 'DEPLOY_LOG') {
         logs.value.push({ data: msg.data, stream: msg.stream })
         await nextTick()
-        if (logContainer.value) {
-          logContainer.value.scrollTop = logContainer.value.scrollHeight
-        }
+        if (logContainer.value) logContainer.value.scrollTop = logContainer.value.scrollHeight
       }
     } catch (err) { }
   }
@@ -92,7 +90,7 @@ function provisionDomain() {
         <button @click="generateToken" :disabled="loading">Add Server</button>
       </section>
 
-      <!-- Connection Logic -->
+      <!-- Command to Run -->
       <section v-else-if="token && serverStatus !== 'online' && !deployStatus" class="command-box">
         <h2>Step 2: Run Command</h2>
         <div class="code-block" @click="copyCommand">
@@ -121,19 +119,19 @@ function provisionDomain() {
         </div>
 
         <div v-else class="terminal-view">
-           <div class="terminal-header">
+           <div class="terminal-header" :class="deployStatus">
               <strong>Logs: {{ deployStatus }}</strong>
-              <span v-if="deployStatus === 'build_skipped'" class="lightning-hint">
-                ⚡ Hot-Path: Build skipped (docs/configs only)
-              </span>
+              <span v-if="deployStatus === 'build_skipped'" class="hint">⚡ Hot-Path: Build skipped</span>
+              <span v-if="deployStatus === 'rollback'" class="hint error">🛡️ Auto-Rollback: Health check failed</span>
            </div>
            <div class="terminal" ref="logContainer">
              <div v-for="(log, idx) in logs" :key="idx" :class="['log-line', log.stream]">
                {{ log.data }}
              </div>
            </div>
-           <div v-if="deployStatus === 'nginx_ready' || deployStatus === 'success' || deployStatus === 'build_skipped'" class="footer">
-              ✅ Task Completed! <button @click="deployStatus = null">Back</button>
+           <div v-if="deployStatus === 'nginx_ready' || deployStatus === 'success' || deployStatus === 'rollback'" class="footer">
+              <span v-if="deployStatus === 'rollback'">System stabilized to last known healthy commit.</span>
+              <button @click="deployStatus = null">Back</button>
            </div>
         </div>
       </section>
@@ -154,9 +152,11 @@ header { display: flex; justify-content: space-between; border-bottom: 1px solid
 input { background: #000; border: 1px solid #333; color: #fff; padding: 0.8rem; margin: 0.5rem 0; width: 100%; border-radius: 4px; }
 .terminal { height: 400px; background: #000; padding: 1.5rem; font-family: monospace; overflow-y: auto; }
 .terminal-header { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem; border-bottom: 1px solid #222; }
-.lightning-hint { font-size: 0.8rem; color: #0070f3; font-weight: bold; }
+.terminal-header.rollback { background: rgba(255, 0, 0, 0.1); border-color: #ff4444; }
+.hint { font-size: 0.8rem; color: #0070f3; font-weight: bold; }
+.hint.error { color: #ff4444; }
 .log-line.stderr { color: #ff4444; }
 .code-block { background: #000; color: #00ff00; padding: 1rem; border-radius: 4px; }
 button { background: #0070f3; color: #fff; border: none; padding: 0.8rem 1.5rem; border-radius: 4px; cursor: pointer; }
-.footer { padding: 1rem; text-align: right; background: #111; }
+.footer { padding: 1rem; display: flex; justify-content: space-between; align-items: center; background: #111; }
 </style>
