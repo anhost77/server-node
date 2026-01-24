@@ -80,18 +80,16 @@
 ---
 
 ### 6. **Hot-Path Diffing (Optimisation Build)**
-**Status:** IMPLÉMENTÉ MAIS INCOMPLET  
+**Status:** ✅ IMPLÉMENTÉ
 **Implémenté:**
-- ✅ `DiffAnalyzer.shouldSkipBuild()` existe
+- [x] `DiffAnalyzer.shouldSkipBuild()` fonctionnel
+- [x] Détection des changements non-code (README, docs, tests, LICENSE, .txt)
+- [x] Skip build si uniquement fichiers ignorés modifiés
+- [x] Patterns configurables: `.md`, `.gitignore`, `docs/`, `tests/`, `LICENSE`, `.txt`
 
-**Manquant:**
-- [ ] Logique réelle d'analyse de diff
-- [ ] Détection des changements non-code (README, docs)
-- [ ] Cache intelligent des builds
-
-**Spécification BMAD:** 
-- FR3: Hot Patch code via WebSocket (<2s)
-- Epic 3: Real-Time Resilience
+**Spécification BMAD:**
+- FR3: Hot Patch code via WebSocket ✅
+- Epic 3: Real-Time Resilience ✅
 
 ---
 
@@ -154,7 +152,7 @@
 | Service Controls | ✅ Fait (Nginx + PM2) | ✅ Terminé | Epic 3 |
 | IA Sysadmin (MCP) | ✅ Fait (7 outils + dry-run) | ✅ Terminé | Epic 4 |
 | Git OAuth + Webhook | ✅ Fait (HMAC + auto-deploy) | ✅ Terminé | Epic 2 |
-| Hot-Path Diffing | 🟡 Incomplet | 🟢 Nice-to-have | Epic 3 |
+| Hot-Path Diffing | ✅ Fait (DiffAnalyzer) | ✅ Terminé | Epic 3 |
 | Audit Logs | 🟡 Basique | 🟢 Nice-to-have | Epic 4 |
 | Teams/RBAC | ❌ Manquant | 🟢 Post-MVP | Epic 5 |
 | i18n | ❌ Manquant | 🟢 Post-MVP | Epic 5 |
@@ -177,7 +175,7 @@
 ### Phase 3: Fonctionnalités Avancées (Post-MVP)
 7. **Teams & RBAC**
 8. **Internationalisation**
-9. **Hot-Path Diffing complet**
+9. ~~**Hot-Path Diffing**~~ ✅ (DiffAnalyzer fonctionnel)
 
 ---
 
