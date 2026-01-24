@@ -34,7 +34,9 @@ function connectWS() {
       if (msg.type === 'DEPLOY_LOG') {
         logs.value.push({ data: msg.data, stream: msg.stream })
         await nextTick()
-        if (logContainer.value) logContainer.value.scrollTop = logContainer.value.scrollHeight
+        if (logContainer.value) {
+          logContainer.value.scrollTop = logContainer.value.scrollHeight
+        }
       }
     } catch (err) { }
   }
@@ -67,7 +69,7 @@ function provisionDomain() {
     type: 'PROVISION_DOMAIN',
     domain: domainName.value,
     port: appPort.value,
-    repoUrl: 'https://github.com/example/my-app.git' // In real app, this is tracked per build
+    repoUrl: 'https://github.com/example/my-app.git' 
   }))
   deployStatus.value = 'provisioning_nginx'
   logs.value = []
@@ -121,13 +123,16 @@ function provisionDomain() {
         <div v-else class="terminal-view">
            <div class="terminal-header">
               <strong>Logs: {{ deployStatus }}</strong>
+              <span v-if="deployStatus === 'build_skipped'" class="lightning-hint">
+                ⚡ Hot-Path: Build skipped (docs/configs only)
+              </span>
            </div>
            <div class="terminal" ref="logContainer">
              <div v-for="(log, idx) in logs" :key="idx" :class="['log-line', log.stream]">
                {{ log.data }}
              </div>
            </div>
-           <div v-if="deployStatus === 'nginx_ready' || deployStatus === 'success'" class="footer">
+           <div v-if="deployStatus === 'nginx_ready' || deployStatus === 'success' || deployStatus === 'build_skipped'" class="footer">
               ✅ Task Completed! <button @click="deployStatus = null">Back</button>
            </div>
         </div>
@@ -148,7 +153,10 @@ header { display: flex; justify-content: space-between; border-bottom: 1px solid
 .status-card { background: #111; padding: 1.5rem; border-radius: 8px; border: 1px solid #222; }
 input { background: #000; border: 1px solid #333; color: #fff; padding: 0.8rem; margin: 0.5rem 0; width: 100%; border-radius: 4px; }
 .terminal { height: 400px; background: #000; padding: 1.5rem; font-family: monospace; overflow-y: auto; }
+.terminal-header { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 1rem; border-bottom: 1px solid #222; }
+.lightning-hint { font-size: 0.8rem; color: #0070f3; font-weight: bold; }
 .log-line.stderr { color: #ff4444; }
 .code-block { background: #000; color: #00ff00; padding: 1rem; border-radius: 4px; }
 button { background: #0070f3; color: #fff; border: none; padding: 0.8rem 1.5rem; border-radius: 4px; cursor: pointer; }
+.footer { padding: 1rem; text-align: right; background: #111; }
 </style>

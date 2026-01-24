@@ -72,8 +72,10 @@ function connectToControlPlane() {
                 });
 
                 ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: 'cloning' }));
-                executor.deploy(msg).then(success => {
-                    ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: success ? 'success' : 'failure' }));
+
+                executor.deploy(msg).then(({ success, buildSkipped }) => {
+                    const finalStatus = success ? (buildSkipped ? 'build_skipped' : 'success') : 'failure';
+                    ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: finalStatus }));
                 });
             }
             else if (msg.type === 'PROVISION_DOMAIN') {
