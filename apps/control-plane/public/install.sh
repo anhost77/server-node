@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ServerFlow Agent Installer
+# ServerFlow Agent Installer (Verbose Edition)
 set -e
 
 # Parse arguments
@@ -39,7 +39,6 @@ check_cmd() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Determine if we need sudo
 SUDO=""
 if [ "$(id -u)" -ne 0 ]; then
     SUDO="sudo"
@@ -58,12 +57,13 @@ fi
 
 # 2. Node.js
 if ! check_cmd node; then
-    echo "📦 [3/5] Installing Node.js 20..."
+    echo "📦 [3/5] Installing Node.js 20 (Downloading repository)..."
     if [ -n "$SUDO" ]; then
         curl -fsSL https://deb.nodesource.com/setup_20.x | $SUDO -E bash -
     else
         curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
     fi
+    echo "📦 [3/5] Compiling and installing Node.js binary..."
     $SUDO apt-get install -y nodejs
 fi
 
@@ -74,28 +74,29 @@ if ! check_cmd pnpm; then
 fi
 
 # 4. Workspace setup
-echo "📂 [5/5] Preparing workspace (Low Resource Mode)..."
+echo "📂 [5/5] Preparing workspace..."
 mkdir -p ~/.server-flow
 cd ~/.server-flow
 
 if [ ! -d "server-node" ]; then
-    echo "📥 Cloning project..."
+    echo "📥 Cloning project repository..."
     git clone --depth 1 https://github.com/anhost77/server-node.git
 else
-    echo "🔄 Updating project..."
+    echo "🔄 Updating project source..."
     cd server-node && git pull && cd ..
 fi
 
 cd server-node
 
-echo "🔨 Installing Agent Dependencies..."
-# Using --prod to avoid massive devDependencies on the VPS
-# This saves significant RAM and prevents Proxmox/OOM crashes
-pnpm install --filter @server-flow/agent --filter @server-flow/shared > /dev/null 2>&1
+echo "🔨 Initializing dependencies..."
+# Removed redirection to /dev/null so user can see progress
+pnpm install --filter @server-flow/agent --filter @server-flow/shared
 
 echo "✨ Configuration complete!"
 echo "📡 Linking agent to control plane at $URL..."
 
-# 5. Start Agent
-# Use tsx from node_modules since we might not have a global dev environment
+# 5. Start Agent - Force build of shared first just in case
+pnpm --filter @server-flow/shared build
+
+# Use npx tsx to ensure we run the TS files directly
 npx tsx apps/agent/src/index.ts --token $TOKEN --url $URL
