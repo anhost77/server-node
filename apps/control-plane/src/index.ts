@@ -32,7 +32,6 @@ if (fs.existsSync(SERVERS_FILE)) {
         registeredServers = new Map(Object.entries(JSON.parse(fs.readFileSync(SERVERS_FILE, 'utf-8'))));
     } catch (e) { }
 }
-
 if (fs.existsSync(AUDIT_FILE)) {
     try {
         auditLogs = JSON.parse(fs.readFileSync(AUDIT_FILE, 'utf-8'));
@@ -44,47 +43,33 @@ function saveServers() {
 }
 
 function addAuditLog(serverId: string, type: string, details: any, status: 'success' | 'failure' | 'info' = 'info') {
-    const entry = {
-        id: randomUUID(),
-        timestamp: Date.now(),
-        serverId,
-        type,
-        details,
-        status
-    };
+    const entry = { id: randomUUID(), timestamp: Date.now(), serverId, type, details, status };
     auditLogs.unshift(entry);
-    if (auditLogs.length > 500) auditLogs.pop(); // Keep last 500
+    if (auditLogs.length > 500) auditLogs.pop();
     fs.writeFileSync(AUDIT_FILE, JSON.stringify(auditLogs, null, 2));
     broadcastToDashboards({ type: 'AUDIT_UPDATE', log: entry });
 }
 
 // State
-interface Session {
-    pubKey?: string;
-    socket: any;
-    authorized: boolean;
-}
+interface Session { pubKey?: string; socket: any; authorized: boolean; nonce?: string; }
 const agentSessions = new Map<string, Session>();
 const dashboardSessions = new Set<any>();
-const registrationTokens = new Map<string, any>();
+const registrationTokens = new Map<string, { expires: number }>();
 
 function broadcastToDashboards(msg: any) {
     const payload = JSON.stringify(msg);
-    dashboardSessions.forEach(socket => {
-        if (socket.readyState === 1) socket.send(payload);
-    });
+    dashboardSessions.forEach(socket => { if (socket.readyState === 1) socket.send(payload); });
 }
 
-function sendToAgentByRepo(repoUrl: string, msg: any) {
-    const payload = JSON.stringify(msg);
+function sendToAgentById(serverId: string, msg: any) {
+    const serverEntry = Array.from(registeredServers.values()).find(s => s.id === serverId);
+    if (!serverEntry) return false;
+
     let sent = false;
     agentSessions.forEach(session => {
-        if (session.authorized) {
-            const server = registeredServers.get(session.pubKey!);
-            if (server) {
-                session.socket.send(payload);
-                sent = true;
-            }
+        if (session.authorized && session.pubKey === serverEntry.pubKey) {
+            session.socket.send(JSON.stringify(msg));
+            sent = true;
         }
     });
     return sent;
@@ -92,61 +77,59 @@ function sendToAgentByRepo(repoUrl: string, msg: any) {
 
 function getSystemState() {
     return Array.from(registeredServers.values()).map(s => {
-        const isOnline = Array.from(agentSessions.values()).some(sess => sess.pubKey === s.pubKey && sess.authorized);
-        return { ...s, status: isOnline ? 'online' : 'offline' };
+        const active = Array.from(agentSessions.values()).find(sess => sess.pubKey === s.pubKey && sess.authorized);
+        return { ...s, status: active ? 'online' : 'offline' };
     });
 }
 
-// Routes
+// REST
 fastify.get('/api/audit/logs', async () => auditLogs);
-
-fastify.get('/api/servers/verify-token/:token', async (request, reply) => {
-    const { token } = (request.params as any);
-    if (registrationTokens.has(token)) return { valid: true };
-    return reply.status(401).send({ valid: false });
+fastify.get('/api/servers/verify-token/:token', async (req, res) => {
+    const { token } = (req.params as any);
+    const data = registrationTokens.get(token);
+    if (data && data.expires > Date.now()) return { valid: true };
+    return res.status(401).send({ valid: false });
 });
-
 fastify.post('/api/servers/token', async () => {
     const token = randomUUID();
     registrationTokens.set(token, { expires: Date.now() + 600000 });
     return { token };
 });
 
-fastify.get('/api/internal/servers', async () => getSystemState());
-
-// GitHub Webhook Handler
-fastify.post('/api/webhooks/github', async (request) => {
-    const payload: any = request.body;
-    const repoUrl = payload?.repository?.clone_url;
-    if (repoUrl) {
-        addAuditLog('system', 'deployment_triggered', { repoUrl, commit: payload.after }, 'info');
-        sendToAgentByRepo(repoUrl, { type: 'DEPLOY', repoUrl, commitHash: payload.after, branch: 'main' });
-    }
-    return { status: 'triggered' };
-});
-
-// WS
+// WebSocket
 fastify.register(async function (fastify) {
     fastify.get('/api/dashboard/ws', { websocket: true }, (connection) => {
         const socket = connection.socket;
         dashboardSessions.add(socket);
         socket.send(JSON.stringify({ type: 'INITIAL_STATE', servers: getSystemState() }));
+
+        socket.on('message', (data: Buffer) => {
+            try {
+                const msg = JSON.parse(data.toString());
+                if (msg.type === 'PROVISION_DOMAIN') {
+                    console.log(`[ORCHESTRATION] Forwarding infrastructure update to agent...`);
+                    // Find active server and forward
+                    const ok = sendToAgentById(msg.serverId, msg);
+                    if (!ok) console.log(`[ORCHESTRATION] Failed to locate active agent for ID: ${msg.serverId}`);
+                }
+            } catch (e) { }
+        });
+
         socket.on('close', () => dashboardSessions.delete(socket));
     });
 
     fastify.get('/api/connect', { websocket: true }, (connection) => {
         const socket = connection.socket;
         const connectionId = randomUUID();
-        let nonce = randomUUID();
+        const nonce = randomUUID();
 
-        socket.on('message', (data: Buffer) => {
+        socket.on('message', (message: Buffer) => {
             try {
-                const msg = JSON.parse(data.toString());
-
+                const msg = JSON.parse(message.toString());
                 if (msg.type === 'CONNECT') {
                     const server = registeredServers.get(msg.pubKey);
                     if (!server) return socket.send(JSON.stringify({ type: 'ERROR', message: 'Not registered' }));
-                    agentSessions.set(connectionId, { pubKey: msg.pubKey, socket, authorized: false });
+                    agentSessions.set(connectionId, { pubKey: msg.pubKey, socket, authorized: false, nonce });
                     socket.send(JSON.stringify({ type: 'CHALLENGE', nonce }));
                 }
                 else if (msg.type === 'RESPONSE') {
@@ -160,9 +143,9 @@ fastify.register(async function (fastify) {
                 }
                 else if (msg.type === 'REGISTER') {
                     if (!registrationTokens.has(msg.token)) return;
-                    const serverId = randomUUID();
-                    const newServer = { id: serverId, pubKey: msg.pubKey, registeredAt: Date.now() };
-                    registeredServers.set(msg.pubKey, newServer);
+                    let server = registeredServers.get(msg.pubKey);
+                    let serverId = server ? server.id : randomUUID();
+                    registeredServers.set(msg.pubKey, { id: serverId, pubKey: msg.pubKey, registeredAt: Date.now() });
                     saveServers();
                     agentSessions.set(connectionId, { pubKey: msg.pubKey, socket, authorized: true });
                     addAuditLog(serverId, 'server_registered', {}, 'success');
@@ -174,11 +157,8 @@ fastify.register(async function (fastify) {
                     const session = agentSessions.get(connectionId);
                     if (!session?.pubKey) return;
                     const server = registeredServers.get(session.pubKey);
-
                     if (msg.type === 'STATUS_UPDATE') {
-                        const statusClass = (msg.status === 'success' || msg.status === 'nginx_ready') ? 'success' :
-                            (msg.status === 'failure' || msg.status === 'rollback') ? 'failure' : 'info';
-                        addAuditLog(server.id, 'status_update', { status: msg.status, repo: msg.repoUrl }, statusClass);
+                        addAuditLog(server.id, 'status_update', { status: msg.status, repo: msg.repoUrl }, 'info');
                         broadcastToDashboards({ ...msg, serverId: server.id, type: 'DEPLOY_STATUS' });
                     }
                     if (msg.type === 'LOG_STREAM') {
@@ -202,4 +182,4 @@ fastify.register(async function (fastify) {
     });
 });
 
-fastify.listen({ port: 3000, host: '0.0.0.0' }).then(() => console.log('🚀 Control Plane auditing ready on 3000'));
+fastify.listen({ port: 3000, host: '0.0.0.0' }).then(() => console.log('🚀 Orchestrator Online'));

@@ -1,6 +1,5 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
-import path from 'node:path';
 
 export interface NginxContext {
     domain: string;
@@ -13,16 +12,19 @@ export class NginxManager {
 
     private async runCommand(cmd: string, args: string[]): Promise<number | null> {
         return new Promise((resolve) => {
-            this.onLog(`\n$ sudo ${cmd} ${args.join(' ')}\n`, 'stdout');
+            const isRoot = process.getuid && process.getuid() === 0;
+            const command = isRoot ? cmd : 'sudo';
+            const finalArgs = isRoot ? args : [cmd, ...args];
 
-            // In a real scenario, this runs with sudo
-            const proc = spawn('sudo', [cmd, ...args], { shell: false });
+            this.onLog(`\n$ ${isRoot ? '' : 'sudo '}${cmd} ${args.join(' ')}\n`, 'stdout');
+
+            const proc = spawn(command, finalArgs, { shell: false });
 
             proc.stdout?.on('data', (data) => this.onLog(data.toString(), 'stdout'));
             proc.stderr?.on('data', (data) => this.onLog(data.toString(), 'stderr'));
-            proc.on('close', (code) => resolve(code));
+            proc.on('close', resolve);
             proc.on('error', (err) => {
-                this.onLog(`Nginx Manager Error: ${err.message}\n`, 'stderr');
+                this.onLog(`Execution Error: ${err.message}\n`, 'stderr');
                 resolve(1);
             });
         });
@@ -50,25 +52,25 @@ server {
 
         this.onLog(`🔧 Generating Nginx config for ${context.domain}...\n`, 'stdout');
 
-        // Note: Writing files with sudo in Node.js typically requires piping to 'tee'
         try {
             // 1. Write Config
-            const writeCode = await new Promise<number>((resolve) => {
-                const tee = spawn('sudo', ['tee', availablePath], { shell: false });
-                tee.stdin?.write(config);
-                tee.stdin?.end();
-                tee.on('close', resolve);
-            });
-
-            if (writeCode !== 0) {
-                this.onLog(`❌ Failed to write config to ${availablePath}. Do I have sudo?\n`, 'stderr');
-                // Windows/Mock Fallback
-                if (process.platform === 'win32') {
-                    this.onLog(`[MOCK] Writing mock config to ./nginx_${fileName}.conf\n`, 'stdout');
-                    fs.writeFileSync(`./nginx_${fileName}.conf`, config);
-                } else {
+            const isRoot = process.getuid && process.getuid() === 0;
+            if (isRoot) {
+                if (!fs.existsSync('/etc/nginx/sites-available')) {
+                    this.onLog(`❌ Directory /etc/nginx/sites-available not found. Is Nginx installed?\n`, 'stderr');
                     return false;
                 }
+                fs.writeFileSync(availablePath, config);
+                this.onLog(`✅ Config written to ${availablePath}\n`, 'stdout');
+            } else {
+                const writeCode = await new Promise<number>((resolve) => {
+                    const tee = spawn('sudo', ['tee', availablePath], { shell: false });
+                    tee.stdin?.write(config);
+                    tee.stdin?.end();
+                    tee.on('close', resolve);
+                    tee.on('error', () => resolve(1));
+                });
+                if (writeCode !== 0) throw new Error('Permission denied');
             }
 
             // 2. Enable Site
@@ -79,17 +81,15 @@ server {
             if (testCode === 0) {
                 await this.runCommand('systemctl', ['reload', 'nginx']);
             } else {
-                this.onLog(`⚠️ Nginx config test failed. Rolling back symbolic link.\n`, 'stderr');
-                await this.runCommand('rm', [enabledPath]);
+                this.onLog(`⚠️ Nginx config test failed.\n`, 'stderr');
                 return false;
             }
 
-            // 4. SSL (Certbot)
-            this.onLog(`🔐 Requesting SSL via Certbot for ${context.domain}...\n`, 'stdout');
-            const sslCode = await this.runCommand('certbot', ['--nginx', '-d', context.domain, '--non-interactive', '--agree-tos', '-m', 'admin@' + context.domain]);
+            // 4. SSL (Attempt only)
+            this.onLog(`🔐 Requesting SSL for ${context.domain}...\n`, 'stdout');
+            await this.runCommand('certbot', ['--nginx', '-d', context.domain, '--non-interactive', '--agree-tos', '-m', 'admin@' + context.domain]);
 
-            return sslCode === 0;
-
+            return true;
         } catch (err: any) {
             this.onLog(`Nginx Provisioning failed: ${err.message}\n`, 'stderr');
             return false;

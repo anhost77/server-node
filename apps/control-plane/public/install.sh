@@ -67,8 +67,8 @@ fi
 
 # 1. System Dependencies
 if ! check_cmd git; then
-    echo "📦 [1/4] Installing git..."
-    $SUDO apt-get update && $SUDO apt-get install -y git
+    echo "📦 [1/4] Installing git & tools..."
+    $SUDO apt-get update && $SUDO apt-get install -y git psmisc
 fi
 
 # 2. Node.js

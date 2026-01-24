@@ -1,0 +1,37 @@
+[
+  {
+    "id": "ab79a620-a502-4970-8924-64be05804283",
+    "timestamp": 1769224093063,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "ad7656fd-86b7-49f7-8511-ab2483df1422",
+    "timestamp": 1769224093023,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "status_update",
+    "details": {
+      "status": "provisioning_nginx",
+      "repo": "local-test"
+    },
+    "status": "info"
+  },
+  {
+    "id": "1f31ae77-83cd-4a41-80a6-8a577ce7a2f9",
+    "timestamp": 1769224083792,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "server_registered",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "4f961f10-768f-4c85-a3e7-ed592799bdcd",
+    "timestamp": 1769223945549,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "server_registered",
+    "details": {},
+    "status": "success"
+  }
+]
