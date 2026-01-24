@@ -14,20 +14,11 @@ const fastify = Fastify({
     logger: true
 });
 
-// Configure CORS for Dashboard
-fastify.register(cors, {
-    origin: true // In production, this should be the dashboard URL
-});
-
-// Serve installer script
-fastify.register(staticFiles, {
-    root: path.join(__dirname, '../public'),
-    prefix: '/'
-});
-
+fastify.register(cors, { origin: true });
+fastify.register(staticFiles, { root: path.join(__dirname, '../public'), prefix: '/' });
 fastify.register(websocket);
 
-// Data structures (To be moved to DB later)
+// State Management
 interface Session {
     nonce: string;
     pubKey?: string;
@@ -35,69 +26,82 @@ interface Session {
     authorized: boolean;
 }
 
-const sessions = new Map<string, Session>();
+const agentSessions = new Map<string, Session>();
+const dashboardSessions = new Set<any>(); // Simple set for MVP broadcast
 const registrationTokens = new Map<string, { userId: string, expires: number }>();
-const registeredServers = new Map<string, { pubKey: string, registeredAt: number }>();
+const registeredServers = new Map<string, { id: string, pubKey: string, registeredAt: number }>();
 
-// API: Generate Registration Token
-fastify.post('/api/servers/token', async (request, reply) => {
-    // TODO: Add actual User Auth check here
+function broadcastToDashboards(msg: ServerMessage) {
+    const payload = JSON.stringify(msg);
+    dashboardSessions.forEach(socket => {
+        if (socket.readyState === 1) { // OPEN
+            socket.send(payload);
+        }
+    });
+}
+
+// REST APIs
+fastify.post('/api/servers/token', async () => {
     const token = randomUUID();
     registrationTokens.set(token, { userId: 'default-user', expires: Date.now() + 10 * 60 * 1000 });
     return { token };
 });
 
-// WebSocket Handshake Handler
+// WebSocket Handlers
 fastify.register(async function (fastify) {
-    fastify.get('/api/connect', { websocket: true }, (connection, req) => {
+    // 1. Dashboard Events Socket
+    fastify.get('/api/dashboard/ws', { websocket: true }, (connection) => {
+        const socket = connection.socket;
+        dashboardSessions.add(socket);
+        console.log('Dashboard connected');
+
+        socket.on('close', () => {
+            dashboardSessions.delete(socket);
+            console.log('Dashboard disconnected');
+        });
+    });
+
+    // 2. Agent Connection Socket
+    fastify.get('/api/connect', { websocket: true }, (connection) => {
         const socket = connection.socket;
         const connectionId = randomUUID();
-
-        console.log('Client connected', connectionId);
 
         socket.on('message', (message: Buffer) => {
             try {
                 const raw = JSON.parse(message.toString());
                 const parsed = AgentMessageSchema.safeParse(raw);
-
-                if (!parsed.success) {
-                    console.error('Invalid agent message', parsed.error);
-                    return;
-                }
+                if (!parsed.success) return;
 
                 const msg = parsed.data;
 
                 if (msg.type === 'CONNECT') {
                     const server = registeredServers.get(msg.pubKey);
                     if (!server) {
-                        const response: ServerMessage = { type: 'ERROR', message: 'Server not registered.' };
-                        socket.send(JSON.stringify(response));
+                        socket.send(JSON.stringify({ type: 'ERROR', message: 'Not registered' }));
                         return;
                     }
 
                     const nonce = randomUUID();
-                    sessions.set(connectionId, { nonce, pubKey: msg.pubKey, socket, authorized: false });
-                    const response: ServerMessage = { type: 'CHALLENGE', nonce };
-                    socket.send(JSON.stringify(response));
+                    agentSessions.set(connectionId, { nonce, pubKey: msg.pubKey, socket, authorized: false });
+                    socket.send(JSON.stringify({ type: 'CHALLENGE', nonce }));
                 }
                 else if (msg.type === 'RESPONSE') {
-                    const session = sessions.get(connectionId);
-                    if (!session || !session.pubKey) {
-                        socket.close(1008, 'Session invalid');
-                        return;
-                    }
+                    const session = agentSessions.get(connectionId);
+                    if (!session || !session.pubKey) return;
 
                     const isValid = verify(
-                        undefined,
-                        Buffer.from(session.nonce),
+                        undefined, Buffer.from(session.nonce),
                         { key: session.pubKey, format: 'pem', type: 'spki' },
                         Buffer.from(msg.signature, 'base64')
                     );
 
                     if (isValid) {
                         session.authorized = true;
-                        const response: ServerMessage = { type: 'AUTHORIZED', sessionId: connectionId };
-                        socket.send(JSON.stringify(response));
+                        const server = registeredServers.get(session.pubKey);
+                        if (server) {
+                            broadcastToDashboards({ type: 'SERVER_STATUS', serverId: server.id, status: 'online' });
+                        }
+                        socket.send(JSON.stringify({ type: 'AUTHORIZED', sessionId: connectionId }));
                     } else {
                         socket.close();
                     }
@@ -105,26 +109,32 @@ fastify.register(async function (fastify) {
                 else if (msg.type === 'REGISTER') {
                     const tokenData = registrationTokens.get(msg.token);
                     if (!tokenData || tokenData.expires < Date.now()) {
-                        const response: ServerMessage = { type: 'ERROR', message: 'Invalid or expired token' };
-                        socket.send(JSON.stringify(response));
+                        socket.send(JSON.stringify({ type: 'ERROR', message: 'Invalid token' }));
                         return;
                     }
 
-                    registeredServers.set(msg.pubKey, { pubKey: msg.pubKey, registeredAt: Date.now() });
+                    const serverId = randomUUID();
+                    registeredServers.set(msg.pubKey, { id: serverId, pubKey: msg.pubKey, registeredAt: Date.now() });
                     registrationTokens.delete(msg.token);
 
-                    console.log(`✨ Server Registered: ${msg.pubKey.substring(0, 30)}...`);
-                    const response: ServerMessage = { type: 'REGISTERED', serverId: randomUUID() };
-                    socket.send(JSON.stringify(response));
+                    broadcastToDashboards({ type: 'SERVER_STATUS', serverId, status: 'online' });
+                    socket.send(JSON.stringify({ type: 'REGISTERED', serverId }));
                 }
 
             } catch (err) {
-                console.error('Processing error', err);
+                console.error('WS Error', err);
             }
         });
 
         socket.on('close', () => {
-            sessions.delete(connectionId);
+            const session = agentSessions.get(connectionId);
+            if (session?.pubKey) {
+                const server = registeredServers.get(session.pubKey);
+                if (server) {
+                    broadcastToDashboards({ type: 'SERVER_STATUS', serverId: server.id, status: 'offline' });
+                }
+            }
+            agentSessions.delete(connectionId);
         });
     });
 });

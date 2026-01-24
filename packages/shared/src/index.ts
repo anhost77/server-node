@@ -12,7 +12,12 @@ export const ServerMessageSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal('CHALLENGE'), nonce: z.string() }),
     z.object({ type: z.literal('AUTHORIZED'), sessionId: z.string() }),
     z.object({ type: z.literal('ERROR'), message: z.string() }),
-    z.object({ type: z.literal('REGISTERED'), serverId: z.string() })
+    z.object({ type: z.literal('REGISTERED'), serverId: z.string() }),
+    z.object({
+        type: z.literal('SERVER_STATUS'),
+        serverId: z.string(),
+        status: z.enum(['online', 'offline'])
+    })
 ]);
 
 export const AgentMessageSchema = z.discriminatedUnion('type', [
