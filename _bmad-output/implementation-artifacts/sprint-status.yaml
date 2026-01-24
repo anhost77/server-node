@@ -56,7 +56,7 @@ development_status:
   epic-3: in-progress
   3-1-hot-path-diffing: backlog
   3-2-auto-rollback-safety-net: in-progress
-  3-3-service-controls-ui: in-progress  # Added - UI ready, logic to connect
+  3-3-service-controls-ui: done  # Nginx + PM2 controls fully wired
   epic-3-retrospective: optional
 
   epic-4: in-progress

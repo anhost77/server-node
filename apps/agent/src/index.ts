@@ -184,19 +184,38 @@ function connectToControlPlane() {
             }
             else if (msg.type === 'SERVICE_ACTION') {
                 const { service, action } = msg;
-                if (service === 'nginx') {
-                    const nginx = new NginxManager((d, s) => {
-                        if (ws.readyState === WebSocket.OPEN && currentServerId) {
-                            ws.send(JSON.stringify({ type: 'SYSTEM_LOG', serverId: currentServerId, data: d, stream: s, source: 'nginx' }));
-                        }
-                    });
-                    if (action === 'start') nginx.start();
-                    else if (action === 'stop') nginx.stop();
-                    else if (action === 'restart') {
-                        nginx.restart().then(() => {
-                            monitor.performHealthCheck();
-                        });
+                const logToWs = (d: string, s: 'stdout' | 'stderr') => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({ type: 'SYSTEM_LOG', serverId: currentServerId, data: d, stream: s, source: service }));
                     }
+                };
+                const sendStatus = (status: string) => {
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: `service:${service}`, status }));
+                    }
+                };
+
+                if (service === 'nginx') {
+                    const nginx = new NginxManager(logToWs);
+                    let promise: Promise<boolean>;
+                    if (action === 'start') promise = nginx.start();
+                    else if (action === 'stop') promise = nginx.stop();
+                    else if (action === 'restart') promise = nginx.restart();
+                    else promise = Promise.resolve(false);
+
+                    promise.then(ok => {
+                        sendStatus(ok ? `${action}_success` : `${action}_failed`);
+                        if (action === 'restart' && ok) monitor.performHealthCheck();
+                    });
+                }
+                else if (service === 'pm2') {
+                    const actionStr = action as string;
+                    logToWs(`🔧 ${actionStr.charAt(0).toUpperCase() + actionStr.slice(1)}ing PM2...\n`, 'stdout');
+                    const pm2Action = actionStr === 'restart' ? 'restart all' : (actionStr === 'stop' ? 'stop all' : 'resurrect');
+                    processManager.runPm2Command(pm2Action).then((ok: boolean) => {
+                        logToWs(ok ? `✅ PM2 ${actionStr} completed\n` : `❌ PM2 ${actionStr} failed\n`, ok ? 'stdout' : 'stderr');
+                        sendStatus(ok ? `${actionStr}_success` : `${actionStr}_failed`);
+                    });
                 }
             }
         } catch (err) { }

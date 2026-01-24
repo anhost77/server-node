@@ -28,15 +28,13 @@
 ---
 
 ### 3. **Boutons de Contrôle des Services**
-**Status:** 🟡 UI EN PLACE - LOGIQUE À BRANCHER
+**Status:** ✅ IMPLÉMENTÉ
 **Implémenté:**
 - [x] Start/Stop/Restart pour les **applications** (via PM2)
-- [x] Boutons UI en place dans le dashboard
-
-**À faire:**
-- [ ] Brancher la logique WebSocket SERVICE_ACTION
-- [ ] Handler côté agent pour restart Nginx/PM2
-- [ ] Retour status en temps réel
+- [x] Boutons UI en place dans le dashboard (Nginx + PM2)
+- [x] Logique WebSocket SERVICE_ACTION branchée
+- [x] Handler côté agent pour restart Nginx/PM2
+- [x] Retour status en temps réel + activity logging
 
 **Spécification BMAD:** FR4 - Auto-Fix critical services
 
@@ -160,7 +158,7 @@
 |----------------|--------|----------|------|
 | Auth OAuth | ✅ Fait | ✅ Terminé | Epic 5 |
 | Console Logs | ✅ Fait | ✅ Terminé | Epic 1 |
-| Service Controls | 🟡 UI prête, logique à brancher | 🔴 En cours | Epic 3 |
+| Service Controls | ✅ Fait (Nginx + PM2) | ✅ Terminé | Epic 3 |
 | IA Sysadmin | 🟡 Basique | 🟠 Important | Epic 4 |
 | Git OAuth | 🟡 Partiel | 🟠 Important | Epic 2 |
 | Hot-Path Diffing | 🟡 Incomplet | 🟢 Nice-to-have | Epic 3 |
@@ -179,7 +177,7 @@
 3. ~~**Auth OAuth GitHub**~~ ✅
 
 ### Phase 2: EN COURS
-4. **Brancher les boutons Service Controls** - Logique WebSocket à connecter
+4. ~~**Brancher les boutons Service Controls**~~ ✅ (Nginx + PM2)
 5. **Git Webhook Complet** - Auto-deploy sur push + HMAC
 6. **Améliorer MCP** - Commandes naturelles + Dry-Run mode
 

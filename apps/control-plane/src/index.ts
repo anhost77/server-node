@@ -224,6 +224,9 @@ fastify.register(async function (fastify) {
                 const nodeId = msg.serverId;
                 if (['PROVISION_DOMAIN', 'SERVICE_ACTION', 'APP_ACTION', 'DELETE_PROXY'].includes(msg.type)) {
                     const ok = await sendToAgentById(nodeId, msg, userId);
+                    if (ok && msg.type === 'SERVICE_ACTION') {
+                        addActivityLog(userId, 'service_action', { service: msg.service, action: msg.action }, nodeId, 'info');
+                    }
                     if (ok && msg.type === 'PROVISION_DOMAIN') {
                         const existing = await db.select().from(schema.proxies).where(and(eq(schema.proxies.nodeId, nodeId), eq(schema.proxies.domain, msg.domain))).get();
                         if (existing) {

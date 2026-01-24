@@ -103,4 +103,46 @@ export class ProcessManager {
             });
         });
     }
+
+    async runPm2Command(command: string): Promise<boolean> {
+        await this.connect();
+        return new Promise((resolve) => {
+            if (command === 'restart all') {
+                pm2.restart('all', (err: any) => {
+                    if (err) {
+                        this.onLog(`PM2 restart all error: ${err.message}\n`, 'stderr');
+                        resolve(false);
+                    } else {
+                        this.onLog(`🔄 All PM2 processes restarted\n`, 'stdout');
+                        resolve(true);
+                    }
+                });
+            } else if (command === 'stop all') {
+                pm2.stop('all', (err: any) => {
+                    if (err) {
+                        this.onLog(`PM2 stop all error: ${err.message}\n`, 'stderr');
+                        resolve(false);
+                    } else {
+                        this.onLog(`🛑 All PM2 processes stopped\n`, 'stdout');
+                        resolve(true);
+                    }
+                });
+            } else if (command === 'resurrect') {
+                // Resurrect requires spawning pm2 CLI
+                const { spawn } = require('node:child_process');
+                const proc = spawn('pm2', ['resurrect'], { shell: true });
+                proc.on('close', (code: number) => {
+                    if (code === 0) {
+                        this.onLog(`▶️ PM2 processes resurrected\n`, 'stdout');
+                        resolve(true);
+                    } else {
+                        this.onLog(`❌ PM2 resurrect failed\n`, 'stderr');
+                        resolve(false);
+                    }
+                });
+            } else {
+                resolve(false);
+            }
+        });
+    }
 }

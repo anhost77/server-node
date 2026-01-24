@@ -564,7 +564,7 @@ function toggleConsoleFilter(type: string) {
               </div>
            </div>
 
-           <select v-if="githubRepos.length > 0" @change="selectRepo(githubRepos[$event.target.selectedIndex])" style="margin-top: 12px;">
+           <select v-if="githubRepos.length > 0" @change="selectRepo(githubRepos[($event.target as HTMLSelectElement).selectedIndex - 1])" style="margin-top: 12px;">
              <option disabled selected>Select a repository...</option>
              <option v-for="r in githubRepos" :key="r.id" :value="r">{{ r.private ? '🔒' : 'globe' }} {{ r.name }}</option>
            </select>
@@ -748,16 +748,29 @@ function toggleConsoleFilter(type: string) {
                  </div>
                  
                   <!-- System Services (Promoted to Top) -->
-                  <div class="glass-card provision-card">
+                  <div class="glass-card provision-card" style="grid-column: span 2;">
                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                         <h3 style="margin: 0;">🛠 System Services</h3>
                         <div class="service-status-tag" style="background: rgba(0,255,189,0.1); color: #00ffbd; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">Running</div>
                      </div>
-                     <p style="color: #666; font-size: 0.8rem; margin: 0 0 16px 0;">Manage the core reverse-proxy serving your applications.</p>
-                     <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <button class="action-btn" style="background: #111; color: #00ffbd;" @click="serviceAction('nginx', 'start')">▶ Start Nginx</button>
-                        <button class="action-btn" style="background: #111; color: #ff4d4d;" @click="serviceAction('nginx', 'stop')">⏹ Stop Nginx</button>
-                        <button class="action-btn" style="background: #fff; color: #000;" @click="serviceAction('nginx', 'restart')">🔄 Restart Nginx</button>
+                     <p style="color: #666; font-size: 0.8rem; margin: 0 0 16px 0;">Manage core services on this node.</p>
+                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="service-block">
+                           <div class="service-header">🌐 Nginx (Reverse Proxy)</div>
+                           <div style="display: flex; gap: 8px; margin-top: 8px;">
+                              <button class="action-btn small" style="background: #111; color: #00ffbd;" @click="serviceAction('nginx', 'start')">▶</button>
+                              <button class="action-btn small" style="background: #111; color: #ff4d4d;" @click="serviceAction('nginx', 'stop')">⏹</button>
+                              <button class="action-btn small" style="background: #fff; color: #000; flex: 1;" @click="serviceAction('nginx', 'restart')">🔄 Restart</button>
+                           </div>
+                        </div>
+                        <div class="service-block">
+                           <div class="service-header">⚙️ PM2 (Process Manager)</div>
+                           <div style="display: flex; gap: 8px; margin-top: 8px;">
+                              <button class="action-btn small" style="background: #111; color: #00ffbd;" @click="serviceAction('pm2', 'start')">▶</button>
+                              <button class="action-btn small" style="background: #111; color: #ff4d4d;" @click="serviceAction('pm2', 'stop')">⏹</button>
+                              <button class="action-btn small" style="background: #fff; color: #000; flex: 1;" @click="serviceAction('pm2', 'restart')">🔄 Restart</button>
+                           </div>
+                        </div>
                      </div>
                   </div>
 
@@ -983,17 +996,26 @@ nav a:hover, nav a.active { color: #fff; background: rgba(255, 255, 255, 0.05); 
 .proxy-info { display: flex; flex-direction: column; gap: 4px; }
 .proxy-domain { font-weight: 600; color: #fff; font-size: 0.95rem; }
 .proxy-target { font-size: 0.75rem; color: #666; font-family: monospace; }
-.icon-btn { 
-  background: none; 
-  border: none; 
-  cursor: pointer; 
-  padding: 8px; 
-  border-radius: 6px; 
-  transition: 0.2s; 
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: 0.2s;
   opacity: 0.5;
 }
 .icon-btn:hover { opacity: 1; background: rgba(255,255,255,0.05); }
 .icon-btn.danger:hover { background: rgba(255,77,77,0.1); }
+
+.service-block {
+  background: rgba(255,255,255,0.02);
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid #222;
+}
+.service-header { font-size: 0.85rem; font-weight: 600; color: #ccc; }
+.action-btn.small { padding: 8px 12px; font-size: 0.75rem; }
 
 .premium-btn {
   background: linear-gradient(135deg, #0070f3, #7928ca);
