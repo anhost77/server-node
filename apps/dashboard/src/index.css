@@ -39,14 +39,17 @@ body::before {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: 
+  background:
     radial-gradient(circle at 10% 20%, rgba(0, 112, 243, 0.05) 0%, transparent 40%),
     radial-gradient(circle at 90% 80%, rgba(121, 40, 202, 0.05) 0%, transparent 40%);
   pointer-events: none;
   z-index: -1;
 }
 
-h1, h2, h3, h4 {
+h1,
+h2,
+h3,
+h4 {
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -69,6 +72,7 @@ button {
 .gradient-text {
   background: linear-gradient(135deg, #fff 0%, #888 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -106,43 +110,75 @@ button {
 
 .status-badge::before {
   content: "";
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
+  display: inline-block;
 }
 
 .status-badge.online {
-  background: rgba(0, 255, 189, 0.1);
+  background: rgba(0, 255, 189, 0.12);
   color: var(--success-color);
   border: 1px solid rgba(0, 255, 189, 0.2);
 }
-.status-badge.online::before { background: var(--success-color); box-shadow: 0 0 8px var(--success-color); }
+
+.status-badge.online::before {
+  background: var(--success-color);
+  box-shadow: 0 0 8px var(--success-color);
+}
 
 .status-badge.offline {
-  background: rgba(255, 77, 77, 0.1);
+  background: rgba(255, 77, 77, 0.12);
   color: var(--error-color);
   border: 1px solid rgba(255, 77, 77, 0.2);
 }
-.status-badge.offline::before { background: var(--error-color); }
+
+.status-badge.offline::before {
+  background: var(--error-color);
+}
 
 .status-badge.pending {
   background: rgba(255, 255, 255, 0.05);
   color: #888;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
-.status-badge.pending::before { background: #444; }
+
+.status-badge.pending::before {
+  background: #444;
+}
+
+/* Global Utility Colors */
+.success {
+  color: var(--success-color) !important;
+}
+
+.error {
+  color: var(--error-color) !important;
+}
+
+.warning {
+  color: #f5a623 !important;
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }

@@ -12,10 +12,9 @@ import { AgentMessage, ServerMessageSchema } from '@server-flow/shared';
 const CONFIG_DIR = path.join(os.homedir(), '.server-flow');
 const REG_FILE = path.join(CONFIG_DIR, 'registration.json');
 
-const fastify = Fastify({ logger: true });
+const fastify = Fastify({ logger: false });
 const identity = getOrGenerateIdentity();
 
-// Simple CLI arg parsing
 const args = process.argv.slice(2);
 const tokenIndex = args.indexOf('--token');
 const registrationToken = tokenIndex !== -1 ? args[tokenIndex + 1] : null;
@@ -31,18 +30,23 @@ function isRegistered() {
     return fs.existsSync(REG_FILE);
 }
 
-// Agent Server
-fastify.register(websocket);
-fastify.get('/', async () => ({ hello: 'agent', registered: isRegistered() }));
-
-// Connect Logic
+// Durable Reconnection Logic
 function connectToControlPlane() {
     const wsBaseUrl = controlPlaneUrl.replace('http', 'ws');
+    console.log(`📡 Attempting connection to ${wsBaseUrl}/api/connect...`);
+
     const ws = new WebSocket(`${wsBaseUrl}/api/connect`);
 
+    // Safety timeout if connection hangs
+    const connectionTimeout = setTimeout(() => {
+        console.log('⌛ Connection attempt timed out. Retrying...');
+        ws.terminate();
+    }, 10000);
+
     ws.on('open', () => {
-        console.log(`🔗 Connected to Control Plane at ${wsBaseUrl}`);
-        if (registrationToken) {
+        clearTimeout(connectionTimeout);
+        console.log('🔗 Connected to Control Plane');
+        if (registrationToken && !isRegistered()) {
             ws.send(JSON.stringify({ type: 'REGISTER', token: registrationToken, pubKey: identity.publicKey }));
         } else {
             ws.send(JSON.stringify({ type: 'CONNECT', pubKey: identity.publicKey }));
@@ -54,7 +58,6 @@ function connectToControlPlane() {
             const raw = JSON.parse(data.toString());
             const parsed = ServerMessageSchema.safeParse(raw);
             if (!parsed.success) return;
-
             const msg = parsed.data;
 
             if (msg.type === 'CHALLENGE') {
@@ -62,16 +65,15 @@ function connectToControlPlane() {
                 ws.send(JSON.stringify({ type: 'RESPONSE', signature }));
             }
             else if (msg.type === 'AUTHORIZED') {
-                console.log('✅ Agent Authorized');
+                console.log('✅ Agent Authorized and Ready');
             }
             else if (msg.type === 'REGISTERED') {
-                console.log('✨ Server Registered');
+                console.log('✨ Server Registered Successfully');
                 saveRegistration({ serverId: msg.serverId });
             }
             else if (msg.type === 'DEPLOY') {
-                console.log(`🚀 DEPLOY TRIGGERED: ${msg.repoUrl}`);
-                const executor = new ExecutionManager((logData, stream) => {
-                    ws.send(JSON.stringify({ type: 'LOG_STREAM', data: logData, stream, repoUrl: msg.repoUrl }));
+                const executor = new ExecutionManager((d, s) => {
+                    ws.send(JSON.stringify({ type: 'LOG_STREAM', data: d, stream: s, repoUrl: msg.repoUrl }));
                 });
                 ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: 'cloning' }));
                 executor.deploy(msg).then(({ success, buildSkipped, healthCheckFailed }) => {
@@ -84,20 +86,24 @@ function connectToControlPlane() {
                 });
             }
             else if (msg.type === 'PROVISION_DOMAIN') {
-                const nginx = new NginxManager((logData, stream) => {
-                    ws.send(JSON.stringify({ type: 'LOG_STREAM', data: logData, stream, repoUrl: msg.repoUrl }));
+                const nginx = new NginxManager((d, s) => {
+                    ws.send(JSON.stringify({ type: 'LOG_STREAM', data: d, stream: s, repoUrl: msg.repoUrl }));
                 });
                 ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: 'provisioning_nginx' }));
-                nginx.provision(msg).then(success => {
-                    ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: success ? 'nginx_ready' : 'failure' }));
+                nginx.provision(msg).then(ok => {
+                    ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: ok ? 'nginx_ready' : 'failure' }));
                 });
             }
         } catch (err) { }
     });
 
     ws.on('close', () => {
-        console.log('Connection lost. Retrying in 5s...');
-        setTimeout(connectToControlPlane, 5000)
+        console.log('❌ Connection lost. Reconnecting in 5s...');
+        setTimeout(connectToControlPlane, 5000);
+    });
+
+    ws.on('error', (err) => {
+        console.error('⚠️ WebSocket Error:', err.message);
     });
 }
 
