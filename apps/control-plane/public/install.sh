@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ServerFlow Agent Installer (Verbose Edition)
+# ServerFlow Agent Installer (Direct Bundle Mode)
 set -e
 
 # Parse arguments
@@ -33,12 +33,13 @@ if [ -z "$URL" ]; then
   exit 1
 fi
 
-echo "🚀 Starting ServerFlow Agent Installation..."
+echo "🚀 Starting ServerFlow Agent Installation (Standalone)..."
 
 check_cmd() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Determine if we need sudo
 SUDO=""
 if [ "$(id -u)" -ne 0 ]; then
     SUDO="sudo"
@@ -46,57 +47,45 @@ fi
 
 # 1. System Dependencies
 if ! check_cmd curl; then
-    echo "📦 [1/5] Installing curl..."
+    echo "📦 [1/4] Installing curl..."
     $SUDO apt-get update && $SUDO apt-get install -y curl
-fi
-
-if ! check_cmd git; then
-    echo "📦 [2/5] Installing git..."
-    $SUDO apt-get update && $SUDO apt-get install -y git
 fi
 
 # 2. Node.js
 if ! check_cmd node; then
-    echo "📦 [3/5] Installing Node.js 20 (Downloading repository)..."
-    if [ -n "$SUDO" ]; then
-        curl -fsSL https://deb.nodesource.com/setup_20.x | $SUDO -E bash -
-    else
-        curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-    fi
-    echo "📦 [3/5] Compiling and installing Node.js binary..."
+    echo "📦 [2/4] Installing Node.js 20..."
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
     $SUDO apt-get install -y nodejs
 fi
 
 # 3. pnpm
 if ! check_cmd pnpm; then
-    echo "📦 [4/5] Installing pnpm..."
+    echo "📦 [3/4] Installing pnpm..."
     $SUDO npm install -g pnpm
 fi
 
-# 4. Workspace setup
-echo "📂 [5/5] Preparing workspace..."
+# 4. Workspace setup (No GitHub Needed)
+echo "📂 [4/4] Fetching ServerFlow Agent bundle from $URL..."
 mkdir -p ~/.server-flow
 cd ~/.server-flow
 
-if [ ! -d "server-node" ]; then
-    echo "📥 Cloning project repository..."
-    git clone --depth 1 https://github.com/anhost77/server-node.git
-else
-    echo "🔄 Updating project source..."
-    cd server-node && git pull && cd ..
-fi
+# Clear old version if exists
+if [ -d "agent-bundle" ]; then rm -rf agent-bundle; fi
+mkdir -p agent-bundle
 
-cd server-node
+# Download and Extract Bundle directly from Control Plane
+curl -sSL "$URL/agent-bundle.tar.gz" -o agent-bundle.tar.gz
+tar -xzf agent-bundle.tar.gz -C agent-bundle
+rm agent-bundle.tar.gz
 
-echo "🔨 Initializing dependencies..."
-# Removed redirection to /dev/null so user can see progress
-pnpm install --filter @server-flow/agent --filter @server-flow/shared
+cd agent-bundle
 
-echo "✨ Configuration complete!"
+echo "🔨 Finalizing local configuration..."
+# Install only production dependencies for the agent to save RAM
+pnpm install --filter @server-flow/agent --filter @server-flow/shared > /dev/null 2>&1
+
+echo "✨ Installation Successful!"
 echo "📡 Linking agent to control plane at $URL..."
 
-# 5. Start Agent - Force build of shared first just in case
-pnpm --filter @server-flow/shared build
-
-# Use npx tsx to ensure we run the TS files directly
+# 5. Start Agent
 npx tsx apps/agent/src/index.ts --token $TOKEN --url $URL
