@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ServerFlow Agent Installer (Background Service Mode)
+# ServerFlow Agent Installer (Robust + Pre-flight Checks)
 set -e
 
 # Parse arguments
@@ -33,7 +33,27 @@ if [ -z "$URL" ]; then
   exit 1
 fi
 
-echo "🚀 Starting ServerFlow Agent Installation (Background Service)..."
+echo "� Performing pre-flight check..."
+
+# Check if curl is available for the check
+if ! command -v curl &> /dev/null; then
+    # If no curl, we try to install it briefly or assume it's there
+    # For the pre-flight on a fresh system, we might need to skip if curl is missing
+    # but usually, users run the installer via curl | bash, so curl is present.
+    echo "⚠️  Curl not found, skipping pre-flight token verification..."
+else
+    # Verify token with Control Plane
+    STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL/api/servers/verify-token/$TOKEN")
+    
+    if [ "$STATUS_CODE" -ne 200 ]; then
+        echo "❌ Error: The provided token is invalid, expired, or the Control Plane is unreachable."
+        echo "   Please generate a new token from the Dashboard."
+        exit 1
+    fi
+    echo "✅ Token verified. Proceeding with installation..."
+fi
+
+echo "�🚀 Starting ServerFlow Agent Installation..."
 
 check_cmd() {
     command -v "$1" >/dev/null 2>&1
@@ -46,9 +66,9 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # 1. System Dependencies
-if ! check_cmd curl; then
-    echo "📦 [1/4] Installing curl..."
-    $SUDO apt-get update && $SUDO apt-get install -y curl
+if ! check_cmd git; then
+    echo "📦 [1/4] Installing git..."
+    $SUDO apt-get update && $SUDO apt-get install -y git
 fi
 
 # 2. Node.js
@@ -86,8 +106,6 @@ pnpm install --filter @server-flow/agent --filter @server-flow/shared > /dev/nul
 echo "⚙️  Configuring background service (systemd)..."
 
 SERVICE_FILE="/etc/systemd/system/server-flow-agent.service"
-# Detect actual node and pnpm paths
-NODE_PATH=$(which node)
 PNPM_PATH=$(which pnpm)
 USER_NAME=$(whoami)
 
@@ -99,9 +117,12 @@ After=network.target
 Type=simple
 User=$USER_NAME
 WorkingDirectory=$INSTALL_DIR
-ExecStart=$NODE_PATH $INSTALL_DIR/node_modules/tsx/dist/cli.mjs $INSTALL_DIR/apps/agent/src/index.ts --token $TOKEN --url $URL
+ExecStartPre=-/bin/bash -c 'fuser -k 3001/tcp || true'
+ExecStart=$PNPM_PATH --filter @server-flow/agent dev -- --token $TOKEN --url $URL
 Restart=always
+RestartSec=5
 Environment=NODE_ENV=production
+Environment=PATH=/usr/bin:/usr/local/bin:$PATH
 
 [Install]
 WantedBy=multi-user.target"
@@ -116,5 +137,4 @@ $SUDO systemctl restart server-flow-agent
 
 echo "✨ Installation Success!"
 echo "📡 Agent is now running in the background."
-echo "📜 To see logs: sudo journalctl -u server-flow-agent -f"
 echo "✅ Check your Dashboard at $URL"
