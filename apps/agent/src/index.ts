@@ -7,6 +7,11 @@ import { AgentMessage, ServerMessageSchema } from '@server-flow/shared';
 const fastify = Fastify({ logger: true });
 const identity = getOrGenerateIdentity();
 
+// Simple CLI arg parsing
+const args = process.argv.slice(2);
+const tokenIndex = args.indexOf('--token');
+const registrationToken = tokenIndex !== -1 ? args[tokenIndex + 1] : null;
+
 // Agent Server (Metrics/Local Control)
 fastify.register(websocket);
 fastify.get('/', async function handler(request, reply) {
@@ -19,13 +24,19 @@ function connectToControlPlane() {
 
     ws.on('open', () => {
         console.log('Connected to Control Plane');
-        const msg: AgentMessage = { type: 'CONNECT', pubKey: identity.publicKey };
-        ws.send(JSON.stringify(msg));
+
+        if (registrationToken) {
+            console.log('Registering with token...');
+            const msg: AgentMessage = { type: 'REGISTER', token: registrationToken, pubKey: identity.publicKey };
+            ws.send(JSON.stringify(msg));
+        } else {
+            const msg: AgentMessage = { type: 'CONNECT', pubKey: identity.publicKey };
+            ws.send(JSON.stringify(msg));
+        }
     });
 
     ws.on('message', (data) => {
         try {
-            // Parse with Schema for safety
             const raw = JSON.parse(data.toString());
             const parsed = ServerMessageSchema.safeParse(raw);
 
@@ -43,6 +54,9 @@ function connectToControlPlane() {
                 ws.send(JSON.stringify(response));
             } else if (msg.type === 'AUTHORIZED') {
                 console.log('✅ Agent Authorized! Session:', msg.sessionId);
+            } else if (msg.type === 'REGISTERED') {
+                console.log('✨ Server Successfully Registered! ID:', msg.serverId);
+                // In real scenario, we'd clear the token from memory/config
             } else if (msg.type === 'ERROR') {
                 console.error('❌ Server Error:', msg.message);
             }

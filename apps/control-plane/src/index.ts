@@ -1,14 +1,27 @@
 import Fastify from 'fastify';
 import websocket from '@fastify/websocket';
+import staticFiles from '@fastify/static';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { randomUUID, verify } from 'node:crypto';
 import { AgentMessageSchema, ServerMessage } from '@server-flow/shared';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const fastify = Fastify({
     logger: true
 });
 
+// Serve installer script
+fastify.register(staticFiles, {
+    root: path.join(__dirname, '../public'),
+    prefix: '/'
+});
+
 fastify.register(websocket);
 
+// Data structures (To be moved to DB later)
 interface Session {
     nonce: string;
     pubKey?: string;
@@ -16,8 +29,18 @@ interface Session {
     authorized: boolean;
 }
 
-const sessions = new Map<string, Session>(); // Socket -> Session
+const sessions = new Map<string, Session>();
+const registrationTokens = new Map<string, { userId: string, expires: number }>();
+const registeredServers = new Map<string, { pubKey: string }>(); // PubKey -> ServerInfo
 
+// API: Generate Registration Token
+fastify.post('/api/servers/token', async (request, reply) => {
+    const token = randomUUID();
+    registrationTokens.set(token, { userId: 'default-user', expires: Date.now() + 10 * 60 * 1000 });
+    return { token };
+});
+
+// WebSocket Handshake Handler
 fastify.register(async function (fastify) {
     fastify.get('/api/connect', { websocket: true }, (connection, req) => {
         const socket = connection.socket;
@@ -38,9 +61,15 @@ fastify.register(async function (fastify) {
                 const msg = parsed.data;
 
                 if (msg.type === 'CONNECT') {
+                    const server = registeredServers.get(msg.pubKey);
+                    if (!server) {
+                        const response: ServerMessage = { type: 'ERROR', message: 'Server not registered.' };
+                        socket.send(JSON.stringify(response));
+                        return;
+                    }
+
                     const nonce = randomUUID();
                     sessions.set(connectionId, { nonce, pubKey: msg.pubKey, socket, authorized: false });
-
                     const response: ServerMessage = { type: 'CHALLENGE', nonce };
                     socket.send(JSON.stringify(response));
                 }
@@ -51,7 +80,6 @@ fastify.register(async function (fastify) {
                         return;
                     }
 
-                    // Verify Signature for Ed25519
                     const isValid = verify(
                         undefined,
                         Buffer.from(session.nonce),
@@ -61,15 +89,25 @@ fastify.register(async function (fastify) {
 
                     if (isValid) {
                         session.authorized = true;
-                        console.log(`✅ Agent ${connectionId} Authorized`);
                         const response: ServerMessage = { type: 'AUTHORIZED', sessionId: connectionId };
                         socket.send(JSON.stringify(response));
                     } else {
-                        console.error(`❌ Agent ${connectionId} Failed Auth`);
-                        const response: ServerMessage = { type: 'ERROR', message: 'Invalid Signature' };
-                        socket.send(JSON.stringify(response));
                         socket.close();
                     }
+                }
+                else if (msg.type === 'REGISTER') {
+                    const tokenData = registrationTokens.get(msg.token);
+                    if (!tokenData || tokenData.expires < Date.now()) {
+                        const response: ServerMessage = { type: 'ERROR', message: 'Invalid token' };
+                        socket.send(JSON.stringify(response));
+                        return;
+                    }
+
+                    registeredServers.set(msg.pubKey, { pubKey: msg.pubKey });
+                    registrationTokens.delete(msg.token);
+
+                    const response: ServerMessage = { type: 'REGISTERED', serverId: randomUUID() };
+                    socket.send(JSON.stringify(response));
                 }
 
             } catch (err) {
@@ -79,14 +117,13 @@ fastify.register(async function (fastify) {
 
         socket.on('close', () => {
             sessions.delete(connectionId);
-            console.log('Client disconnected', connectionId);
         });
     });
 });
 
 const start = async () => {
     try {
-        await fastify.listen({ port: 3000 });
+        await fastify.listen({ port: 3000, host: '0.0.0.0' });
     } catch (err) {
         fastify.log.error(err);
         process.exit(1);

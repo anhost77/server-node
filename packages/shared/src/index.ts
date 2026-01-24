@@ -11,12 +11,14 @@ export type Example = z.infer<typeof ExampleSchema>;
 export const ServerMessageSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal('CHALLENGE'), nonce: z.string() }),
     z.object({ type: z.literal('AUTHORIZED'), sessionId: z.string() }),
-    z.object({ type: z.literal('ERROR'), message: z.string() })
+    z.object({ type: z.literal('ERROR'), message: z.string() }),
+    z.object({ type: z.literal('REGISTERED'), serverId: z.string() })
 ]);
 
 export const AgentMessageSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal('CONNECT'), pubKey: z.string() }),
-    z.object({ type: z.literal('RESPONSE'), signature: z.string() })
+    z.object({ type: z.literal('RESPONSE'), signature: z.string() }),
+    z.object({ type: z.literal('REGISTER'), token: z.string(), pubKey: z.string() })
 ]);
 
 export type ServerMessage = z.infer<typeof ServerMessageSchema>;
