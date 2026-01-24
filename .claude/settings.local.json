@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nchore: Snapshot before next sprint - BMAD milestone\n\nEpic 1: Zero-Trust Bridge - COMPLETE\nEpic 2: GitOps Engine - 90% \\(2.3 SSL, 2.4 App Mgmt done\\)\nEpic 3: Traffic Logic - Auto-rollback done\nEpic 4: Governance - MCP + Audit logging done\nEpic 5: SaaS - Auth + GitHub OAuth done\n\nNew features in this commit:\n- Process management \\(PM2 integration\\)\n- System log monitoring\n- Database schema \\(Drizzle ORM\\)\n- Multi-tenant architecture\n- GitHub OAuth integration\n- Reconciliation audit documentation\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+    ]
+  }
+}

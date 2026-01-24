@@ -1,5 +1,888 @@
 [
   {
+    "id": "9c28c2c4-1799-4662-b01f-224f6a0be8e3",
+    "timestamp": 1769235875351,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "e3bace49-d76b-4f30-9a4d-eb04938cd6f9",
+    "timestamp": 1769235875345,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "6de6d05b-35e8-417b-a2e8-01605fa3d486",
+    "timestamp": 1769235661099,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "4175fac8-1fe5-47eb-8b76-f33922d78531",
+    "timestamp": 1769235661092,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "81fe35b5-bbfa-4022-91b9-3d043a5f51c7",
+    "timestamp": 1769235598916,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "48a7b987-50de-4897-bff5-e273d76e5ff5",
+    "timestamp": 1769235598912,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "4686c78a-524c-41e5-940e-820d103f4645",
+    "timestamp": 1769235579679,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "5eb71cc0-991b-46d4-b54d-3cc67beb2e6a",
+    "timestamp": 1769235579676,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "f9ea6820-f3c7-491f-966e-f2fa037c50b3",
+    "timestamp": 1769235304111,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "c9c57f6a-648f-4e8c-89bc-aaa86d0394e6",
+    "timestamp": 1769235304109,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "4c9a4af5-f427-4cc6-a47a-d66f42838b4a",
+    "timestamp": 1769235292195,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "d9af2081-c2d5-4e21-b369-f2f94468baa5",
+    "timestamp": 1769235292192,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "2ac0fc87-380a-4b0e-9560-a08c6f81b81c",
+    "timestamp": 1769235279435,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "07724f5d-a4da-4c5f-a269-5e15b80ff28b",
+    "timestamp": 1769235279432,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "766563b5-2922-4412-b6c8-2a3659ad9304",
+    "timestamp": 1769235244522,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "b76a5323-8ee8-4636-92bf-863ffd505a0d",
+    "timestamp": 1769235244520,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "122d2cc1-21bf-4aca-b1fc-7f3bedfb96af",
+    "timestamp": 1769235052934,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "f9839ea1-39d9-46d3-9d70-c1ec45713242",
+    "timestamp": 1769235052931,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "703b5f34-e430-4b7d-b241-b56fe2550d0f",
+    "timestamp": 1769234123865,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "18f1b1be-3c04-491c-aa5a-6018ebc190c9",
+    "timestamp": 1769234123863,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "83c81649-c3a6-4b65-81dd-e616d5994fe8",
+    "timestamp": 1769234009967,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "8140ef6f-3ec1-4937-8c20-1db0956a5686",
+    "timestamp": 1769234009964,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "bd73d4b9-b72a-4b5b-827e-4e9c9ea798ea",
+    "timestamp": 1769233358892,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "1b2cd8cc-0d32-492b-b5ab-2a768d38ecae",
+    "timestamp": 1769233358888,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "dd838e1e-9ac1-4932-b229-1d55f7727ad2",
+    "timestamp": 1769232786785,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "b44512a2-d8b4-4102-a710-76c2b31a155d",
+    "timestamp": 1769232786783,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "dc92e5ef-f817-4555-86b0-344f4a4642a8",
+    "timestamp": 1769232758624,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "b112a165-e577-48ff-a8e0-cdd609ba144e",
+    "timestamp": 1769232758622,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "13315f66-6c05-411f-8a8f-8c0d69b268b7",
+    "timestamp": 1769232701289,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "720fafee-43d4-4494-82e6-236ca95e26b1",
+    "timestamp": 1769232701286,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "6d19dced-974a-4b69-893b-b460ae1784d4",
+    "timestamp": 1769232680946,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "7e228963-fa6d-4d1b-82f6-74b5cd42dfa0",
+    "timestamp": 1769232680936,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "cea461ad-672f-4d21-96dd-db9b2d7ede01",
+    "timestamp": 1769232564470,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "61af2d57-2e5c-4e6d-9ca1-1dc534866ec7",
+    "timestamp": 1769232564468,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "f2c00263-09b1-4632-8d09-b00557154bce",
+    "timestamp": 1769232358960,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "ddab444e-3232-443a-941b-97014bdfb172",
+    "timestamp": 1769232358957,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "4732709e-886c-4a87-9fdf-5be2b89796e5",
+    "timestamp": 1769232339598,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "4398a2b3-4ab6-4f41-b13b-211b2f45e6bd",
+    "timestamp": 1769232339595,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "89a63dbd-6632-4115-b2e6-f46c9fdeccc9",
+    "timestamp": 1769230481439,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "status_update",
+    "details": {
+      "status": "nginx_ready",
+      "repo": "system-provision"
+    },
+    "status": "info"
+  },
+  {
+    "id": "e2ee25ac-7d5b-4f9c-9803-8a4391fcee20",
+    "timestamp": 1769230476648,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "status_update",
+    "details": {
+      "status": "nginx_ready",
+      "repo": "system-provision"
+    },
+    "status": "info"
+  },
+  {
+    "id": "09539c42-02b9-45bc-9c88-33f184fa1e61",
+    "timestamp": 1769230475090,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "status_update",
+    "details": {
+      "status": "provisioning_nginx",
+      "repo": "system-provision"
+    },
+    "status": "info"
+  },
+  {
+    "id": "2115097a-7c44-4f81-b60f-a5023c20861d",
+    "timestamp": 1769230475084,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "status_update",
+    "details": {
+      "status": "provisioning_nginx",
+      "repo": "system-provision"
+    },
+    "status": "info"
+  },
+  {
+    "id": "7f8d5b92-e12d-420f-9737-e2fc967b4760",
+    "timestamp": 1769230392866,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "status_update",
+    "details": {
+      "status": "nginx_ready",
+      "repo": "http://www.git.com"
+    },
+    "status": "info"
+  },
+  {
+    "id": "9bf5d549-af52-4934-9eea-0182f2467b7b",
+    "timestamp": 1769230387809,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "status_update",
+    "details": {
+      "status": "nginx_ready",
+      "repo": "http://www.git.com"
+    },
+    "status": "info"
+  },
+  {
+    "id": "128768ad-1d84-41cf-8c08-efa60e4df29c",
+    "timestamp": 1769230386171,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "status_update",
+    "details": {
+      "status": "provisioning_nginx",
+      "repo": "http://www.git.com"
+    },
+    "status": "info"
+  },
+  {
+    "id": "755ad066-01b6-4e1a-9d6c-f987cff803e7",
+    "timestamp": 1769230386156,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "status_update",
+    "details": {
+      "status": "provisioning_nginx",
+      "repo": "http://www.git.com"
+    },
+    "status": "info"
+  },
+  {
+    "id": "35b9ead5-086b-4678-a38c-240da4153b32",
+    "timestamp": 1769230232454,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "status_update",
+    "details": {
+      "status": "nginx_ready",
+      "repo": "http://www.github.com"
+    },
+    "status": "info"
+  },
+  {
+    "id": "4905205d-4282-4c27-9e29-407dc016b871",
+    "timestamp": 1769230227656,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "status_update",
+    "details": {
+      "status": "nginx_ready",
+      "repo": "http://www.github.com"
+    },
+    "status": "info"
+  },
+  {
+    "id": "40df6970-963f-4677-8a2a-f6868a60c518",
+    "timestamp": 1769230223476,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "status_update",
+    "details": {
+      "status": "provisioning_nginx",
+      "repo": "http://www.github.com"
+    },
+    "status": "info"
+  },
+  {
+    "id": "066cde9b-ea39-4d14-8358-b58e9f41f4cb",
+    "timestamp": 1769230223463,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "status_update",
+    "details": {
+      "status": "provisioning_nginx",
+      "repo": "http://www.github.com"
+    },
+    "status": "info"
+  },
+  {
+    "id": "24e1f512-8fe1-4c8a-a4bc-9e31c7922714",
+    "timestamp": 1769229993193,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "5a1666a5-6692-41a8-839d-e703b80ea23c",
+    "timestamp": 1769229993184,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "2c58bf31-af08-46e0-a72b-51c441a7b305",
+    "timestamp": 1769229750947,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "c3aba2c9-d545-433c-a9e2-f43357278491",
+    "timestamp": 1769229750944,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "b4baddc8-c155-4d1d-9b16-8518e18f287d",
+    "timestamp": 1769229747656,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "f0862c27-1c65-46c3-8406-a5e8a3f47188",
+    "timestamp": 1769229747649,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "23d73b78-44ee-4540-bba5-2636b501bb50",
+    "timestamp": 1769229527149,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "a2c18c35-caf4-4e8b-b7ff-8f9736f69f47",
+    "timestamp": 1769229527146,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "9a3780d6-c1db-497d-91fe-ff1efa4059b1",
+    "timestamp": 1769229525350,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "01a27905-7bd6-455c-951f-7ce0f699c16a",
+    "timestamp": 1769229383593,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "afa055cb-ec7a-46f8-989d-b18d4a17da2a",
+    "timestamp": 1769229381820,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "82952555-3de1-48f1-a151-3340508f72c1",
+    "timestamp": 1769229245821,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "461d6e7e-654a-4859-ac5e-f9be43937344",
+    "timestamp": 1769229207302,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "296286fc-cb43-4940-8abe-931c188355e9",
+    "timestamp": 1769229103086,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "10e73dc6-f410-4543-bab7-09636a37dfea",
+    "timestamp": 1769228569673,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "cdfdb232-bf29-4367-9816-5dddcda7a3a5",
+    "timestamp": 1769228427792,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "87c1d227-d4ae-4923-967f-33fbbedd6287",
+    "timestamp": 1769228426197,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "639eb4a2-36ab-4efe-8943-9c4ce2858a18",
+    "timestamp": 1769228414591,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "c4e88a6f-3ff4-4646-a987-f277800c96a4",
+    "timestamp": 1769228412833,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "dfe6fc96-eb1a-4d91-a17f-209a2ab721e4",
+    "timestamp": 1769228382493,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "780e6e6b-7d99-476d-9178-75b79b7fffdc",
+    "timestamp": 1769228273653,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "d75aff76-c3c2-44e7-b134-b37d9080c41d",
+    "timestamp": 1769228271994,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "c60a2b91-6d1a-4829-be62-7b85daa35bf8",
+    "timestamp": 1769228250908,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "9968f008-06ec-45d3-8b6a-52c56547f2c8",
+    "timestamp": 1769228168287,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "e97e5c39-6b57-4701-a094-090a2cef1098",
+    "timestamp": 1769228166416,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "d66b9361-4533-404a-9620-5424bb509957",
+    "timestamp": 1769228122605,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "fd4f4c34-8900-420b-b73e-1731c90bd3b1",
+    "timestamp": 1769228088266,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "7f735065-8987-41f8-9cf5-8bc2996b15d5",
+    "timestamp": 1769228083296,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "caf9c302-2b1f-4f1c-8fda-7a3ab2820952",
+    "timestamp": 1769227903120,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "6b1568c9-9078-4f53-91f6-76c6bc4e9283",
+    "timestamp": 1769227802500,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "2bac6c61-3663-4ccd-a4d9-dad49daec53b",
+    "timestamp": 1769227799321,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "86ed2120-a3f5-4942-a583-5a204f3ed7b3",
+    "timestamp": 1769227696814,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "9297f6a8-3c1a-4ea1-923a-2aee4ffdef98",
+    "timestamp": 1769227695061,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "f1cf421c-187b-4652-9595-7658fb5d78d5",
+    "timestamp": 1769227561866,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "8759b524-15ef-45e5-bd1e-57fd2e41f6df",
+    "timestamp": 1769227558049,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "d41bbe01-48d2-415b-b252-b96d755a8dc3",
+    "timestamp": 1769227384399,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "a7afccd8-2008-48b9-ac05-2c7857fd94cb",
+    "timestamp": 1769227358934,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "e815074d-0311-4103-8477-401ebad4d4c7",
+    "timestamp": 1769227155118,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "5ccd05d6-eb3a-4773-b3d5-f9adedcfa3ed",
+    "timestamp": 1769227145419,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "14b19541-7086-4810-b48d-b7b8112a7411",
+    "timestamp": 1769226773628,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "app_start",
+    "details": {
+      "appId": "0837b53d-e13e-4e25-89ca-26f287374873",
+      "name": "dgfdg"
+    },
+    "status": "info"
+  },
+  {
+    "id": "92df919f-0cc5-4ab4-bc01-36ef12dbf60f",
+    "timestamp": 1769226756957,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "app_deploy_triggered",
+    "details": {
+      "appId": "0837b53d-e13e-4e25-89ca-26f287374873",
+      "name": "dgfdg"
+    },
+    "status": "info"
+  },
+  {
+    "id": "59339984-6ad0-408a-8584-1e3fb996a4c1",
+    "timestamp": 1769226665846,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "38aefaa0-93e5-4f14-ab8e-ec3edabbf3fe",
+    "timestamp": 1769226630703,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "498eb290-df5a-475f-a6e2-fe0b7c40e23c",
+    "timestamp": 1769226485520,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "90daebb9-4d04-4b28-a40f-a02cbcd9a71d",
+    "timestamp": 1769226477943,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
+    "id": "f78b910c-9745-411f-a354-8a571d8ec30b",
+    "timestamp": 1769226329757,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "1df9c47d-c1c8-46fa-b299-3523ba60720b",
+    "timestamp": 1769226142574,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "ebdc27c9-995a-42ca-816a-185addc9edf5",
+    "timestamp": 1769225909559,
+    "serverId": "system",
+    "type": "app_created",
+    "details": {
+      "name": "dgfdg",
+      "repo": "https://github.com/anhost77"
+    },
+    "status": "success"
+  },
+  {
+    "id": "263f10f2-37c4-4fa4-87e2-3c32b867e0ad",
+    "timestamp": 1769225338411,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "14849f71-149b-47ab-9676-7814f008c390",
+    "timestamp": 1769225058909,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "564db5a3-c0ee-4a8f-87e7-9856c8285f24",
+    "timestamp": 1769224650471,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "status_update",
+    "details": {
+      "status": "nginx_ready",
+      "repo": "local-test"
+    },
+    "status": "info"
+  },
+  {
+    "id": "feb09f9e-eb49-4c79-b5df-98c784de9d8a",
+    "timestamp": 1769224643263,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "status_update",
+    "details": {
+      "status": "provisioning_nginx",
+      "repo": "local-test"
+    },
+    "status": "info"
+  },
+  {
+    "id": "6b0fc82b-2efc-4076-9b80-13aa52baf96e",
+    "timestamp": 1769224639981,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_established",
+    "details": {},
+    "status": "success"
+  },
+  {
+    "id": "4577d419-18b4-42af-97bc-58bfc778996e",
+    "timestamp": 1769224632508,
+    "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",
+    "type": "connection_lost",
+    "details": {},
+    "status": "failure"
+  },
+  {
     "id": "46bfdd91-3862-42af-aa14-db883185e696",
     "timestamp": 1769224511075,
     "serverId": "bab208d3-bbc8-4f3f-b352-9e40f48208e4",

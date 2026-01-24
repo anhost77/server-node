@@ -7,6 +7,8 @@ import os from 'node:os';
 import { getOrGenerateIdentity, signData } from './identity.js';
 import { ExecutionManager } from './execution.js';
 import { NginxManager } from './nginx.js';
+import { ProcessManager } from './process.js';
+import { SystemMonitor } from './monitor.js';
 import { AgentMessage, ServerMessageSchema } from '@server-flow/shared';
 
 const CONFIG_DIR = path.join(os.homedir(), '.server-flow');
@@ -14,8 +16,23 @@ const REG_FILE = path.join(CONFIG_DIR, 'registration.json');
 
 const fastify = Fastify({ logger: false });
 const identity = getOrGenerateIdentity();
+// Global process manager for lifecycle actions
+let activeWs: WebSocket | null = null;
+const processManager = new ProcessManager((data, stream) => {
+    if (activeWs && activeWs.readyState === WebSocket.OPEN && currentServerId) {
+        activeWs.send(JSON.stringify({
+            type: 'SYSTEM_LOG',
+            serverId: currentServerId,
+            data,
+            stream,
+            source: 'application'
+        }));
+    }
+});
+processManager.startLogStreaming();
 
 const args = process.argv.slice(2);
+// ... existing args logic ...
 const tokenIndex = args.indexOf('--token');
 const registrationToken = tokenIndex !== -1 ? args[tokenIndex + 1] : null;
 
@@ -30,22 +47,52 @@ function isRegistered() {
     return fs.existsSync(REG_FILE);
 }
 
+function loadRegistration() {
+    if (fs.existsSync(REG_FILE)) {
+        try {
+            return JSON.parse(fs.readFileSync(REG_FILE, 'utf-8'));
+        } catch (e) { return null; }
+    }
+    return null;
+}
+
+// System Monitor with log streaming
+let currentServerId: string | null = loadRegistration()?.serverId || null;
+let healthCheckInterval: NodeJS.Timeout | null = null;
+
 // Durable Reconnection Logic
 function connectToControlPlane() {
     const wsBaseUrl = controlPlaneUrl.replace('http', 'ws');
     console.log(`📡 Attempting connection to ${wsBaseUrl}/api/connect...`);
 
     const ws = new WebSocket(`${wsBaseUrl}/api/connect`);
+    activeWs = ws;
+
+    // System monitor with WebSocket logging
+    const monitor = new SystemMonitor((data, stream, source) => {
+        if (ws.readyState === WebSocket.OPEN && currentServerId) {
+            ws.send(JSON.stringify({
+                type: 'SYSTEM_LOG',
+                serverId: currentServerId,
+                data,
+                stream,
+                source
+            }));
+        }
+    });
 
     // Safety timeout if connection hangs
     const connectionTimeout = setTimeout(() => {
         console.log('⌛ Connection attempt timed out. Retrying...');
+        monitor.logConnection('error', 'Connection timeout');
         ws.terminate();
     }, 10000);
 
     ws.on('open', () => {
         clearTimeout(connectionTimeout);
         console.log('🔗 Connected to Control Plane');
+        monitor.logConnection('connecting', 'Establishing secure channel...');
+
         if (registrationToken && !isRegistered()) {
             ws.send(JSON.stringify({ type: 'REGISTER', token: registrationToken, pubKey: identity.publicKey }));
         } else {
@@ -57,7 +104,10 @@ function connectToControlPlane() {
         try {
             const raw = JSON.parse(data.toString());
             const parsed = ServerMessageSchema.safeParse(raw);
-            if (!parsed.success) return;
+            if (!parsed.success) {
+                console.error('Validation Error:', parsed.error);
+                return;
+            }
             const msg = parsed.data;
 
             if (msg.type === 'CHALLENGE') {
@@ -66,9 +116,22 @@ function connectToControlPlane() {
             }
             else if (msg.type === 'AUTHORIZED') {
                 console.log('✅ Agent Authorized and Ready');
+                monitor.logConnection('connected', 'Agent authorized and ready');
+
+                // Start health checks every 30 seconds
+                if (healthCheckInterval) clearInterval(healthCheckInterval);
+                healthCheckInterval = setInterval(() => {
+                    monitor.performHealthCheck();
+                }, 30000);
+
+                // Immediate health check
+                setTimeout(() => monitor.performHealthCheck(), 2000);
             }
             else if (msg.type === 'REGISTERED') {
                 console.log('✨ Server Registered Successfully');
+                currentServerId = msg.serverId;
+                monitor.logStartup();
+                monitor.logConnection('connected', `Server registered: ${msg.serverId.slice(0, 12)}`);
                 saveRegistration({ serverId: msg.serverId });
             }
             else if (msg.type === 'DEPLOY') {
@@ -76,13 +139,30 @@ function connectToControlPlane() {
                     ws.send(JSON.stringify({ type: 'LOG_STREAM', data: d, stream: s, repoUrl: msg.repoUrl }));
                 });
                 ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: 'cloning' }));
-                executor.deploy(msg).then(({ success, buildSkipped, healthCheckFailed }) => {
+                executor.deploy(msg, msg.port).then(({ success, buildSkipped, healthCheckFailed }) => {
                     let finalStatus = success ? (buildSkipped ? 'build_skipped' : 'success') : 'failure';
                     if (healthCheckFailed) {
                         finalStatus = 'rollback';
-                        ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: 'health_check_failed' }));
                     }
                     ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: finalStatus }));
+                });
+            }
+            else if (msg.type === 'APP_ACTION') {
+                const { action, repoUrl } = msg;
+                const appName = repoUrl.split('/').pop()?.replace('.git', '') || 'unnamed-app';
+
+                ws.send(JSON.stringify({ type: 'LOG_STREAM', data: `Triggering ${action} for ${appName}...\n`, stream: 'stdout', repoUrl }));
+
+                let promise;
+                if (action === 'START') promise = processManager.startApp(appName, ''); // empty cwd for existing
+                else if (action === 'STOP') promise = processManager.stopApp(appName);
+                else if (action === 'RESTART') promise = processManager.restartApp(appName);
+                else if (action === 'DELETE') promise = processManager.deleteApp(appName);
+
+                promise?.then(() => {
+                    ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl, status: `${action.toLowerCase()}_success` }));
+                }).catch(err => {
+                    ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl, status: `${action.toLowerCase()}_failed` }));
                 });
             }
             else if (msg.type === 'PROVISION_DOMAIN') {
@@ -94,16 +174,50 @@ function connectToControlPlane() {
                     ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: ok ? 'nginx_ready' : 'failure' }));
                 });
             }
+            else if (msg.type === 'DELETE_PROXY') {
+                const nginx = new NginxManager((d, s) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({ type: 'SYSTEM_LOG', serverId: currentServerId, data: d, stream: s, source: 'nginx' }));
+                    }
+                });
+                nginx.deleteConfig(msg.domain);
+            }
+            else if (msg.type === 'SERVICE_ACTION') {
+                const { service, action } = msg;
+                if (service === 'nginx') {
+                    const nginx = new NginxManager((d, s) => {
+                        if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                            ws.send(JSON.stringify({ type: 'SYSTEM_LOG', serverId: currentServerId, data: d, stream: s, source: 'nginx' }));
+                        }
+                    });
+                    if (action === 'start') nginx.start();
+                    else if (action === 'stop') nginx.stop();
+                    else if (action === 'restart') {
+                        nginx.restart().then(() => {
+                            monitor.performHealthCheck();
+                        });
+                    }
+                }
+            }
         } catch (err) { }
     });
 
     ws.on('close', () => {
         console.log('❌ Connection lost. Reconnecting in 5s...');
+        monitor.logConnection('disconnected', 'Connection lost, reconnecting...');
+
+        // Stop health checks
+        if (healthCheckInterval) {
+            clearInterval(healthCheckInterval);
+            healthCheckInterval = null;
+        }
+
         setTimeout(connectToControlPlane, 5000);
     });
 
     ws.on('error', (err) => {
         console.error('⚠️ WebSocket Error:', err.message);
+        monitor.logConnection('error', `WebSocket error: ${err.message}`);
     });
 }
 

@@ -4,23 +4,28 @@ import fs from 'node:fs';
 import os from 'node:os';
 import net from 'node:net';
 import { DiffAnalyzer } from './diff.js';
+import { ProcessManager } from './process.js';
 
 const APPS_DIR = path.join(os.homedir(), '.server-flow', 'apps');
 
 export interface DeployContext {
     repoUrl: string;
-    commitHash: string;
-    branch: string;
+    commitHash?: string;
+    branch?: string;
+    env?: Record<string, string>;
 }
 
 export class ExecutionManager {
+    private processManager: ProcessManager;
+
     constructor(private onLog: (data: string, stream: 'stdout' | 'stderr') => void) {
         if (!fs.existsSync(APPS_DIR)) {
             fs.mkdirSync(APPS_DIR, { recursive: true });
         }
+        this.processManager = new ProcessManager(onLog);
     }
 
-    private async runCommand(cmd: string, args: string[], cwd: string): Promise<number | null> {
+    private async runCommand(cmd: string, args: string[], cwd: string, env: Record<string, string> = {}): Promise<number | null> {
         return new Promise((resolve) => {
             const displayCmd = `${cmd} ${args.join(' ')}`;
             console.log(`[RUN] ${displayCmd} in ${cwd}`);
@@ -32,7 +37,7 @@ export class ExecutionManager {
             const proc = spawn(exe, args, {
                 cwd,
                 shell: false,
-                env: { ...process.env, NODE_ENV: 'production' }
+                env: { ...process.env, ...env, NODE_ENV: 'production' }
             });
 
             proc.stdout?.on('data', (data) => this.onLog(data.toString(), 'stdout'));
@@ -45,7 +50,7 @@ export class ExecutionManager {
         });
     }
 
-    private async verifyAppHealth(port: number, timeoutMs = 10000): Promise<boolean> {
+    private async verifyAppHealth(port: number, timeoutMs = 15000): Promise<boolean> {
         this.onLog(`🔍 Checking app health on port ${port}...\n`, 'stdout');
         const start = Date.now();
 
@@ -87,11 +92,11 @@ export class ExecutionManager {
             }
 
             // 3. Checkout target
-            const target = context.commitHash || context.branch;
+            const target = context.commitHash || context.branch || 'main';
             await this.runCommand('git', ['checkout', '-f', target], workDir);
 
             // 4. Hot-Path Analysis
-            const isNoRelevantChange = DiffAnalyzer.shouldSkipBuild(workDir, oldHash, context.commitHash);
+            const isNoRelevantChange = DiffAnalyzer.shouldSkipBuild(workDir, oldHash, context.commitHash || target);
 
             if (isNoRelevantChange && oldHash !== '') {
                 this.onLog(`\n⚡ Hot-Path Triggered. Skipping Build.\n`, 'stdout');
@@ -99,29 +104,37 @@ export class ExecutionManager {
             } else {
                 // 5. Install & Build
                 await this.runCommand('pnpm', ['install', '--frozen-lockfile'], workDir);
-                const buildCode = await this.runCommand('npm', ['run', 'build'], workDir);
-                if (buildCode !== 0) return { success: false, buildSkipped, healthCheckFailed };
+                const buildCode = await this.runCommand('npm', ['run', 'build'], workDir, context.env);
+                if (buildCode !== 0) {
+                    this.onLog(`\n❌ Build failed with exit code ${buildCode}\n`, 'stderr');
+                    return { success: false, buildSkipped, healthCheckFailed };
+                }
             }
 
-            // 6. HEALTH CHECK (Simulated / Mock Start)
-            // In a real scenario, we'd restart the systemd service here.
-            // For MVP, we pretend it started and check the port.
+            // 6. Start / Restart App via PM2
+            this.onLog(`\n🚀 Starting application ${repoName}...\n`, 'stdout');
+            await this.processManager.startApp(repoName, workDir, context.env);
+
+            // 7. HEALTH CHECK
             const isHealthy = await this.verifyAppHealth(appPort);
 
             if (!isHealthy) {
-                this.onLog(`\n🚨 HEALTH CHECK FAILED. Initiating Rollback to ${oldHash}...\n`, 'stderr');
+                this.onLog(`\n🚨 HEALTH CHECK FAILED. Initiating Rollback...\n`, 'stderr');
                 healthCheckFailed = true;
 
                 if (oldHash) {
                     await this.runCommand('git', ['checkout', '-f', oldHash], workDir);
                     await this.runCommand('pnpm', ['install'], workDir);
                     await this.runCommand('npm', ['run', 'build'], workDir);
+                    await this.processManager.startApp(repoName, workDir, context.env);
                     this.onLog(`\n↩️ Rollback Successful.\n`, 'stdout');
+                } else {
+                    await this.processManager.stopApp(repoName);
                 }
                 return { success: false, buildSkipped, healthCheckFailed };
             }
 
-            this.onLog(`\n🚀 Deployment Successful\n`, 'stdout');
+            this.onLog(`\n✨ Deployment Successful and Verified\n`, 'stdout');
             return { success: true, buildSkipped, healthCheckFailed };
 
         } catch (err: any) {

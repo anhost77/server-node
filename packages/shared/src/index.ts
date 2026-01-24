@@ -21,8 +21,16 @@ export const ServerMessageSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('DEPLOY'),
     repoUrl: z.string(),
-    commitHash: z.string(),
-    branch: z.string()
+    commitHash: z.string().optional(),
+    branch: z.string().optional(),
+    port: z.number().optional(),
+    env: z.record(z.string()).optional()
+  }),
+  z.object({
+    type: z.literal('APP_ACTION'),
+    appId: z.string(),
+    action: z.enum(['START', 'STOP', 'RESTART', 'DELETE']),
+    repoUrl: z.string()
   }),
   z.object({
     type: z.literal('DEPLOY_LOG'),
@@ -35,13 +43,32 @@ export const ServerMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('DEPLOY_STATUS'),
     serverId: z.string(),
     repoUrl: z.string(),
-    status: z.enum(['cloning', 'installing', 'building', 'success', 'failure', 'build_skipped', 'rollback', 'health_check_failed'])
+    status: z.string()
   }),
   z.object({
     type: z.literal('PROVISION_DOMAIN'),
     domain: z.string(),
     port: z.number(),
-    repoUrl: z.string()
+    repoUrl: z.string(),
+    appId: z.string().optional()
+  }),
+  z.object({
+    type: z.literal('DELETE_PROXY'),
+    serverId: z.string(),
+    domain: z.string()
+  }),
+  z.object({
+    type: z.literal('SYSTEM_LOG'),
+    serverId: z.string(),
+    data: z.string(),
+    stream: z.enum(['stdout', 'stderr', 'system']),
+    source: z.string().optional()
+  }),
+  z.object({
+    type: z.literal('SERVICE_ACTION'),
+    serverId: z.string(),
+    service: z.enum(['nginx', 'pm2']),
+    action: z.enum(['start', 'stop', 'restart', 'status'])
   })
 ]);
 
@@ -58,7 +85,7 @@ export const AgentMessageSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('STATUS_UPDATE'),
     repoUrl: z.string(),
-    status: z.enum(['cloning', 'installing', 'building', 'success', 'failure', 'provisioning_nginx', 'nginx_ready', 'build_skipped', 'rollback', 'health_check_failed'])
+    status: z.string()
   })
 ]);
 

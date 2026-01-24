@@ -105,4 +105,46 @@ server {
             return false;
         }
     }
+
+    async start(): Promise<boolean> {
+        this.onLog(`▶️ Starting Nginx...\n`, 'stdout');
+        const code = await this.runCommand('systemctl', ['start', 'nginx']);
+        return code === 0;
+    }
+
+    async stop(): Promise<boolean> {
+        this.onLog(`⏹️ Stopping Nginx...\n`, 'stdout');
+        const code = await this.runCommand('systemctl', ['stop', 'nginx']);
+        return code === 0;
+    }
+
+    async restart(): Promise<boolean> {
+        this.onLog(`🔄 Restarting Nginx...\n`, 'stdout');
+        const code = await this.runCommand('systemctl', ['restart', 'nginx']);
+        if (code === 0) {
+            this.onLog(`✅ Nginx restarted successfully\n`, 'stdout');
+            return true;
+        } else {
+            // Fallback
+            const code2 = await this.runCommand('service', ['nginx', 'restart']);
+            if (code2 !== 0) {
+                this.onLog(`❌ Failed to restart Nginx\n`, 'stderr');
+                return false;
+            }
+            this.onLog(`✅ Nginx restarted successfully (via service)\n`, 'stdout');
+            return true;
+        }
+    }
+
+    async deleteConfig(domain: string): Promise<boolean> {
+        const fileName = domain.replace(/\./g, '_');
+        const availablePath = `/etc/nginx/sites-available/${fileName}`;
+        const enabledPath = `/etc/nginx/sites-enabled/${fileName}`;
+
+        this.onLog(`🗑️ Removing Nginx config for ${domain}...\n`, 'stdout');
+        await this.runCommand('rm', ['-f', enabledPath]);
+        await this.runCommand('rm', ['-f', availablePath]);
+        await this.runCommand('systemctl', ['reload', 'nginx']);
+        return true;
+    }
 }
