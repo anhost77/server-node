@@ -46,7 +46,7 @@ development_status:
   1-5-console-logs-streaming: done  # Added - Console logs implemented
   epic-1-retrospective: done
 
-  epic-2: in-progress
+  epic-2: done  # GitOps pipeline complete
   2-1-git-push-webhook-handler: done  # HMAC verification + auto-deploy
   2-2-git-pull-build-agent-side: done  # ExecutionManager fully functional
   2-3-nginx-ssl-automation: done
@@ -59,7 +59,7 @@ development_status:
   3-3-service-controls-ui: done  # Nginx + PM2 controls fully wired
   epic-3-retrospective: optional
 
-  epic-4: in-progress
+  epic-4: done  # MCP v0.2.0 with 7 tools + dry-run
   4-1-mcp-server-implementation: done
   4-2-structured-audit-logging: done
   epic-4-retrospective: optional

@@ -27,11 +27,25 @@ fastify.register(staticFiles, { root: path.join(__dirname, '../public'), prefix:
 fastify.register(websocket);
 
 // Multi-tenant Authentication Middleware
+const MCP_TOKEN = process.env.MCP_API_TOKEN || 'mcp-internal-token';
+
 fastify.addHook('onRequest', async (req, reply) => {
     if (req.url.startsWith('/api/auth') && req.url !== '/api/auth/me') return;
     if (req.url.startsWith('/api/connect')) return;
     if (req.url.startsWith('/api/servers/verify-token')) return;
+    if (req.url.startsWith('/api/webhooks')) return; // Webhooks have their own auth
     if (req.url === '/' || !req.url.startsWith('/api')) return;
+
+    // MCP Token Authentication (for AI agents)
+    const mcpToken = req.headers['x-mcp-token'];
+    if (mcpToken === MCP_TOKEN) {
+        // MCP requests get access to first admin user (or create system user)
+        const adminUser = await db.select().from(schema.users).get();
+        if (adminUser) {
+            (req as any).userId = adminUser.id;
+            return;
+        }
+    }
 
     const sessionId = req.cookies.session_id;
     if (!sessionId) return reply.status(401).send({ error: 'Not authenticated' });

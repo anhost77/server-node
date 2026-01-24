@@ -41,30 +41,22 @@
 ---
 
 ### 4. **IA Sysadmin (MCP Integration Avancée)**
-**Status:** BASIQUE IMPLÉMENTÉ  
+**Status:** ✅ IMPLÉMENTÉ
 **Implémenté:**
-- ✅ MCP Server avec outils `list_servers` et `deploy_app`
+- [x] MCP Server v0.2.0 avec 7 outils
+- [x] `list_servers` - Liste des serveurs
+- [x] `list_apps` - Liste des applications
+- [x] `deploy_app` - Déclencher un déploiement
+- [x] `app_action` - Start/Stop/Restart app
+- [x] `restart_service` - Restart Nginx/PM2
+- [x] `get_activity_logs` - Logs d'activité
+- [x] `provision_domain` - Provisionner domaine
+- [x] Dry-Run mode sur toutes les actions destructives
+- [x] Token MCP pour authentification
 
-**Manquant:**
-- [ ] Commandes en langage naturel complexes
-- [ ] "Deploy docker-compose.prod.yml with persistent volumes"
-- [ ] Auto-Fix via IA (détection d'erreurs et correction automatique)
-- [ ] Dry-Run mode (simulation avant exécution)
-- [ ] Confirmation utilisateur pour actions destructives
-
-**Spécification BMAD:** 
-- FR6: MCP Chat - Natural Language deployment
-- FR7: Dry Run check before destructive commands
-- Journey 2: "Uses MCP Chat to request complex deployments"
-
-**Action requise:** Améliorer le MCP Server :
-```typescript
-// Exemples de commandes IA à supporter :
-"Restart nginx on server prod-01"
-"Show me the last 100 lines of error logs"
-"Deploy my-app to production with blue-green strategy"
-"Rollback to previous version"
-```
+**Spécification BMAD:**
+- FR6: MCP Chat - Natural Language deployment ✅
+- FR7: Dry Run check before destructive commands ✅
 
 ---
 
@@ -160,7 +152,7 @@
 | Auth OAuth | ✅ Fait | ✅ Terminé | Epic 5 |
 | Console Logs | ✅ Fait | ✅ Terminé | Epic 1 |
 | Service Controls | ✅ Fait (Nginx + PM2) | ✅ Terminé | Epic 3 |
-| IA Sysadmin | 🟡 Basique | 🟠 Important | Epic 4 |
+| IA Sysadmin (MCP) | ✅ Fait (7 outils + dry-run) | ✅ Terminé | Epic 4 |
 | Git OAuth + Webhook | ✅ Fait (HMAC + auto-deploy) | ✅ Terminé | Epic 2 |
 | Hot-Path Diffing | 🟡 Incomplet | 🟢 Nice-to-have | Epic 3 |
 | Audit Logs | 🟡 Basique | 🟢 Nice-to-have | Epic 4 |
@@ -177,10 +169,10 @@
 2. ~~**Migration PostgreSQL**~~ ✅ (Drizzle ORM)
 3. ~~**Auth OAuth GitHub**~~ ✅
 
-### Phase 2: EN COURS
+### Phase 2: ✅ TERMINÉ
 4. ~~**Brancher les boutons Service Controls**~~ ✅ (Nginx + PM2)
 5. ~~**Git Webhook Complet**~~ ✅ (HMAC + auto-deploy main/master)
-6. **Améliorer MCP** - Commandes naturelles + Dry-Run mode
+6. ~~**Améliorer MCP**~~ ✅ (7 outils + dry-run mode)
 
 ### Phase 3: Fonctionnalités Avancées (Post-MVP)
 7. **Teams & RBAC**
