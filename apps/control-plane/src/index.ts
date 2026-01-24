@@ -62,6 +62,18 @@ fastify.post('/api/servers/token', async () => {
     return { token };
 });
 
+// Internal API for MCP Server
+fastify.get('/api/internal/servers', async () => {
+    const servers = Array.from(registeredServers.values()).map(s => {
+        const isOnline = Array.from(agentSessions.values()).some(session => session.pubKey === s.pubKey && session.authorized);
+        return {
+            ...s,
+            status: isOnline ? 'online' : 'offline'
+        };
+    });
+    return servers;
+});
+
 // GitHub Webhook Handler
 fastify.post('/api/webhooks/github', async (request, reply) => {
     const signature = request.headers['x-hub-signature-256'];
@@ -85,7 +97,6 @@ fastify.post('/api/webhooks/github', async (request, reply) => {
     const commitHash = payload.after;
     const branch = payload.ref.replace('refs/heads/', '');
 
-    // Auto-assign repo to first agent for demo if not set
     agentSessions.forEach(session => {
         if (session.authorized) {
             const server = registeredServers.get(session.pubKey!);
@@ -112,13 +123,12 @@ fastify.register(async function (fastify) {
         socket.on('message', (data: Buffer) => {
             try {
                 const raw = JSON.parse(data.toString());
-                const parsed = ServerMessageSchema.safeParse(raw); // Dashboard sends "ServerMessage" types (commanding CP)
+                const parsed = ServerMessageSchema.safeParse(raw);
                 if (!parsed.success) return;
 
                 const msg = parsed.data;
 
                 if (msg.type === 'PROVISION_DOMAIN') {
-                    console.log(`🌐 Dashboard requested provisioning for ${msg.domain}`);
                     sendToAgentByRepo(msg.repoUrl, msg);
                 }
             } catch (err) { }
@@ -186,7 +196,6 @@ fastify.register(async function (fastify) {
                         const server = registeredServers.get(session.pubKey);
                         if (server) {
                             const forward: any = { ...msg, serverId: server.id };
-                            // Transform Agent-to-CP type to CP-to-Dashboard type if needed
                             if (msg.type === 'LOG_STREAM') forward.type = 'DEPLOY_LOG';
                             if (msg.type === 'STATUS_UPDATE') forward.type = 'DEPLOY_STATUS';
                             broadcastToDashboards(forward);
