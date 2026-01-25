@@ -50,22 +50,29 @@ jobs:
         run: |
           echo "🔍 Checking for forbidden cryptographic algorithms..."
 
+          # Note: We allow bcryptjs (safe), but forbid bcrypt (deprecated)
+          # Patterns must be precise to avoid false positives
           FORBIDDEN=(
-            "createHash.*md5"
-            "createHash.*sha1"
-            "RSA-SHA256"
-            "RSA-SHA1"
-            "from 'bcrypt'"
-            "require.*bcrypt"
+            "createHash\\(['\"]md5['\"]\\)"
+            "createHash\\(['\"]sha1['\"]\\)"
+            "from ['\"]bcrypt['\"]"
+            "require\\(['\"]bcrypt['\"]\\)"
           )
 
           FOUND=0
           for pattern in "${FORBIDDEN[@]}"; do
-            if grep -rE "$pattern" --include="*.ts" --include="*.js" . 2>/dev/null | grep -v node_modules | grep -v ".git"; then
+            # Exclude scripts/ folder (contains pattern definitions)
+            if grep -rE "$pattern" --include="*.ts" --include="*.js" . 2>/dev/null | grep -v node_modules | grep -v ".git" | grep -v "scripts/"; then
               echo "❌ Found forbidden pattern: $pattern"
               FOUND=1
             fi
           done
+
+          # Check for RSA usage (not in patterns to avoid self-match)
+          if grep -rE "RSA-SHA256|RSA-SHA1" --include="*.ts" --include="*.js" . 2>/dev/null | grep -v node_modules | grep -v ".git" | grep -v "scripts/"; then
+            echo "❌ Found RSA algorithm usage"
+            FOUND=1
+          fi
 
           if [ $FOUND -eq 1 ]; then
             echo "::error::Forbidden cryptographic algorithms detected! See CONTRIBUTING.md"
