@@ -20,6 +20,50 @@ When implementing a feature, **always check if there's a corresponding implement
 
 ---
 
+## Tracking & Progress Updates
+
+**CRITICAL**: At EACH step of implementation, Claude MUST update ALL tracking files:
+
+### Files to Update
+1. **`_bmad-output/implementation-artifacts/sprint-status.yaml`**
+   - Update story status: `backlog` → `in-progress` → `done`
+   - Add new stories if implementing new features
+   - Mark epics as `done` when all stories complete
+
+2. **Story Implementation File** (if exists)
+   - Add implementation notes at the end
+   - Document any deviations from the spec
+   - List files created/modified
+
+3. **Create New Implementation Artifact** (if needed)
+   - When implementing a feature without existing spec
+   - Use format: `{epic}-{story}-{title}.md`
+   - Document the implementation approach
+
+### Status Workflow
+```
+backlog → in-progress → review → done
+```
+
+### Example Update
+When starting work on a story:
+```yaml
+# Before
+7-1-multi-runtime-support: backlog
+
+# After
+7-1-multi-runtime-support: in-progress
+```
+
+When completing:
+```yaml
+7-1-multi-runtime-support: done
+```
+
+**Update tracking files BEFORE running `pnpm commit:all`**
+
+---
+
 ## Automatic Git Workflow
 
 **IMPORTANT**: After completing any code changes, Claude MUST automatically commit and push using:

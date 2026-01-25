@@ -75,3 +75,12 @@ development_status:
   6-2-internationalization-i18n: done  # 5 languages (EN, FR, DE, ES, IT) + vue-i18n
   6-3-server-alias-feature: done  # User-friendly server names + MCP integration
   epic-6-retrospective: optional
+
+  epic-7: in-progress  # Multi-Runtime & DevOps Automation
+  7-1-multi-runtime-support: done  # Python, Go, Rust, Ruby, Docker detection + deployment
+  7-2-ci-security-automation: done  # GitHub Actions + pre-commit hooks + security scripts
+  7-3-git-workflow-automation: done  # auto-commit.js script + pnpm commit:all
+  7-4-billing-stripe-integration: done  # Stripe checkout, webhooks, subscriptions (backend)
+  7-5-vps-providers-integration: done  # Hetzner, DigitalOcean, Vultr APIs (backend)
+  7-6-managed-servers-ui: backlog  # Dashboard UI for managed servers (currently hidden)
+  epic-7-retrospective: optional
