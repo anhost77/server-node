@@ -1,5 +1,25 @@
 # Claude Code Instructions
 
+## BMAD Framework Documentation
+
+**IMPORTANT**: Before starting any implementation task, Claude MUST read the relevant BMAD documentation in `_bmad-output/`:
+
+### Planning Artifacts (Read First)
+- `_bmad-output/planning-artifacts/prd.md` - Product Requirements Document
+- `_bmad-output/planning-artifacts/architecture.md` - System Architecture
+- `_bmad-output/planning-artifacts/epics.md` - Epic breakdown and stories
+
+### Implementation Artifacts (Per Feature)
+- `_bmad-output/implementation-artifacts/` - Contains detailed specs for each story
+- Story format: `{epic}-{story}-{title}.md` (e.g., `2-3-nginx-ssl-automation.md`)
+
+### Current Sprint Status
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` - Current sprint progress
+
+When implementing a feature, **always check if there's a corresponding implementation artifact** before writing code.
+
+---
+
 ## Automatic Git Workflow
 
 **IMPORTANT**: After completing any code changes, Claude MUST automatically commit and push using:
