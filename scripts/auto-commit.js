@@ -12,6 +12,8 @@
 
 const { execSync } = require('child_process');
 const readline = require('readline');
+const fs = require('fs');
+const path = require('path');
 
 const COLORS = {
     RED: '\x1b[31m',
@@ -237,11 +239,18 @@ async function main() {
 
     console.log(`${COLORS.GREEN}✅ Staged ${filesToStage.length} files${COLORS.RESET}`);
 
-    // Commit
+    // Commit - use temp file for message to avoid shell escaping issues
     console.log(`\n${COLORS.CYAN}💾 Committing...${COLORS.RESET}`);
     const commitMsg = `${message}\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>`;
 
-    const commitResult = exec(`git commit -m "${commitMsg.replace(/"/g, '\\"')}"`, true);
+    const tempFile = path.join(process.cwd(), '.git', 'COMMIT_MSG_TEMP');
+    fs.writeFileSync(tempFile, commitMsg);
+
+    const commitResult = exec(`git commit --file="${tempFile}"`, true);
+
+    // Clean up temp file
+    try { fs.unlinkSync(tempFile); } catch {}
+
     if (commitResult) {
         console.log(`${COLORS.GREEN}✅ Committed successfully${COLORS.RESET}`);
     } else {

@@ -1,0 +1,27 @@
+{
+  "name": "serverflow-mcp",
+  "version": "1.0.1",
+  "description": "MCP client for ServerFlow - Connect Claude Desktop to your ServerFlow infrastructure",
+  "main": "index.js",
+  "bin": {
+    "serverflow-mcp": "./index.js"
+  },
+  "type": "module",
+  "keywords": [
+    "mcp",
+    "claude",
+    "serverflow",
+    "infrastructure",
+    "devops",
+    "deployment"
+  ],
+  "author": "ServerFlow",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/serverflow/mcp-client"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
