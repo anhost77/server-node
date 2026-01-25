@@ -258,7 +258,7 @@ async function main() {
     fs.writeFileSync(tempFile, commitMsg);
 
     // Skip hooks since we run security checks in this script and CI
-    const commitResult = exec(`git commit --no-verify --file="${tempFile}"`, true, true);
+    const commitResult = exec(`git commit --no-verify --file="${tempFile}"`, true);
 
     // Clean up temp file
     try { fs.unlinkSync(tempFile); } catch {}
