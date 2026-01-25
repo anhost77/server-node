@@ -11,7 +11,11 @@
     "clean": "turbo run clean",
     "test": "turbo run test",
     "prepare": "husky install",
-    "security:check": "node scripts/security-check.js"
+    "security:check": "node scripts/security-check.js",
+    "commit": "node scripts/auto-commit.js",
+    "commit:push": "node scripts/auto-commit.js --push",
+    "commit:yes": "node scripts/auto-commit.js --yes",
+    "commit:all": "node scripts/auto-commit.js --push --yes"
   },
   "devDependencies": {
     "turbo": "^1.12.4",

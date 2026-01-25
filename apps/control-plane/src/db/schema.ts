@@ -78,7 +78,9 @@ export const apps = sqliteTable('apps', {
     nodeId: text('node_id').references(() => nodes.id, { onDelete: 'cascade' }).notNull(),
     name: text('name').notNull(),
     repoUrl: text('repo_url').notNull(),
-    port: integer('port').notNull(),
+    port: integer('port').notNull(), // Legacy: main port (kept for backwards compatibility)
+    ports: text('ports'), // JSON: [{"port": 3000, "name": "web", "isMain": true}, {"port": 3001, "name": "api"}]
+    detectedPorts: text('detected_ports'), // JSON: [3000, 3001, 9229] - actual ports from server
     env: text('env'), // Stored as JSON or encoded string
     status: text('status').default('stopped'),
     createdAt: integer('created_at').default(sql`(cast(strftime('%s','now') as int))`)
