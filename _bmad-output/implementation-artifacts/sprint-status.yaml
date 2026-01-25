@@ -83,4 +83,5 @@ development_status:
   7-4-billing-stripe-integration: done  # Stripe checkout, webhooks, subscriptions (backend)
   7-5-vps-providers-integration: done  # Hetzner, DigitalOcean, Vultr APIs (backend)
   7-6-managed-servers-ui: backlog  # Dashboard UI for managed servers (currently hidden)
+  7-7-multi-runtime-installer: in-progress  # DISCUSSION: How to install runtimes on servers
   epic-7-retrospective: optional
