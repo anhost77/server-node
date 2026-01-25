@@ -130,6 +130,12 @@ export const ServerMessageSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('UPDATE_AGENT'),
     serverId: z.string()
+  }),
+  // Agent Shutdown (server deletion from dashboard)
+  z.object({
+    type: z.literal('SHUTDOWN_AGENT'),
+    serverId: z.string(),
+    action: z.enum(['stop', 'uninstall']) // stop = arrête le service, uninstall = supprime tout
   })
 ]);
 
@@ -210,6 +216,12 @@ export const AgentMessageSchema = z.discriminatedUnion('type', [
     status: z.enum(['downloading', 'installing', 'restarting', 'success', 'failed']),
     message: z.string().optional(),
     newVersion: z.string().optional()
+  }),
+  // Agent Shutdown Acknowledgment
+  z.object({
+    type: z.literal('AGENT_SHUTDOWN_ACK'),
+    serverId: z.string(),
+    action: z.enum(['stop', 'uninstall'])
   })
 ]);
 

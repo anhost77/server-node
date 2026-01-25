@@ -44,6 +44,12 @@ const updateStatus = ref<{ status: string; message?: string; newVersion?: string
 const showSshUpdateModal = ref(false)
 const sshUpdateTargetServer = ref<any>(null)
 
+// Server Deletion State
+const showDeleteServerModal = ref(false)
+const deleteTargetServer = ref<any>(null)
+const deleteAction = ref<'stop' | 'uninstall'>('stop')
+const deletingServer = ref(false)
+
 // Mobile Menu State
 const mobileMenuOpen = ref(false)
 function closeMobileMenu() {
@@ -1233,6 +1239,58 @@ function updateAgent(serverId: string) {
     type: 'UPDATE_AGENT',
     serverId
   }))
+}
+
+/**
+ * **openDeleteServerModal**
+ * Ouvre le modal de suppression pour un serveur.
+ * Affiche les options "Déconnecter" ou "Supprimer complètement".
+ */
+function openDeleteServerModal(server: any) {
+  deleteTargetServer.value = server
+  deleteAction.value = 'stop' // Par défaut: déconnecter seulement
+  showDeleteServerModal.value = true
+}
+
+/**
+ * **confirmDeleteServer**
+ * Supprime le serveur sélectionné via l'API.
+ * Envoie SHUTDOWN_AGENT à l'agent si connecté.
+ * Supprime en cascade les apps et domaines associés.
+ */
+async function confirmDeleteServer() {
+  if (!deleteTargetServer.value || deletingServer.value) return
+
+  deletingServer.value = true
+
+  try {
+    const res = await request(`/api/nodes/${deleteTargetServer.value.id}?action=${deleteAction.value}`, {
+      method: 'DELETE'
+    })
+
+    if (res.success) {
+      const serverName = deleteTargetServer.value.alias || deleteTargetServer.value.id.slice(0, 8)
+      showAlert(
+        t('common.success'),
+        t('infrastructure.serverDeleted', { name: serverName }) || `Server "${serverName}" deleted successfully`,
+        'info'
+      )
+
+      // Fermer le modal et réinitialiser
+      showDeleteServerModal.value = false
+      deleteTargetServer.value = null
+      selectedServerId.value = null
+
+      // Rafraîchir les données (le WebSocket devrait aussi mettre à jour)
+      await refreshData()
+    } else {
+      throw new Error(res.message || 'Delete failed')
+    }
+  } catch (e: any) {
+    showAlert(t('common.error'), e.message || t('infrastructure.deleteServerFailed') || 'Failed to delete server', 'error')
+  } finally {
+    deletingServer.value = false
+  }
 }
 
 function installRuntime(runtime: string) {
@@ -2537,6 +2595,85 @@ function openNewCannedResponse() {
                  {{ t('common.cancel') }}
               </button>
            </template>
+        </div>
+     </div>
+  </div>
+
+  <!-- Delete Server Modal -->
+  <div v-if="showDeleteServerModal" class="modal-overlay" style="z-index: 10003;" @click.self="!deletingServer && (showDeleteServerModal = false)">
+     <div class="glass-card delete-server-modal">
+        <div class="modal-header danger">
+           <h3>🗑️ {{ t('infrastructure.removeServer') }}</h3>
+           <button v-if="!deletingServer" class="close-btn" @click="showDeleteServerModal = false">×</button>
+        </div>
+
+        <div class="modal-body">
+           <!-- Server info -->
+           <div class="server-target danger">
+              <span class="server-label">{{ t('infrastructure.targetServer') || 'Target Server' }}:</span>
+              <span class="server-name">{{ deleteTargetServer?.alias || deleteTargetServer?.id?.slice(0, 8) }}</span>
+              <span class="server-ip">({{ deleteTargetServer?.ip }})</span>
+           </div>
+
+           <!-- Warning message -->
+           <div class="warning-box">
+              <span class="warning-icon">⚠️</span>
+              <div class="warning-text">
+                 <strong>{{ t('infrastructure.deleteWarningTitle') || 'Warning' }}</strong>
+                 <p>{{ t('infrastructure.confirmRemoveServer') }}</p>
+              </div>
+           </div>
+
+           <!-- Associated resources -->
+           <div v-if="deleteTargetServer" class="associated-resources">
+              <h4>{{ t('infrastructure.associatedResources') || 'Associated resources that will be deleted:' }}</h4>
+              <ul>
+                 <li>{{ apps.filter(a => a.nodeId === deleteTargetServer.id).length }} {{ t('nav.applications') }}</li>
+                 <li>{{ proxies.filter(p => p.nodeId === deleteTargetServer.id).length }} {{ t('nav.domains') }}</li>
+              </ul>
+           </div>
+
+           <!-- Action choice -->
+           <div class="action-choice">
+              <h4>{{ t('infrastructure.deleteActionChoice') || 'Choose an action:' }}</h4>
+              <div class="action-options">
+                 <label class="action-option" :class="{ selected: deleteAction === 'stop' }">
+                    <input type="radio" v-model="deleteAction" value="stop" />
+                    <div class="option-content">
+                       <span class="option-icon">⏹️</span>
+                       <div class="option-text">
+                          <strong>{{ t('infrastructure.disconnectOnly') || 'Disconnect only' }}</strong>
+                          <p>{{ t('infrastructure.disconnectOnlyDesc') || 'Stop the agent but keep files on the server. You can reinstall later.' }}</p>
+                       </div>
+                    </div>
+                 </label>
+                 <label class="action-option" :class="{ selected: deleteAction === 'uninstall' }">
+                    <input type="radio" v-model="deleteAction" value="uninstall" />
+                    <div class="option-content">
+                       <span class="option-icon">🗑️</span>
+                       <div class="option-text">
+                          <strong>{{ t('infrastructure.uninstallCompletely') || 'Uninstall completely' }}</strong>
+                          <p>{{ t('infrastructure.uninstallCompletelyDesc') || 'Remove agent, apps and all ServerFlow files from the server.' }}</p>
+                       </div>
+                    </div>
+                 </label>
+              </div>
+           </div>
+
+           <!-- Offline warning -->
+           <div v-if="deleteTargetServer?.status !== 'online'" class="offline-warning">
+              <span>⚠️</span>
+              <span>{{ t('infrastructure.agentOfflineWarning') || 'Agent is offline. The server will be removed from the dashboard, but the agent may continue running on the server.' }}</span>
+           </div>
+        </div>
+
+        <div class="modal-footer">
+           <button class="secondary" @click="showDeleteServerModal = false" :disabled="deletingServer">
+              {{ t('common.cancel') }}
+           </button>
+           <button class="danger-btn" @click="confirmDeleteServer()" :disabled="deletingServer">
+              {{ deletingServer ? '...' : (deleteAction === 'uninstall' ? t('infrastructure.uninstallCompletely') || 'Uninstall' : t('infrastructure.disconnectOnly') || 'Disconnect') }}
+           </button>
         </div>
      </div>
   </div>
@@ -5114,6 +5251,9 @@ function openNewCannedResponse() {
                  <div class="header-actions">
                     <button class="settings-btn" @click="openServerSettings()" title="Server Settings">
                        ⚙️ {{ t('infrastructure.serverSettings') || 'Settings' }}
+                    </button>
+                    <button class="delete-server-btn" @click="openDeleteServerModal(activeServer)" :title="t('infrastructure.removeServer')">
+                       🗑️ {{ t('infrastructure.removeServer') }}
                     </button>
                     <div class="alias-editor">
                        <template v-if="!editingAlias">
@@ -13514,6 +13654,261 @@ nav a:hover, nav a.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
 
 .ssh-update-modal .modal-footer .secondary:hover {
   background: rgba(255, 255, 255, 0.15);
+}
+
+/* Delete Server Modal */
+.delete-server-modal {
+  width: 520px;
+  max-width: 95vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+.delete-server-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.delete-server-modal .modal-header.danger {
+  background: rgba(239, 68, 68, 0.1);
+  border-bottom-color: rgba(239, 68, 68, 0.2);
+}
+
+.delete-server-modal .modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.delete-server-modal .close-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.delete-server-modal .modal-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.delete-server-modal .server-target {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.delete-server-modal .server-target.danger {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.delete-server-modal .server-target .server-label {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+}
+
+.delete-server-modal .server-target .server-name {
+  font-weight: 600;
+  color: white;
+}
+
+.delete-server-modal .server-target .server-ip {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+}
+
+.delete-server-modal .warning-box {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  gap: 12px;
+}
+
+.delete-server-modal .warning-icon {
+  font-size: 1.5rem;
+}
+
+.delete-server-modal .warning-text strong {
+  color: rgba(245, 158, 11, 0.9);
+}
+
+.delete-server-modal .warning-text p {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+.delete-server-modal .associated-resources {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.delete-server-modal .associated-resources h4 {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.delete-server-modal .associated-resources ul {
+  margin: 0;
+  padding-left: 20px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+}
+
+.delete-server-modal .associated-resources li {
+  margin: 4px 0;
+}
+
+.delete-server-modal .action-choice h4 {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.delete-server-modal .action-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.delete-server-modal .action-option {
+  display: block;
+  cursor: pointer;
+}
+
+.delete-server-modal .action-option input {
+  display: none;
+}
+
+.delete-server-modal .action-option .option-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.delete-server-modal .action-option:hover .option-content {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.delete-server-modal .action-option.selected .option-content {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.delete-server-modal .option-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.delete-server-modal .option-text strong {
+  display: block;
+  color: white;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+
+.delete-server-modal .option-text p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.delete-server-modal .offline-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: rgba(245, 158, 11, 0.9);
+}
+
+.delete-server-modal .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.delete-server-modal .modal-footer .secondary {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.delete-server-modal .modal-footer .secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.delete-server-modal .modal-footer .danger-btn {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  border: none;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.delete-server-modal .modal-footer .danger-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.delete-server-modal .modal-footer .danger-btn:disabled,
+.delete-server-modal .modal-footer .secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Delete Server Button in header */
+.delete-server-btn {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: rgba(239, 68, 68, 0.9);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.delete-server-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
 }
 
 /* ==================== PRINT STYLES ==================== */

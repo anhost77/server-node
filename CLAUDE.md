@@ -119,6 +119,46 @@ pnpm commit:all   # Commit and push (USE THIS!)
 Quand tu parles à un humain, tu parles en français.
 
 ## Structuration des fichiers
-Afin d'éviter les fichier trop longs, tu dois structurer les fichiers en plusieurs fichiers. et faire des commentaires pour chaque fonction. (en français)
+Afin d'éviter les fichier trop longs (maximum 500 lignes), tu dois structurer les fichiers en plusieurs fichiers. et faire des commentaires pour chaque fonction. (en français)
 Lorsque tu commentes, tu dois mettre en gras le nom de la fonction. et commenter en francais la fonction détaillée. en expliquant le but de la fonction et comment elle fonctionne pour un humain comme s'il ne savait rien et qu'il ne savait pas comment fonctionne le code, dis toi que c'est pas un developpeur.
 Si tu tombe sur un fichier trop long, tu vois avec l'agent product manager qu'il mette en place un plan pour structurer le fichier, et tu demandes à un dev de refactoriser le code.
+
+## En-têtes de fichiers (OBLIGATOIRE)
+**CHAQUE fichier** doit commencer par un bloc de commentaires décrivant :
+1. **Nom du fichier** - Le chemin relatif depuis la racine du projet
+2. **Description** - Ce que fait le fichier en 2-3 phrases simples (pour un non-développeur)
+3. **Fonctions principales** - Liste des fonctions importantes et leur but
+
+Exemple pour TypeScript/JavaScript:
+```typescript
+/**
+ * @file apps/agent/src/index.ts
+ * @description Point d'entrée de l'agent ServerFlow.
+ * Ce fichier démarre l'agent qui tourne sur le serveur de l'utilisateur.
+ * Il gère la connexion WebSocket avec le Control Plane et exécute les commandes reçues.
+ *
+ * @fonctions_principales
+ * - connectToControlPlane() : Établit la connexion sécurisée avec le serveur central
+ * - start() : Démarre l'agent et le serveur Fastify local
+ */
+```
+
+Exemple pour Vue:
+```vue
+<!--
+  @file apps/dashboard/src/components/ServerCard.vue
+  @description Carte affichant les informations d'un serveur connecté.
+  Cette carte montre le nom du serveur, son statut (en ligne/hors ligne),
+  le nombre d'applications déployées et les domaines configurés.
+
+  @fonctions_principales
+  - openDetails() : Ouvre la page de détails du serveur
+  - deleteServer() : Ouvre le modal de suppression
+-->
+
+## Utilisation des outils et agents
+Lors d'une proposition de fonctionnalité, tu dois utiliser l'agent product manager pour proposer la fonctionnalité. et celui-ci doit procéder à une analyse approfondie et une planification avec les agent dev, ux, et proceder à des test de sécurité et de performance. Lorsque l'on parle de fonctionnalité, tu dois aussi faire des recherches web pour trouver des informations sur la fonctionnalité et proposer des améliorations.
+Chaque conversation doit etre uniformisé par un fichier .md, et un plan de développement.
+
+## UI / UX
+Lorsqu'on parle d'interface utilisateur, tu dois utiliser l'agent UX pour proposer des améliorations et des fonctionnalités. le dev ne doit jamais procéder à des modifications sans l'approbation de l'agent UX. Le produit manager doit toujours être consulté pour proposer des améliorations. L'interface doit obligatoirement etre responsive et moderne.

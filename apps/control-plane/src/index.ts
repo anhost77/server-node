@@ -2893,6 +2893,147 @@ fastify.delete('/api/managed-servers/:id', async (req, reply) => {
 });
 
 // ============================================
+// NODE (SERVER) DELETION
+// ============================================
+
+/**
+ * **DELETE /api/nodes/:id**
+ * Supprime un serveur connecté (node) et toutes ses ressources associées.
+ * - Envoie SHUTDOWN_AGENT à l'agent si connecté
+ * - Supprime en cascade: apps, domaines (proxyConfigs)
+ * - Supprime le node de la base de données
+ * - Timeout de 10 secondes pour attendre l'ACK de l'agent
+ */
+fastify.delete<{ Params: { id: string }, Querystring: { action?: 'stop' | 'uninstall' } }>('/api/nodes/:id', async (req, reply) => {
+    const userId = (req as any).userId;
+    const { id } = req.params;
+    const action = req.query.action || 'stop'; // Par défaut: arrêter sans désinstaller
+
+    // Vérifier que le node appartient à l'utilisateur
+    const node = await db.select()
+        .from(schema.nodes)
+        .where(and(
+            eq(schema.nodes.id, id),
+            eq(schema.nodes.ownerId, userId)
+        ))
+        .get();
+
+    if (!node) {
+        return reply.status(404).send({ error: 'NODE_NOT_FOUND', message: 'Server not found' });
+    }
+
+    // Trouver la session de l'agent si connecté
+    const agentSession = Array.from(agentSessions.values()).find(
+        sess => sess.nodeId === id && sess.authorized
+    );
+
+    let agentAcknowledged = false;
+
+    // Envoyer SHUTDOWN_AGENT si l'agent est connecté
+    if (agentSession) {
+        try {
+            // Créer une promesse pour attendre l'ACK
+            const ackPromise = new Promise<boolean>((resolve) => {
+                const timeout = setTimeout(() => resolve(false), 10000); // 10 secondes
+
+                // Écouter l'ACK (on le fera via le socket)
+                const originalOnMessage = agentSession.socket.onmessage;
+                agentSession.socket.onmessage = (event: MessageEvent) => {
+                    try {
+                        const msg = JSON.parse(event.data.toString());
+                        if (msg.type === 'AGENT_SHUTDOWN_ACK' && msg.serverId === id) {
+                            clearTimeout(timeout);
+                            agentSession.socket.onmessage = originalOnMessage;
+                            resolve(true);
+                        } else if (originalOnMessage) {
+                            originalOnMessage.call(agentSession.socket, event);
+                        }
+                    } catch {
+                        if (originalOnMessage) {
+                            originalOnMessage.call(agentSession.socket, event);
+                        }
+                    }
+                };
+            });
+
+            // Envoyer la commande SHUTDOWN_AGENT
+            agentSession.socket.send(JSON.stringify({
+                type: 'SHUTDOWN_AGENT',
+                serverId: id,
+                action
+            }));
+
+            // Attendre l'ACK (max 10 secondes)
+            agentAcknowledged = await ackPromise;
+        } catch (e) {
+            console.error('Error sending SHUTDOWN_AGENT:', e);
+        }
+    }
+
+    try {
+        // Supprimer les apps associées au node
+        const deletedApps = await db.delete(schema.apps)
+            .where(eq(schema.apps.nodeId, id))
+            .returning()
+            .all();
+
+        // Supprimer les proxies (domaines) associées au node
+        const deletedProxies = await db.delete(schema.proxies)
+            .where(eq(schema.proxies.nodeId, id))
+            .returning()
+            .all();
+
+        // Supprimer le managed server associé (si existe)
+        await db.delete(schema.managedServers)
+            .where(eq(schema.managedServers.nodeId, id))
+            .run();
+
+        // Supprimer le node
+        await db.delete(schema.nodes)
+            .where(eq(schema.nodes.id, id))
+            .run();
+
+        // Supprimer la session de l'agent de la map
+        if (agentSession) {
+            for (const [connId, sess] of agentSessions.entries()) {
+                if (sess.nodeId === id) {
+                    agentSessions.delete(connId);
+                    break;
+                }
+            }
+        }
+
+        // Logger l'activité
+        addActivityLog(userId, 'node_deleted', {
+            nodeId: id,
+            nodeName: node.alias || node.hostname || id,
+            nodeIp: node.ip,
+            action,
+            agentAcknowledged,
+            deletedApps: deletedApps.length,
+            deletedDomains: deletedProxies.length
+        }, undefined, 'info');
+
+        // Notifier tous les dashboards de la suppression
+        broadcastToDashboards({ type: 'SERVER_STATUS', serverId: id, status: 'offline' });
+
+        return {
+            success: true,
+            agentOnline: !!agentSession,
+            agentAcknowledged,
+            deletedApps: deletedApps.length,
+            deletedDomains: deletedProxies.length
+        };
+    } catch (error: any) {
+        console.error('Failed to delete node:', error);
+        return reply.status(500).send({
+            error: 'DELETE_FAILED',
+            message: error.message || 'Failed to delete server'
+        });
+    }
+});
+
+// ============================================
 // SUPPORT TICKET SYSTEM
 // ============================================
 

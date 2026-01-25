@@ -186,7 +186,19 @@ export default {
         installingDeps: 'Installation des dépendances',
         restartingAgent: 'Redémarrage de l\'agent',
         waitingForOutput: 'En attente de la sortie...',
-        startUpdate: 'Démarrer la mise à jour'
+        startUpdate: 'Démarrer la mise à jour',
+
+        // Server Deletion (Story 7.9)
+        deleteWarningTitle: 'Attention',
+        serverDeleted: 'Serveur "{name}" supprimé avec succès',
+        deleteServerFailed: 'Échec de la suppression du serveur',
+        associatedResources: 'Ressources associées qui seront supprimées :',
+        deleteActionChoice: 'Choisissez une action :',
+        disconnectOnly: 'Déconnecter seulement',
+        disconnectOnlyDesc: 'Arrête l\'agent mais garde les fichiers sur le serveur. Vous pourrez réinstaller plus tard.',
+        uninstallCompletely: 'Désinstaller complètement',
+        uninstallCompletelyDesc: 'Supprime l\'agent, les apps et tous les fichiers ServerFlow du serveur.',
+        agentOfflineWarning: 'L\'agent est hors ligne. Le serveur sera retiré du tableau de bord, mais l\'agent peut continuer à fonctionner sur le serveur.'
     },
 
     // Applications

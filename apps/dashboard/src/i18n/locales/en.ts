@@ -186,7 +186,19 @@ export default {
         installingDeps: 'Installing dependencies',
         restartingAgent: 'Restarting agent',
         waitingForOutput: 'Waiting for output...',
-        startUpdate: 'Start Update'
+        startUpdate: 'Start Update',
+
+        // Server Deletion (Story 7.9)
+        deleteWarningTitle: 'Warning',
+        serverDeleted: 'Server "{name}" deleted successfully',
+        deleteServerFailed: 'Failed to delete server',
+        associatedResources: 'Associated resources that will be deleted:',
+        deleteActionChoice: 'Choose an action:',
+        disconnectOnly: 'Disconnect only',
+        disconnectOnlyDesc: 'Stop the agent but keep files on the server. You can reinstall later.',
+        uninstallCompletely: 'Uninstall completely',
+        uninstallCompletelyDesc: 'Remove agent, apps and all ServerFlow files from the server.',
+        agentOfflineWarning: 'Agent is offline. The server will be removed from the dashboard, but the agent may continue running on the server.'
     },
 
     // Applications

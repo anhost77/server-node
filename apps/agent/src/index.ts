@@ -310,6 +310,81 @@ function connectToControlPlane() {
                 return;
             }
 
+            // Handle SHUTDOWN_AGENT (server deletion from dashboard)
+            if (raw.type === 'SHUTDOWN_AGENT') {
+                const action = raw.action as 'stop' | 'uninstall';
+                console.log(`🛑 Received SHUTDOWN_AGENT command (action: ${action})`);
+
+                // Send acknowledgment before shutting down
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'AGENT_SHUTDOWN_ACK',
+                        serverId: currentServerId,
+                        action
+                    }));
+                }
+
+                (async () => {
+                    try {
+                        const { exec } = await import('node:child_process');
+                        const { promisify } = await import('node:util');
+                        const execAsync = promisify(exec);
+
+                        // Close WebSocket connection
+                        ws.close();
+
+                        if (action === 'uninstall') {
+                            // Full uninstall: remove everything
+                            console.log('🗑️ Uninstalling ServerFlow Agent...');
+
+                            // Stop and disable the systemd service
+                            try {
+                                await execAsync('sudo systemctl stop server-flow-agent');
+                                await execAsync('sudo systemctl disable server-flow-agent');
+                                await execAsync('sudo rm -f /etc/systemd/system/server-flow-agent.service');
+                                await execAsync('sudo systemctl daemon-reload');
+                            } catch (e) {
+                                console.log('Note: systemd cleanup may have partially failed');
+                            }
+
+                            // Stop all pm2 processes managed by this agent
+                            try {
+                                await execAsync('pm2 delete all');
+                            } catch (e) {
+                                // pm2 might not be running
+                            }
+
+                            // Remove the .server-flow directory
+                            const serverFlowDir = path.join(os.homedir(), '.server-flow');
+                            if (fs.existsSync(serverFlowDir)) {
+                                fs.rmSync(serverFlowDir, { recursive: true, force: true });
+                            }
+
+                            console.log('✅ Uninstall complete');
+                        } else {
+                            // Just stop: disable service but keep files
+                            console.log('⏹️ Stopping ServerFlow Agent...');
+
+                            try {
+                                await execAsync('sudo systemctl stop server-flow-agent');
+                                await execAsync('sudo systemctl disable server-flow-agent');
+                            } catch (e) {
+                                // Fallback: just exit
+                            }
+
+                            console.log('✅ Agent stopped');
+                        }
+
+                        // Exit the process
+                        process.exit(0);
+                    } catch (err: any) {
+                        console.error('Shutdown error:', err.message);
+                        process.exit(1);
+                    }
+                })();
+                return;
+            }
+
             const parsed = ServerMessageSchema.safeParse(raw);
             if (!parsed.success) {
                 console.error('Validation Error:', parsed.error);
