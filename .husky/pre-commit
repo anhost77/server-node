@@ -1,0 +1,39 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🔒 Running security checks..."
+
+# Check for hardcoded secrets
+SECRETS_PATTERN='(sk_live_|pk_live_|ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}|sk-[A-Za-z0-9]{48}|-----BEGIN (RSA )?PRIVATE KEY-----)'
+
+if git diff --cached --name-only | xargs grep -lE "$SECRETS_PATTERN" 2>/dev/null; then
+    echo "❌ BLOCKED: Potential secrets detected in staged files!"
+    echo "   Remove hardcoded secrets and use environment variables."
+    echo "   See CONTRIBUTING.md for guidelines."
+    exit 1
+fi
+
+# Check for forbidden crypto algorithms
+FORBIDDEN_CRYPTO='(createHash\(['\''"]md5|createHash\(['\''"]sha1|RSA-SHA256|bcrypt\.hash)'
+
+if git diff --cached --name-only -- '*.ts' '*.js' | xargs grep -lE "$FORBIDDEN_CRYPTO" 2>/dev/null; then
+    echo "❌ BLOCKED: Forbidden cryptographic algorithm detected!"
+    echo "   - MD5/SHA1: Use SHA-256 or better"
+    echo "   - RSA: Use Ed25519"
+    echo "   - bcrypt: Use Argon2id"
+    echo "   See CONTRIBUTING.md for guidelines."
+    exit 1
+fi
+
+# Check for console.log with sensitive data patterns
+SENSITIVE_LOGS='console\.(log|info|debug)\(.*?(password|token|secret|apiKey|privateKey)'
+
+if git diff --cached --name-only -- '*.ts' '*.js' | xargs grep -iE "$SENSITIVE_LOGS" 2>/dev/null; then
+    echo "⚠️  WARNING: Potential sensitive data in console.log detected!"
+    echo "   Make sure you're not logging passwords, tokens, or secrets."
+fi
+
+echo "✅ Security checks passed!"
+
+# Run lint-staged
+npx lint-staged

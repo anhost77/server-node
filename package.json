@@ -6,16 +6,21 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
+    "lint:security": "eslint --config .eslintrc.security.json --no-eslintrc 'apps/**/*.ts' 'packages/**/*.ts'",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "clean": "turbo run clean",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "prepare": "husky install",
+    "security:check": "node scripts/security-check.js"
   },
   "devDependencies": {
     "turbo": "^1.12.4",
     "typescript": "^5.3.3",
     "prettier": "^3.2.5",
     "eslint": "^8.56.0",
-    "@types/node": "^20.11.19"
+    "@types/node": "^20.11.19",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.2.0"
   },
   "workspaces": [
     "apps/*",

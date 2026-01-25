@@ -1,0 +1,144 @@
+name: Security Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Scan
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for secrets
+        run: |
+          echo "🔍 Scanning for hardcoded secrets..."
+
+          # Patterns to detect
+          PATTERNS=(
+            'ghp_[A-Za-z0-9]{36}'
+            'gho_[A-Za-z0-9]{36}'
+            'sk_live_[A-Za-z0-9]{24,}'
+            'pk_live_[A-Za-z0-9]{24,}'
+            'sk-[A-Za-z0-9]{48}'
+            'AKIA[0-9A-Z]{16}'
+          )
+
+          FOUND=0
+          for pattern in "${PATTERNS[@]}"; do
+            if grep -rE "$pattern" --include="*.ts" --include="*.js" --include="*.json" . 2>/dev/null | grep -v node_modules | grep -v ".git"; then
+              echo "❌ Found potential secret matching: $pattern"
+              FOUND=1
+            fi
+          done
+
+          if [ $FOUND -eq 1 ]; then
+            echo "::error::Hardcoded secrets detected! Remove them and use environment variables."
+            exit 1
+          fi
+
+          echo "✅ No hardcoded secrets found"
+
+      - name: Check for forbidden crypto
+        run: |
+          echo "🔍 Checking for forbidden cryptographic algorithms..."
+
+          FORBIDDEN=(
+            "createHash.*md5"
+            "createHash.*sha1"
+            "RSA-SHA256"
+            "RSA-SHA1"
+            "from 'bcrypt'"
+            "require.*bcrypt"
+          )
+
+          FOUND=0
+          for pattern in "${FORBIDDEN[@]}"; do
+            if grep -rE "$pattern" --include="*.ts" --include="*.js" . 2>/dev/null | grep -v node_modules | grep -v ".git"; then
+              echo "❌ Found forbidden pattern: $pattern"
+              FOUND=1
+            fi
+          done
+
+          if [ $FOUND -eq 1 ]; then
+            echo "::error::Forbidden cryptographic algorithms detected! See CONTRIBUTING.md"
+            exit 1
+          fi
+
+          echo "✅ No forbidden crypto algorithms found"
+
+      - name: Check Ed25519 usage
+        run: |
+          echo "🔍 Verifying Ed25519 is used for signatures..."
+
+          # Check that we use ed25519, not RSA
+          if grep -rE "generateKeyPairSync.*rsa" --include="*.ts" . 2>/dev/null | grep -v node_modules; then
+            echo "::error::RSA key generation detected! Use Ed25519 instead."
+            exit 1
+          fi
+
+          echo "✅ Correct algorithm usage"
+
+      - name: GDPR compliance check
+        run: |
+          echo "🔍 Checking GDPR compliance patterns..."
+
+          # Check for unsanitized logging of sensitive data
+          SENSITIVE_LOGS=(
+            'console\.log.*password'
+            'console\.log.*token'
+            'console\.log.*apiKey'
+            'console\.log.*secret'
+            'logger\.(info|debug|error).*password'
+          )
+
+          WARNINGS=0
+          for pattern in "${SENSITIVE_LOGS[@]}"; do
+            if grep -riE "$pattern" --include="*.ts" . 2>/dev/null | grep -v node_modules | grep -v ".git"; then
+              echo "⚠️ Potential sensitive data logging: $pattern"
+              WARNINGS=1
+            fi
+          done
+
+          if [ $WARNINGS -eq 1 ]; then
+            echo "::warning::Potential GDPR violations detected. Review logging of sensitive data."
+          fi
+
+          echo "✅ GDPR check complete"
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    name: Dependency Audit
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit dependencies
+        run: pnpm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Check for known vulnerabilities
+        run: |
+          echo "🔍 Checking for critical vulnerabilities..."
+          pnpm audit --json | jq '.advisories | to_entries[] | select(.value.severity == "critical") | .value.title' || true

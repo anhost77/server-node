@@ -12,7 +12,7 @@ export const ServerMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('CHALLENGE'), nonce: z.string() }),
   z.object({ type: z.literal('AUTHORIZED'), sessionId: z.string() }),
   z.object({ type: z.literal('ERROR'), message: z.string() }),
-  z.object({ type: z.literal('REGISTERED'), serverId: z.string() }),
+  z.object({ type: z.literal('REGISTERED'), serverId: z.string(), cpPublicKey: z.string().optional() }),
   z.object({
     type: z.literal('SERVER_STATUS'),
     serverId: z.string(),
@@ -20,10 +20,12 @@ export const ServerMessageSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('DEPLOY'),
+    appId: z.string(),
     repoUrl: z.string(),
     commitHash: z.string().optional(),
     branch: z.string().optional(),
     port: z.number().optional(),
+    ports: z.array(z.object({ port: z.number(), name: z.string(), isMain: z.boolean() })).optional(),
     env: z.record(z.string()).optional()
   }),
   z.object({
@@ -86,6 +88,12 @@ export const AgentMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('STATUS_UPDATE'),
     repoUrl: z.string(),
     status: z.string()
+  }),
+  z.object({
+    type: z.literal('DETECTED_PORTS'),
+    appId: z.string(),
+    repoUrl: z.string(),
+    ports: z.array(z.number())
   })
 ]);
 

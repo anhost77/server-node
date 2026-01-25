@@ -8,6 +8,35 @@ import { ProcessManager } from './process.js';
 
 const APPS_DIR = path.join(os.homedir(), '.server-flow', 'apps');
 
+type ProjectType = 'nodejs' | 'static';
+
+interface ProjectInfo {
+    type: ProjectType;
+    startScript: string;
+    hasStartScript: boolean;
+}
+
+function detectProjectType(workDir: string, port: number): ProjectInfo {
+    const pkgPath = path.join(workDir, 'package.json');
+
+    if (fs.existsSync(pkgPath)) {
+        try {
+            const pkgJson = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+            const hasStart = Boolean(pkgJson.scripts?.start);
+            return {
+                type: 'nodejs',
+                hasStartScript: hasStart,
+                startScript: hasStart ? 'npm start' : `npx serve -s . -l ${port}`
+            };
+        } catch {
+            return { type: 'nodejs', hasStartScript: false, startScript: `npx serve -s . -l ${port}` };
+        }
+    }
+
+    // No package.json = static site
+    return { type: 'static', hasStartScript: false, startScript: `npx serve -s . -l ${port}` };
+}
+
 export interface DeployContext {
     repoUrl: string;
     commitHash?: string;
@@ -102,18 +131,48 @@ export class ExecutionManager {
                 this.onLog(`\n⚡ Hot-Path Triggered. Skipping Build.\n`, 'stdout');
                 buildSkipped = true;
             } else {
-                // 5. Install & Build
-                await this.runCommand('pnpm', ['install', '--frozen-lockfile'], workDir);
-                const buildCode = await this.runCommand('npm', ['run', 'build'], workDir, context.env);
-                if (buildCode !== 0) {
-                    this.onLog(`\n❌ Build failed with exit code ${buildCode}\n`, 'stderr');
-                    return { success: false, buildSkipped, healthCheckFailed };
+                // 5. Check project type and Install & Build if needed
+                const hasPackageJson = fs.existsSync(path.join(workDir, 'package.json'));
+
+                if (hasPackageJson) {
+                    this.onLog(`\n📦 Node.js project detected\n`, 'stdout');
+                    await this.runCommand('pnpm', ['install', '--frozen-lockfile'], workDir);
+
+                    // Check if build script exists
+                    try {
+                        const pkgJson = JSON.parse(fs.readFileSync(path.join(workDir, 'package.json'), 'utf-8'));
+                        if (pkgJson.scripts?.build) {
+                            const buildCode = await this.runCommand('npm', ['run', 'build'], workDir, context.env);
+                            if (buildCode !== 0) {
+                                this.onLog(`\n❌ Build failed with exit code ${buildCode}\n`, 'stderr');
+                                return { success: false, buildSkipped, healthCheckFailed };
+                            }
+                        } else {
+                            this.onLog(`\n⏭️ No build script found, skipping build step\n`, 'stdout');
+                        }
+                    } catch (e) {
+                        this.onLog(`\n⚠️ Could not parse package.json, attempting build anyway\n`, 'stderr');
+                        const buildCode = await this.runCommand('npm', ['run', 'build'], workDir, context.env);
+                        if (buildCode !== 0) {
+                            this.onLog(`\n❌ Build failed with exit code ${buildCode}\n`, 'stderr');
+                            return { success: false, buildSkipped, healthCheckFailed };
+                        }
+                    }
+                } else {
+                    this.onLog(`\n📄 Static site detected (no package.json)\n`, 'stdout');
+                    buildSkipped = true;
                 }
             }
 
-            // 6. Start / Restart App via PM2
-            this.onLog(`\n🚀 Starting application ${repoName}...\n`, 'stdout');
-            await this.processManager.startApp(repoName, workDir, context.env);
+            // 6. Detect project type and determine start script
+            const projectInfo = detectProjectType(workDir, appPort);
+            this.onLog(`\n🚀 Starting application ${repoName} (${projectInfo.type})...\n`, 'stdout');
+
+            if (!projectInfo.hasStartScript) {
+                this.onLog(`📡 Using static server: ${projectInfo.startScript}\n`, 'stdout');
+            }
+
+            await this.processManager.startApp(repoName, workDir, context.env, projectInfo.startScript);
 
             // 7. HEALTH CHECK
             const isHealthy = await this.verifyAppHealth(appPort);
@@ -124,9 +183,20 @@ export class ExecutionManager {
 
                 if (oldHash) {
                     await this.runCommand('git', ['checkout', '-f', oldHash], workDir);
-                    await this.runCommand('pnpm', ['install'], workDir);
-                    await this.runCommand('npm', ['run', 'build'], workDir);
-                    await this.processManager.startApp(repoName, workDir, context.env);
+                    const hasPackageJson = fs.existsSync(path.join(workDir, 'package.json'));
+                    if (hasPackageJson) {
+                        await this.runCommand('pnpm', ['install'], workDir);
+                        try {
+                            const pkgJson = JSON.parse(fs.readFileSync(path.join(workDir, 'package.json'), 'utf-8'));
+                            if (pkgJson.scripts?.build) {
+                                await this.runCommand('npm', ['run', 'build'], workDir);
+                            }
+                        } catch (e) {
+                            await this.runCommand('npm', ['run', 'build'], workDir);
+                        }
+                    }
+                    const rollbackProjectInfo = detectProjectType(workDir, appPort);
+                    await this.processManager.startApp(repoName, workDir, context.env, rollbackProjectInfo.startScript);
                     this.onLog(`\n↩️ Rollback Successful.\n`, 'stdout');
                 } else {
                     await this.processManager.stopApp(repoName);

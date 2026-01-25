@@ -1,0 +1,34 @@
+{
+  "rules": {
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "CallExpression[callee.property.name='createSign'][arguments.0.value='RSA-SHA256']",
+        "message": "RSA is forbidden. Use Ed25519 instead. See CONTRIBUTING.md"
+      },
+      {
+        "selector": "CallExpression[callee.property.name='createHash'][arguments.0.value='md5']",
+        "message": "MD5 is forbidden. Use SHA-256 or better. See CONTRIBUTING.md"
+      },
+      {
+        "selector": "CallExpression[callee.property.name='createHash'][arguments.0.value='sha1']",
+        "message": "SHA-1 is forbidden. Use SHA-256 or better. See CONTRIBUTING.md"
+      },
+      {
+        "selector": "Literal[value=/^(sk_live_|pk_live_|ghp_|gho_|sk-)/]",
+        "message": "Potential hardcoded secret detected. Use environment variables."
+      }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["bcrypt", "bcryptjs"],
+            "message": "bcrypt is deprecated. Use argon2 instead. See CONTRIBUTING.md"
+          }
+        ]
+      }
+    ]
+  }
+}

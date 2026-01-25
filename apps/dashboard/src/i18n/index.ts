@@ -41,9 +41,11 @@ export const availableLocales = [
     { code: 'it', name: 'Italiano', flag: '🇮🇹' }
 ];
 
+type SupportedLocale = 'en' | 'fr' | 'de' | 'es' | 'it';
+
 export function setLocale(locale: string) {
     if (['en', 'fr', 'de', 'es', 'it'].includes(locale)) {
-        i18n.global.locale.value = locale;
+        i18n.global.locale.value = locale as SupportedLocale;
         localStorage.setItem('locale', locale);
         document.documentElement.lang = locale;
     }

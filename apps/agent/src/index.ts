@@ -4,12 +4,20 @@ import WebSocket from 'ws';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { getOrGenerateIdentity, signData } from './identity.js';
+import { getOrGenerateIdentity, signData, regenerateIdentity } from './identity.js';
 import { ExecutionManager } from './execution.js';
 import { NginxManager } from './nginx.js';
 import { ProcessManager } from './process.js';
 import { SystemMonitor } from './monitor.js';
 import { AgentMessage, ServerMessageSchema } from '@server-flow/shared';
+import {
+    verifyCommand,
+    saveCPPublicKey,
+    hasCPPublicKey,
+    requiresSignature,
+    isProtocolMessage,
+    type SignedCommand
+} from './security/verifier.js';
 
 const CONFIG_DIR = path.join(os.homedir(), '.server-flow');
 const REG_FILE = path.join(CONFIG_DIR, 'registration.json');
@@ -104,6 +112,68 @@ function connectToControlPlane() {
         try {
             const raw = JSON.parse(data.toString());
 
+            // Handle CP_KEY_ROTATION (update stored CP public key)
+            if (raw.type === 'CP_KEY_ROTATION' && raw.payload?.newPublicKey) {
+                // Verify this command first if we have a key
+                if (hasCPPublicKey()) {
+                    const verification = verifyCommand(raw as SignedCommand);
+                    if (!verification.valid) {
+                        console.error(`🚨 SECURITY: Rejected CP_KEY_ROTATION - ${verification.error}`);
+                        return;
+                    }
+                }
+                saveCPPublicKey(raw.payload.newPublicKey);
+                console.log('🔐 CP public key updated via rotation');
+                return;
+            }
+
+            // Handle REGENERATE_IDENTITY (for key rotation)
+            if (raw.type === 'REGENERATE_IDENTITY' && raw.payload?.registrationToken) {
+                // Verify this command first
+                if (hasCPPublicKey()) {
+                    const verification = verifyCommand(raw as SignedCommand);
+                    if (!verification.valid) {
+                        console.error(`🚨 SECURITY: Rejected REGENERATE_IDENTITY - ${verification.error}`);
+                        return;
+                    }
+                }
+                console.log('🔐 Regenerating agent identity...');
+                const newIdentity = regenerateIdentity();
+                // Clear registration and reconnect
+                if (fs.existsSync(REG_FILE)) fs.unlinkSync(REG_FILE);
+                currentServerId = null;
+                // Re-register with new identity
+                ws.send(JSON.stringify({
+                    type: 'REGISTER',
+                    token: raw.payload.registrationToken,
+                    pubKey: newIdentity.publicKey
+                }));
+                return;
+            }
+
+            // Verify signed commands (DEPLOY, APP_ACTION, etc.)
+            if (requiresSignature(raw.type)) {
+                if (hasCPPublicKey()) {
+                    const verification = verifyCommand(raw as SignedCommand);
+                    if (!verification.valid) {
+                        console.error(`🚨 SECURITY: Rejected command ${raw.type} - ${verification.error}`);
+                        ws.send(JSON.stringify({
+                            type: 'SECURITY_ALERT',
+                            reason: verification.error,
+                            rejectedCommand: raw.type
+                        }));
+                        return;
+                    }
+                    console.log(`✅ Verified command: ${raw.type}`);
+                } else {
+                    console.log(`⚠️ No CP key stored - accepting command ${raw.type} without verification`);
+                }
+                // For signed commands, the actual data is in payload
+                if (raw.payload) {
+                    Object.assign(raw, raw.payload);
+                }
+            }
+
             // Handle GET_LOGS separately (not in Zod schema - internal MCP message)
             if (raw.type === 'GET_LOGS') {
                 (async () => {
@@ -196,18 +266,40 @@ function connectToControlPlane() {
                 monitor.logStartup();
                 monitor.logConnection('connected', `Server registered: ${msg.serverId.slice(0, 12)}`);
                 saveRegistration({ serverId: msg.serverId });
+                // Save CP public key for command verification
+                if (msg.cpPublicKey) {
+                    saveCPPublicKey(msg.cpPublicKey);
+                    console.log('🔐 CP public key saved for command verification');
+                }
             }
             else if (msg.type === 'DEPLOY') {
                 const executor = new ExecutionManager((d, s) => {
                     ws.send(JSON.stringify({ type: 'LOG_STREAM', data: d, stream: s, repoUrl: msg.repoUrl }));
                 });
                 ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: 'cloning' }));
-                executor.deploy(msg, msg.port).then(({ success, buildSkipped, healthCheckFailed }) => {
+                executor.deploy(msg, msg.port).then(async ({ success, buildSkipped, healthCheckFailed }) => {
                     let finalStatus = success ? (buildSkipped ? 'build_skipped' : 'success') : 'failure';
                     if (healthCheckFailed) {
                         finalStatus = 'rollback';
                     }
                     ws.send(JSON.stringify({ type: 'STATUS_UPDATE', repoUrl: msg.repoUrl, status: finalStatus }));
+
+                    // After successful deploy, detect actual listening ports
+                    if (success && !healthCheckFailed) {
+                        const appName = msg.repoUrl.split('/').pop()?.replace('.git', '') || 'unnamed-app';
+                        // Wait a bit for the app to fully start
+                        setTimeout(async () => {
+                            const detectedPorts = await processManager.getAppPorts(appName);
+                            if (detectedPorts.length > 0) {
+                                ws.send(JSON.stringify({
+                                    type: 'DETECTED_PORTS',
+                                    appId: msg.appId,
+                                    repoUrl: msg.repoUrl,
+                                    ports: detectedPorts
+                                }));
+                            }
+                        }, 3000);
+                    }
                 });
             }
             else if (msg.type === 'APP_ACTION') {

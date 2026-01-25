@@ -1,0 +1,18 @@
+{
+  "*.{ts,tsx}": [
+    "eslint --config .eslintrc.security.json --no-eslintrc",
+    "tsc --noEmit"
+  ],
+  "*.{ts,tsx,js,jsx,json,md}": [
+    "prettier --check"
+  ],
+  "*.env*": [
+    "echo '❌ BLOCKED: .env files should not be committed!' && exit 1"
+  ],
+  "**/*.pem": [
+    "echo '❌ BLOCKED: Private key files should not be committed!' && exit 1"
+  ],
+  "**/credentials*.json": [
+    "echo '❌ BLOCKED: Credential files should not be committed!' && exit 1"
+  ]
+}

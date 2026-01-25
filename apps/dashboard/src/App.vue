@@ -76,7 +76,14 @@ const sshTerminalRef = ref<HTMLElement | null>(null)
 
 // Modal Logic
 const showAddAppModal = ref(false)
-const newApp = ref({ name: '', repoUrl: '', serverId: '', port: 3000, env: '' })
+const newApp = ref({
+  name: '',
+  repoUrl: '',
+  serverId: '',
+  port: 3000,
+  ports: [{ port: 3000, name: 'main', isMain: true }] as Array<{ port: number; name: string; isMain: boolean }>,
+  env: ''
+})
 
 // Deploy Modal
 const showDeployModal = ref(false)
@@ -118,9 +125,17 @@ const adminUsers = ref<any[]>([])
 const adminPlans = ref<any[]>([])
 const adminSubscriptions = ref<any[]>([])
 const adminMetrics = ref<any>(null)
+const adminSecurity = ref<any>(null)
+const adminAgentKeys = ref<any[]>([])
+const rotatingCPKey = ref(false)
+const rotatingAgentKey = ref<string | null>(null)
 const showPlanModal = ref(false)
 const editingPlan = ref<any>(null)
 const selectedUserDetails = ref<any>(null)
+const showAssignPlanModal = ref(false)
+const assignPlanUserId = ref<string | null>(null)
+const assignPlanUserEmail = ref<string>('')
+const selectedPlanId = ref<string>('')
 
 function viewUserDetails(u: any) {
   selectedUserDetails.value = u
@@ -971,18 +986,55 @@ function serviceAction(service: string, action: string) {
   })
 }
 
+// Port management helpers
+function addPort() {
+  const nextPort = newApp.value.ports.length > 0
+    ? Math.max(...newApp.value.ports.map(p => p.port)) + 1
+    : 3000
+  newApp.value.ports.push({ port: nextPort, name: `port-${newApp.value.ports.length}`, isMain: false })
+}
+
+function removePort(idx: number) {
+  const wasMain = newApp.value.ports[idx].isMain
+  newApp.value.ports.splice(idx, 1)
+  // If removed port was main, make first port main
+  if (wasMain && newApp.value.ports.length > 0) {
+    newApp.value.ports[0].isMain = true
+  }
+}
+
+function setMainPort(idx: number) {
+  newApp.value.ports.forEach((p, i) => { p.isMain = i === idx })
+}
+
 async function createApp() {
   try {
     const envObj = newApp.value.env.split('\n').reduce((acc: any, line) => {
       const [k, v] = line.split('='); if(k && v) acc[k.trim()] = v.trim(); return acc;
     }, {})
+    // Find main port for legacy support
+    const mainPort = newApp.value.ports.find(p => p.isMain)?.port || newApp.value.ports[0]?.port || 3000
     await request('/api/apps', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...newApp.value, env: envObj })
+      body: JSON.stringify({
+        name: newApp.value.name,
+        repoUrl: newApp.value.repoUrl,
+        serverId: newApp.value.serverId,
+        port: mainPort,
+        ports: newApp.value.ports,
+        env: envObj
+      })
     })
     showAddAppModal.value = false
-    newApp.value = { name: '', repoUrl: '', serverId: '', port: 3000, env: '' }
+    newApp.value = {
+      name: '',
+      repoUrl: '',
+      serverId: '',
+      port: 3000,
+      ports: [{ port: 3000, name: 'main', isMain: true }],
+      env: ''
+    }
     refreshData()
     activeMenu.value = 'applications'
   } catch(e) {}
@@ -1221,6 +1273,53 @@ async function loadAdminMetrics() {
   }
 }
 
+async function loadAdminSecurity() {
+  try {
+    const [securityRes, agentsRes] = await Promise.all([
+      request('/api/admin/security'),
+      request('/api/admin/security/agents')
+    ])
+    adminSecurity.value = securityRes
+    adminAgentKeys.value = agentsRes || []
+  } catch (e) {
+    console.error('Failed to load security info:', e)
+  }
+}
+
+async function rotateCPKey() {
+  if (!confirm('Regenerating the Control Plane key will require all offline agents to be manually updated. Continue?')) return
+  rotatingCPKey.value = true
+  try {
+    const res = await request('/api/admin/security/rotate-cp-key', { method: 'POST' })
+    if (res?.success) {
+      alert(`Key rotated successfully. ${res.agentsNotified} agents notified.`)
+      await loadAdminSecurity()
+    }
+  } catch (e) {
+    console.error('Failed to rotate CP key:', e)
+    alert('Failed to rotate key')
+  } finally {
+    rotatingCPKey.value = false
+  }
+}
+
+async function rotateAgentKey(nodeId: string) {
+  if (!confirm('This will regenerate the agent identity. The agent must be online. Continue?')) return
+  rotatingAgentKey.value = nodeId
+  try {
+    const res = await request(`/api/admin/security/rotate-agent-key/${nodeId}`, { method: 'POST' })
+    if (res?.success) {
+      alert('Agent key rotation initiated')
+      setTimeout(() => loadAdminSecurity(), 2000)
+    }
+  } catch (e: any) {
+    console.error('Failed to rotate agent key:', e)
+    alert(e.message || 'Failed to rotate agent key')
+  } finally {
+    rotatingAgentKey.value = null
+  }
+}
+
 function openPlanModal(plan?: any) {
   if (plan) {
     editingPlan.value = plan
@@ -1321,24 +1420,28 @@ async function impersonateUser(userId: string) {
   })
 }
 
-async function assignUserPlan(userId: string) {
-  // Simple plan selection - could be enhanced with a modal
-  const planIds = adminPlans.value.map(p => p.id).join(', ')
-  showInput('Assign Plan', `Enter plan ID (${planIds}):`, 'Plan ID', async (planId) => {
-    if (!planId) return
-    try {
-      await request(`/api/admin/subscriptions/${userId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId, status: 'active' })
-      })
-      showAlert('Success', 'Subscription assigned', 'info')
-      loadAdminUsers()
-      loadAdminSubscriptions()
-    } catch (e) {
-      showAlert('Error', 'Failed to assign subscription', 'error')
-    }
-  })
+function assignUserPlan(userId: string, userEmail: string) {
+  assignPlanUserId.value = userId
+  assignPlanUserEmail.value = userEmail
+  selectedPlanId.value = ''
+  showAssignPlanModal.value = true
+}
+
+async function confirmAssignPlan() {
+  if (!assignPlanUserId.value || !selectedPlanId.value) return
+  try {
+    await request(`/api/admin/subscriptions/${assignPlanUserId.value}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ planId: selectedPlanId.value, status: 'active' })
+    })
+    showAlert('Success', 'Subscription assigned', 'info')
+    showAssignPlanModal.value = false
+    loadAdminUsers()
+    loadAdminSubscriptions()
+  } catch (e) {
+    showAlert('Error', 'Failed to assign subscription', 'error')
+  }
 }
 
 // ==================== BILLING FUNCTIONS ====================
@@ -2207,7 +2310,18 @@ function openNewCannedResponse() {
         <select v-model="newApp.serverId">
           <option v-for="s in servers" :key="s.id" :value="s.id">{{ s.id.slice(0,12) }} ({{ s.status }})</option>
         </select>
-        <label>Container Port</label><input v-model="newApp.port" type="number" />
+        <label>Application Ports</label>
+        <div class="ports-config">
+          <div v-for="(p, idx) in newApp.ports" :key="idx" class="port-row">
+            <input v-model.number="p.port" type="number" placeholder="3000" class="port-input" />
+            <input v-model="p.name" type="text" placeholder="main" class="port-name" />
+            <label class="port-main-label">
+              <input type="radio" name="mainPort" :checked="p.isMain" @change="setMainPort(idx)" /> Main
+            </label>
+            <button v-if="newApp.ports.length > 1" class="port-remove" @click="removePort(idx)" title="Remove">×</button>
+          </div>
+          <button type="button" class="add-port-btn" @click="addPort">+ Add Port</button>
+        </div>
         <label>Environment Variables (KEY=VALUE)</label>
         <textarea v-model="newApp.env" placeholder="API_KEY=xyz\nDB_PASS=123"></textarea>
         <div class="modal-actions">
@@ -2471,6 +2585,7 @@ function openNewCannedResponse() {
           <nav v-show="!collapsedSections.admin">
             <a href="#" :class="{ active: activeMenu === 'admin-users' }" @click="activeMenu = 'admin-users'; loadAdminUsers(); loadAdminPlans(); closeMobileMenu()">{{ t('nav.users') }}</a>
             <a href="#" :class="{ active: activeMenu === 'admin-plans' }" @click="activeMenu = 'admin-plans'; loadAdminPlans(); closeMobileMenu()">{{ t('nav.plans') }}</a>
+            <a href="#" :class="{ active: activeMenu === 'admin-security' }" @click="activeMenu = 'admin-security'; loadAdminSecurity(); closeMobileMenu()">{{ t('nav.security') }}</a>
             <a href="#" :class="{ active: activeMenu === 'admin-support' }" @click="activeMenu = 'admin-support'; loadAdminTickets(); loadSupportMetrics(); loadCannedResponses(); closeMobileMenu()">{{ t('nav.support') }}</a>
             <a href="#" :class="{ active: activeMenu === 'admin-metrics' }" @click="activeMenu = 'admin-metrics'; loadAdminMetrics(); closeMobileMenu()">{{ t('admin.metrics.title') }}</a>
           </nav>
@@ -2489,7 +2604,7 @@ function openNewCannedResponse() {
         <div class="server-list">
           <div v-for="s in servers" :key="s.id" class="server-item" :class="{ selected: selectedServerId === s.id, online: s.status === 'online' }" @click="selectedServerId = s.id; activeMenu = 'infrastructure'; closeMobileMenu()">
              <div class="status-dot"></div>
-             <div class="node-info"><p>{{ s.id.slice(0, 12) }}</p><span>{{ s.status }}</span></div>
+             <div class="node-info"><p>{{ s.id.slice(0, 8) }}{{ s.alias ? ` (${s.alias})` : '' }}</p><span>{{ s.status }}</span></div>
           </div>
         </div>
       </div>
@@ -2583,7 +2698,13 @@ function openNewCannedResponse() {
                  </div>
                  <div class="app-details">
                     <span>Node: {{ app.nodeId?.slice(0,8) }}</span>
-                    <span>{{ t('applications.port') }}: {{ app.port }}</span>
+                    <span v-if="app.ports && JSON.parse(app.ports || '[]').length > 0">
+                      {{ t('applications.ports') || 'Ports' }}: {{ JSON.parse(app.ports || '[]').map((p: any) => `${p.port}${p.isMain ? '*' : ''}`).join(', ') }}
+                    </span>
+                    <span v-else>{{ t('applications.port') }}: {{ app.port }}</span>
+                    <span v-if="app.detectedPorts" class="detected-ports" :title="'Detected from server'">
+                      🔍 {{ JSON.parse(app.detectedPorts || '[]').join(', ') }}
+                    </span>
                  </div>
                  <div class="app-actions">
                     <button class="action-btn" @click="triggerDeploy(app.id)">{{ t('applications.deploy') }}</button>
@@ -3563,7 +3684,7 @@ function openNewCannedResponse() {
                        <td>
                           <button class="action-btn" @click="viewUserDetails(u)" :title="t('admin.users.viewDetails')">📋</button>
                           <button class="action-btn" @click="impersonateUser(u.id)" :title="t('admin.users.impersonate')">👤</button>
-                          <button class="action-btn" @click="assignUserPlan(u.id)" :title="t('admin.users.assignPlan')">💳</button>
+                          <button class="action-btn" @click="assignUserPlan(u.id, u.email)" :title="t('admin.users.assignPlan')">💳</button>
                        </td>
                     </tr>
                  </tbody>
@@ -3617,6 +3738,27 @@ function openNewCannedResponse() {
                  </div>
                  <div class="modal-actions">
                     <button class="secondary" @click="selectedUserDetails = null">{{ t('common.close') }}</button>
+                 </div>
+              </div>
+           </div>
+
+           <!-- Assign Plan Modal -->
+           <div v-if="showAssignPlanModal" class="modal-overlay" @click.self="showAssignPlanModal = false">
+              <div class="modal-box" style="max-width: 400px;">
+                 <h3>{{ t('admin.users.assignPlan') }}</h3>
+                 <p style="color: var(--text-muted); margin-bottom: 1rem;">{{ assignPlanUserEmail }}</p>
+                 <div class="form-group">
+                    <label>{{ t('admin.users.plan') }}</label>
+                    <select v-model="selectedPlanId" class="form-select">
+                       <option value="" disabled>{{ t('admin.plans.selectPlan') || 'Select a plan...' }}</option>
+                       <option v-for="plan in adminPlans" :key="plan.id" :value="plan.id">
+                          {{ plan.displayName || plan.name }} - {{ plan.priceMonthly }}€/{{ t('billing.perMonth') }}
+                       </option>
+                    </select>
+                 </div>
+                 <div class="modal-actions">
+                    <button class="secondary" @click="showAssignPlanModal = false">{{ t('common.cancel') }}</button>
+                    <button class="primary" @click="confirmAssignPlan" :disabled="!selectedPlanId">{{ t('common.confirm') }}</button>
                  </div>
               </div>
            </div>
@@ -3833,6 +3975,90 @@ function openNewCannedResponse() {
                        <div class="stat-number">{{ proxies.length }}</div>
                        <div class="stat-desc">Active domains</div>
                     </div>
+                 </div>
+              </div>
+           </div>
+        </div>
+
+        <!-- ADMIN SECURITY VIEW -->
+        <div v-else-if="activeMenu === 'admin-security'" class="admin-view security-view">
+           <h1 class="gradient-text">{{ t('admin.security.title') }}</h1>
+
+           <!-- Control Plane Key Card -->
+           <div class="glass-card security-card cp-key-card">
+              <div class="card-header">
+                 <div class="card-icon">🔐</div>
+                 <h3>{{ t('admin.security.cpKey') }}</h3>
+              </div>
+              <div v-if="adminSecurity" class="card-content">
+                 <div class="key-details">
+                    <div class="detail-item">
+                       <span class="detail-label">{{ t('admin.security.fingerprint') }}</span>
+                       <code class="fingerprint-code">{{ adminSecurity.controlPlane.fingerprint }}</code>
+                    </div>
+                    <div class="detail-row-inline">
+                       <div class="detail-item">
+                          <span class="detail-label">{{ t('admin.security.algorithm') }}</span>
+                          <span class="badge badge-info">{{ adminSecurity.controlPlane.algorithm }}</span>
+                       </div>
+                       <div class="detail-item">
+                          <span class="detail-label">{{ t('admin.security.createdAt') }}</span>
+                          <span class="detail-value">{{ new Date(adminSecurity.controlPlane.createdAt).toLocaleDateString() }}</span>
+                       </div>
+                       <div class="detail-item">
+                          <span class="detail-label">{{ t('admin.security.agentsOnline') }}</span>
+                          <span class="agents-counter">
+                             <span class="count-online">{{ adminSecurity.agents.online }}</span>
+                             <span class="count-sep">/</span>
+                             <span class="count-total">{{ adminSecurity.agents.total }}</span>
+                          </span>
+                       </div>
+                    </div>
+                 </div>
+                 <div class="card-actions">
+                    <button class="btn btn-warning" @click="rotateCPKey()" :disabled="rotatingCPKey">
+                       <span v-if="rotatingCPKey" class="spinner"></span>
+                       {{ rotatingCPKey ? t('common.loading') : t('admin.security.rotateCPKey') }}
+                    </button>
+                 </div>
+                 <p class="warning-text">⚠️ {{ t('admin.security.rotateCPWarning') }}</p>
+              </div>
+              <div v-else class="card-loading">
+                 <div class="spinner"></div>
+                 <span>{{ t('common.loading') }}</span>
+              </div>
+           </div>
+
+           <!-- Agent Keys Card -->
+           <div class="glass-card security-card">
+              <div class="card-header">
+                 <div class="card-icon">🖥️</div>
+                 <h3>{{ t('admin.security.agentKeys') }}</h3>
+                 <span class="badge badge-count" v-if="adminAgentKeys.length">{{ adminAgentKeys.length }}</span>
+              </div>
+              <div class="card-content">
+                 <div v-if="adminAgentKeys.length" class="agents-grid">
+                    <div v-for="agent in adminAgentKeys" :key="agent.id" class="agent-card" :class="{ offline: !agent.isOnline }">
+                       <div class="agent-header">
+                          <span class="agent-name">{{ agent.alias || 'Unknown' }}</span>
+                          <span :class="['status-badge', agent.isOnline ? 'online' : 'offline']">
+                             {{ agent.isOnline ? 'Online' : 'Offline' }}
+                          </span>
+                       </div>
+                       <code class="agent-fingerprint">{{ agent.fingerprint }}</code>
+                       <button
+                          class="btn btn-sm btn-secondary"
+                          @click="rotateAgentKey(agent.id)"
+                          :disabled="rotatingAgentKey === agent.id || !agent.isOnline"
+                       >
+                          <span v-if="rotatingAgentKey === agent.id" class="spinner small"></span>
+                          {{ rotatingAgentKey === agent.id ? '...' : t('admin.security.rotateKey') }}
+                       </button>
+                    </div>
+                 </div>
+                 <div v-else class="empty-state-box">
+                    <span class="empty-icon">🔒</span>
+                    <p>{{ t('admin.security.noAgents') }}</p>
                  </div>
               </div>
            </div>
@@ -4358,7 +4584,7 @@ function openNewCannedResponse() {
                     <div class="node-card-header">
                        <div class="node-icon" :class="server.status"></div>
                        <div class="node-info">
-                          <span class="node-id">{{ server.alias || server.id.slice(0, 12) }}</span>
+                          <span class="node-id">{{ server.id.slice(0, 8) }}{{ server.alias ? ` (${server.alias})` : '' }}</span>
                           <span :class="['node-status', server.status]">{{ t('infrastructure.' + server.status) }}</span>
                        </div>
                     </div>
@@ -4417,10 +4643,6 @@ function openNewCannedResponse() {
                  <div class="status-item">
                     <span class="status-label">{{ t('common.status') }}</span>
                     <span :class="['status-value', serverStatus === 'online' ? 'success' : 'error']">{{ t('infrastructure.' + serverStatus) }}</span>
-                 </div>
-                 <div class="status-item">
-                    <span class="status-label">{{ t('infrastructure.uptime') }}</span>
-                    <span class="status-value">99.9%</span>
                  </div>
                  <div class="status-item">
                     <span class="status-label">{{ t('infrastructure.serverId') }}</span>
@@ -5047,7 +5269,8 @@ nav a:hover, nav a.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
 .app-meta h4 { margin: 0; font-size: 1rem; color: #0f172a; }
 .app-meta p { margin: 0; font-size: 0.75rem; color: #64748b; }
 .app-status { margin-left: auto; font-size: 0.7rem; color: #10b981; background: rgba(16,185,129,0.1); padding: 4px 10px; border-radius: 20px; font-weight: 600; }
-.app-details { font-size: 0.8rem; color: #64748b; display: flex; gap: 16px; margin-bottom: 20px; }
+.app-details { font-size: 0.8rem; color: #64748b; display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 20px; }
+.detected-ports { color: #3b82f6; font-weight: 500; cursor: help; }
 .app-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .app-actions .action-btn:nth-child(1),
 .app-actions .action-btn:nth-child(2) { grid-column: span 1; }
@@ -5425,6 +5648,67 @@ nav a:hover, nav a.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
 .modal-card h3 { color: #0f172a; margin-bottom: 8px; }
 .modal-card label { color: #64748b; font-size: 0.85rem; }
 .modal-subtitle { color: #64748b; font-size: 0.85rem; margin-bottom: 20px; }
+
+/* Multi-port configuration */
+.ports-config {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.port-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.port-input {
+  width: 80px !important;
+  padding: 8px !important;
+}
+.port-name {
+  flex: 1;
+  padding: 8px !important;
+}
+.port-main-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.port-main-label input[type="radio"] {
+  margin: 0;
+  width: auto;
+}
+.port-remove {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+.port-remove:hover {
+  background: #fecaca;
+}
+.add-port-btn {
+  align-self: flex-start;
+  padding: 6px 12px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px dashed #cbd5e1;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.add-port-btn:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+}
 .ssl-info {
   display: flex;
   align-items: center;
@@ -6003,11 +6287,14 @@ nav a:hover, nav a.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
   flex-direction: column;
   gap: 2px;
 }
-.node-id {
+.node-card .node-id {
   font-weight: 700;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.95rem;
-  color: #0f172a;
+  color: #0f172a !important;
+  background: transparent;
+  padding: 0;
+  border: none;
 }
 .node-status {
   font-size: 0.75rem;
@@ -9860,6 +10147,288 @@ nav a:hover, nav a.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
 .admin-view .action-btn.danger:hover {
   background: rgba(239,68,68,0.1);
   border-color: #ef4444;
+}
+
+/* Security View Styles */
+.security-view .security-card {
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.security-card .card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.security-card .card-header .card-icon {
+  font-size: 1.5rem;
+}
+
+.security-card .card-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e293b;
+  flex: 1;
+}
+
+.security-card .card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.security-card .key-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.security-card .detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.security-card .detail-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.security-card .detail-value {
+  font-size: 0.95rem;
+  color: #334155;
+}
+
+.security-card .detail-row-inline {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.security-card .fingerprint-code {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.85rem;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  color: #0f172a;
+  word-break: break-all;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.security-card .badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.security-card .badge-info {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+}
+
+.security-card .badge-count {
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  color: #4338ca;
+  margin-left: auto;
+}
+
+.security-card .agents-counter {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.security-card .agents-counter .count-online {
+  color: #059669;
+}
+
+.security-card .agents-counter .count-sep {
+  color: #94a3b8;
+  margin: 0 0.25rem;
+}
+
+.security-card .agents-counter .count-total {
+  color: #64748b;
+}
+
+.security-card .card-actions {
+  margin-top: 0.5rem;
+}
+
+.security-card .warning-text {
+  font-size: 0.8rem;
+  color: #92400e;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin: 0;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.security-card .card-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  color: #64748b;
+}
+
+/* Agents Grid */
+.security-view .agents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.security-view .agent-card {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.security-view .agent-card:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+}
+
+.security-view .agent-card.offline {
+  opacity: 0.7;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.security-view .agent-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.security-view .agent-name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.95rem;
+}
+
+.security-view .status-badge {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.5rem;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.security-view .status-badge.online {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #166534;
+}
+
+.security-view .status-badge.offline {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #991b1b;
+}
+
+.security-view .agent-fingerprint {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.7rem;
+  color: #475569;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 0.5rem;
+  border-radius: 6px;
+  word-break: break-all;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.security-view .empty-state-box {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: #64748b;
+}
+
+.security-view .empty-state-box .empty-icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+/* Button styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+}
+
+.btn-warning:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  transform: translateY(-1px);
+}
+
+.btn-sm {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  color: #334155;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.spinner.small {
+  width: 12px;
+  height: 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .plans-admin-grid {

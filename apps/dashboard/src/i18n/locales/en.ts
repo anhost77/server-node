@@ -84,7 +84,8 @@ export default {
         users: 'Users',
         plans: 'Plans',
         subscriptions: 'Subscriptions',
-        supportAdmin: 'Support Admin'
+        supportAdmin: 'Support Admin',
+        security: 'Security'
     },
 
     // Infrastructure
@@ -163,6 +164,11 @@ export default {
         repoUrl: 'Repository URL',
         selectServer: 'Select Server',
         port: 'Port',
+        ports: 'Ports',
+        detectedPorts: 'Detected Ports',
+        mainPort: 'Main',
+        addPort: 'Add Port',
+        portName: 'Port Name',
         envVars: 'Environment Variables',
         envVarsPlaceholder: 'KEY=value (one per line)',
         deploy: 'Deploy',
@@ -547,6 +553,7 @@ export default {
         },
         plans: {
             title: 'Plans',
+            selectPlan: 'Select a plan...',
             createPlan: 'Create Plan',
             editPlan: 'Edit Plan',
             name: 'Plan Name',
@@ -595,6 +602,20 @@ export default {
             servers: 'Servers',
             applications: 'Applications',
             domains: 'Domains'
+        },
+        security: {
+            title: 'Security & Keys',
+            cpKey: 'Control Plane Key',
+            fingerprint: 'Fingerprint',
+            algorithm: 'Algorithm',
+            createdAt: 'Created',
+            agentsOnline: 'Agents Online',
+            rotateCPKey: 'Rotate Key',
+            rotateCPWarning: 'Warning: Rotating the CP key will require all connected agents to update their stored key.',
+            agentKeys: 'Agent Keys',
+            agentOffline: 'Offline',
+            rotateKey: 'Rotate',
+            noAgents: 'No agents connected'
         }
     },
 

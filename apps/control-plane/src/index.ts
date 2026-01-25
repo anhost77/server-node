@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { randomUUID, createHmac, timingSafeEqual } from 'node:crypto';
+import { randomUUID, createHmac, timingSafeEqual, verify as cryptoVerify } from 'node:crypto';
 import { config } from 'dotenv';
 
 // Get local network IP address (for SSH installation)
@@ -58,6 +58,16 @@ import {
 } from './providers/index.js';
 import cookie from '@fastify/cookie';
 import bcrypt from 'bcryptjs';
+// Security imports
+import {
+    verifyEd25519,
+    getKeyFingerprint,
+    getCPPublicKey,
+    getCPKeyCreatedAt,
+    rotateCPKeys,
+    createSignedCommand,
+    SIGNED_COMMAND_TYPES
+} from './security/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -212,7 +222,14 @@ async function sendToAgentById(nodeId: string, msg: any, userId: string) {
     let sent = false;
     agentSessions.forEach(session => {
         if (session.authorized && session.nodeId === node.id) {
-            session.socket.send(JSON.stringify(msg));
+            // Sign commands that require signature
+            if (SIGNED_COMMAND_TYPES.includes(msg.type)) {
+                const { type, ...payload } = msg;
+                const signedCmd = createSignedCommand(type, payload);
+                session.socket.send(JSON.stringify(signedCmd));
+            } else {
+                session.socket.send(JSON.stringify(msg));
+            }
             sent = true;
         }
     });
@@ -1028,19 +1045,35 @@ fastify.post('/api/apps', async (req, reply) => {
     }
 
     const body = req.body as any;
+
+    // Handle ports - support both single port (legacy) and multiple ports
+    let ports: Array<{ port: number; name: string; isMain: boolean }> = [];
+    if (body.ports && Array.isArray(body.ports)) {
+        ports = body.ports.map((p: any, i: number) => ({
+            port: Number(p.port),
+            name: p.name || (i === 0 ? 'main' : `port-${i}`),
+            isMain: p.isMain ?? (i === 0)
+        }));
+    } else if (body.port) {
+        ports = [{ port: Number(body.port), name: 'main', isMain: true }];
+    }
+
+    const mainPort = ports.find(p => p.isMain)?.port || ports[0]?.port || 3000;
+
     const app = {
         id: randomUUID(),
         ownerId: userId,
         nodeId: body.serverId,
         name: body.name,
         repoUrl: body.repoUrl,
-        port: body.port,
+        port: mainPort, // Legacy field for backwards compatibility
+        ports: JSON.stringify(ports),
         env: JSON.stringify(body.env || {}),
         createdAt: Math.floor(Date.now() / 1000)
     };
     await db.insert(schema.apps).values(app).run();
     addActivityLog(userId, 'app_created', { name: app.name, repo: app.repoUrl }, app.nodeId, 'success');
-    return app;
+    return { ...app, ports }; // Return parsed ports
 });
 
 fastify.delete('/api/apps/:id', async (req) => {
@@ -1052,6 +1085,49 @@ fastify.delete('/api/apps/:id', async (req) => {
         addActivityLog(userId, 'app_deleted', { name: app.name }, app.nodeId, 'info');
     }
     return { success: true };
+});
+
+// Update app ports
+fastify.patch('/api/apps/:id/ports', async (req, reply) => {
+    const userId = (req as any).userId;
+    const { id } = req.params as any;
+    const { ports } = req.body as any;
+
+    const app = await db.select().from(schema.apps)
+        .where(and(eq(schema.apps.id, id), eq(schema.apps.ownerId, userId))).get();
+
+    if (!app) {
+        return reply.status(404).send({ error: 'App not found' });
+    }
+
+    // Validate ports array
+    if (!Array.isArray(ports) || ports.length === 0) {
+        return reply.status(400).send({ error: 'At least one port is required' });
+    }
+
+    const validatedPorts = ports.map((p: any, i: number) => ({
+        port: Number(p.port),
+        name: p.name || (i === 0 ? 'main' : `port-${i}`),
+        isMain: p.isMain ?? (i === 0)
+    }));
+
+    // Ensure exactly one main port
+    const mainPorts = validatedPorts.filter((p: any) => p.isMain);
+    if (mainPorts.length === 0) {
+        validatedPorts[0].isMain = true;
+    } else if (mainPorts.length > 1) {
+        validatedPorts.forEach((p: any, i: number) => { p.isMain = i === 0; });
+    }
+
+    const mainPort = validatedPorts.find((p: any) => p.isMain)?.port;
+
+    await db.update(schema.apps)
+        .set({ ports: JSON.stringify(validatedPorts), port: mainPort })
+        .where(eq(schema.apps.id, id))
+        .run();
+
+    addActivityLog(userId, 'app_ports_updated', { name: app.name, ports: validatedPorts }, app.nodeId, 'info');
+    return { success: true, ports: validatedPorts };
 });
 
 fastify.post('/api/apps/:id/deploy', async (req, reply) => {
@@ -1076,9 +1152,11 @@ fastify.post('/api/apps/:id/deploy', async (req, reply) => {
     if (!app) return reply.status(404).send({ error: 'App not found' });
     const ok = await sendToAgentById(app.nodeId, {
         type: 'DEPLOY',
+        appId: app.id,
         repoUrl: app.repoUrl,
         commitHash: commitHash || 'main',
         port: app.port,
+        ports: app.ports ? JSON.parse(app.ports) : undefined,
         env: JSON.parse(app.env || '{}')
     }, userId);
 
@@ -1335,9 +1413,17 @@ fastify.register(async function (fastify) {
                 }
                 else if (msg.type === 'RESPONSE') {
                     const sess = agentSessions.get(connectionId);
-                    if (sess) {
+                    if (sess && sess.nonce) {
+                        // Verify the signature with agent's public key
+                        const isValid = verifyEd25519(sess.nonce, msg.signature, sess.pubKey);
+                        if (!isValid) {
+                            console.error(`🚨 SECURITY: Invalid signature from agent [${sess.nodeId}]`);
+                            socket.send(JSON.stringify({ type: 'ERROR', message: 'Invalid signature' }));
+                            socket.close();
+                            return;
+                        }
                         sess.authorized = true;
-                        console.log(`✅ Agent auth [${sess.nodeId}]`);
+                        console.log(`✅ Agent auth [${sess.nodeId}] - Signature verified`);
                         socket.send(JSON.stringify({ type: 'AUTHORIZED', sessionId: connectionId }));
                         broadcastToDashboards({ type: 'SERVER_STATUS', serverId: sess.nodeId, status: 'online' });
                     }
@@ -1349,7 +1435,12 @@ fastify.register(async function (fastify) {
                     await db.insert(schema.nodes).values({ id: nodeId, ownerId: tokenData.ownerId, pubKey: msg.pubKey }).run();
                     console.log(`🚀 Node reg [${nodeId}]`);
                     agentSessions.set(connectionId, { pubKey: msg.pubKey, nodeId, socket, authorized: true });
-                    socket.send(JSON.stringify({ type: 'REGISTERED', serverId: nodeId }));
+                    // Include CP public key so agent can verify future commands
+                    socket.send(JSON.stringify({
+                        type: 'REGISTERED',
+                        serverId: nodeId,
+                        cpPublicKey: getCPPublicKey()
+                    }));
                     broadcastToDashboards({ type: 'SERVER_STATUS', serverId: nodeId, status: 'online' });
                     addActivityLog(tokenData.ownerId, 'node_registered', { nodeId }, nodeId, 'success');
                     await db.delete(schema.registrationTokens).where(eq(schema.registrationTokens.id, msg.token)).run();
@@ -1401,6 +1492,25 @@ fastify.register(async function (fastify) {
                         clearTimeout(pending.timeout);
                         pendingLogRequests.delete(msg.requestId);
                         pending.resolve(msg.logs || msg.error || 'No logs returned');
+                    }
+                }
+                // Handle detected ports from agent
+                else if (msg.type === 'DETECTED_PORTS') {
+                    const sess = agentSessions.get(connectionId);
+                    if (sess?.authorized && msg.appId && msg.ports) {
+                        console.log(`🔌 [${sess.nodeId}] Detected ports for app ${msg.appId}: ${msg.ports.join(', ')}`);
+                        // Update the app with detected ports
+                        await db.update(schema.apps)
+                            .set({ detectedPorts: JSON.stringify(msg.ports) })
+                            .where(eq(schema.apps.id, msg.appId))
+                            .run();
+                        // Broadcast to dashboards
+                        broadcastToDashboards({
+                            type: 'APP_PORTS_DETECTED',
+                            appId: msg.appId,
+                            serverId: sess.nodeId,
+                            detectedPorts: msg.ports
+                        });
                     }
                 }
             } catch (e) { }
@@ -1529,15 +1639,18 @@ fastify.get('/api/github/repos', async (req, reply) => {
 });
 
 fastify.get('/api/auth/github/login', async (req, reply) => {
-    const CLIENT_ID = 'Ov23li2gv04BDMg0h9Tn';
-    const params = new URLSearchParams({ client_id: CLIENT_ID, redirect_uri: 'http://localhost:3000/api/auth/github/callback', scope: 'repo user:email' });
+    const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
+    if (!CLIENT_ID) return reply.status(500).send({ error: 'GitHub OAuth not configured' });
+    const redirectUri = `${process.env.CONTROL_PLANE_URL || 'http://localhost:3000'}/api/auth/github/callback`;
+    const params = new URLSearchParams({ client_id: CLIENT_ID, redirect_uri: redirectUri, scope: 'repo user:email' });
     return reply.redirect(`https://github.com/login/oauth/authorize?${params.toString()}`);
 });
 
 fastify.get('/api/auth/github/callback', async (req: any, reply) => {
     const code = req.query.code;
-    const CLIENT_ID = 'Ov23li2gv04BDMg0h9Tn';
-    const CLIENT_SECRET = '499e7cde652a6a626927923205903bf4d302b4ce';
+    const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
+    const CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
+    if (!CLIENT_ID || !CLIENT_SECRET) return reply.status(500).send({ error: 'GitHub OAuth not configured' });
     const tRes = await fetch('https://github.com/login/oauth/access_token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -1555,7 +1668,7 @@ fastify.get('/api/auth/github/callback', async (req: any, reply) => {
         await db.insert(schema.accounts).values({ id: randomUUID(), userId, provider: 'github', providerAccountId: String(ghUser.id), accessToken: tData.access_token }).run();
     }
     await createSession(userId, reply);
-    return reply.redirect(`http://localhost:5173/?gh_token=${tData.access_token}`);
+    return reply.redirect(`${process.env.APP_URL || 'http://localhost:5173'}/?gh_token=${tData.access_token}`);
 });
 
 // GitHub Webhook Handler (Auto-deploy on push)
@@ -1625,9 +1738,11 @@ fastify.post('/api/webhooks/github', async (req, reply) => {
         if (session.authorized && session.nodeId === targetApp.nodeId) {
             session.socket.send(JSON.stringify({
                 type: 'DEPLOY',
+                appId: targetApp.id,
                 repoUrl: targetApp.repoUrl,
                 commitHash,
                 port: targetApp.port,
+                ports: targetApp.ports ? JSON.parse(targetApp.ports) : undefined,
                 env: JSON.parse(targetApp.env || '{}')
             }));
             agentFound = true;
@@ -2413,6 +2528,136 @@ fastify.get('/api/admin/metrics', async (req, reply) => {
             mrr,
             mrrFormatted: formatAmount(mrr)
         }
+    };
+});
+
+// ============ SECURITY ADMIN API ============
+
+// Get security info (CP key fingerprint, creation date)
+fastify.get('/api/admin/security', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const cpPublicKey = getCPPublicKey();
+    const createdAt = getCPKeyCreatedAt();
+
+    // Count online/offline agents
+    let onlineAgents = 0;
+    const allNodes = await db.select().from(schema.nodes).all();
+    agentSessions.forEach(session => {
+        if (session.authorized) onlineAgents++;
+    });
+
+    return {
+        controlPlane: {
+            fingerprint: getKeyFingerprint(cpPublicKey),
+            createdAt,
+            algorithm: 'Ed25519'
+        },
+        agents: {
+            total: allNodes.length,
+            online: onlineAgents,
+            offline: allNodes.length - onlineAgents
+        }
+    };
+});
+
+// Get agent keys info
+fastify.get('/api/admin/security/agents', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const nodes = await db.select().from(schema.nodes).all();
+
+    return nodes.map(node => {
+        const isOnline = Array.from(agentSessions.values()).some(
+            s => s.nodeId === node.id && s.authorized
+        );
+        return {
+            id: node.id,
+            alias: node.alias || node.hostname || 'Unknown',
+            fingerprint: getKeyFingerprint(node.pubKey),
+            isOnline
+        };
+    });
+});
+
+// Rotate CP key
+fastify.post('/api/admin/security/rotate-cp-key', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    // Generate new keys
+    const newKeys = rotateCPKeys();
+    console.log('🔐 CP keys rotated by admin');
+
+    // Broadcast new public key to all connected agents
+    let notifiedCount = 0;
+    agentSessions.forEach(session => {
+        if (session.authorized) {
+            const signedCmd = createSignedCommand('CP_KEY_ROTATION', {
+                newPublicKey: newKeys.publicKey
+            });
+            session.socket.send(JSON.stringify(signedCmd));
+            notifiedCount++;
+        }
+    });
+
+    return {
+        success: true,
+        fingerprint: getKeyFingerprint(newKeys.publicKey),
+        agentsNotified: notifiedCount
+    };
+});
+
+// Rotate agent key
+fastify.post('/api/admin/security/rotate-agent-key/:nodeId', async (req, reply) => {
+    await requireAdmin(req, reply);
+    if (reply.sent) return;
+
+    const { nodeId } = req.params as { nodeId: string };
+    const node = await db.select().from(schema.nodes).where(eq(schema.nodes.id, nodeId)).get();
+    if (!node) {
+        return reply.status(404).send({ error: 'Server not found' });
+    }
+
+    // Find the agent session
+    let agentSession: any = null;
+    agentSessions.forEach(session => {
+        if (session.nodeId === nodeId && session.authorized) {
+            agentSession = session;
+        }
+    });
+
+    if (!agentSession) {
+        return reply.status(400).send({ error: 'Agent is offline. Cannot rotate key.' });
+    }
+
+    // Generate a new registration token for re-registration
+    const token = randomUUID();
+    await db.insert(schema.registrationTokens).values({
+        id: token,
+        ownerId: node.ownerId,
+        expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
+    }).run();
+
+    // Send command to agent to regenerate identity
+    const signedCmd = createSignedCommand('REGENERATE_IDENTITY', {
+        registrationToken: token
+    });
+    agentSession.socket.send(JSON.stringify(signedCmd));
+
+    return {
+        success: true,
+        message: 'Agent will regenerate identity and re-register'
+    };
+});
+
+// Public endpoint to get CP public key (for install.sh)
+fastify.get('/api/security/public-key', async () => {
+    return {
+        publicKey: getCPPublicKey(),
+        algorithm: 'Ed25519'
     };
 });
 

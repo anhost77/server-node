@@ -84,7 +84,8 @@ export default {
         users: 'Utilisateurs',
         plans: 'Plans',
         subscriptions: 'Abonnements',
-        supportAdmin: 'Support Admin'
+        supportAdmin: 'Support Admin',
+        security: 'Sécurité'
     },
 
     // Infrastructure
@@ -163,6 +164,11 @@ export default {
         repoUrl: 'URL du dépôt',
         selectServer: 'Sélectionner un serveur',
         port: 'Port',
+        ports: 'Ports',
+        detectedPorts: 'Ports détectés',
+        mainPort: 'Principal',
+        addPort: 'Ajouter un port',
+        portName: 'Nom du port',
         envVars: 'Variables d\'environnement',
         envVarsPlaceholder: 'CLE=valeur (une par ligne)',
         deploy: 'Déployer',
@@ -547,6 +553,7 @@ export default {
         },
         plans: {
             title: 'Plans',
+            selectPlan: 'Sélectionner un plan...',
             createPlan: 'Créer un plan',
             editPlan: 'Modifier le plan',
             name: 'Nom du plan',
@@ -595,6 +602,20 @@ export default {
             servers: 'Serveurs',
             applications: 'Applications',
             domains: 'Domaines'
+        },
+        security: {
+            title: 'Sécurité & Clés',
+            cpKey: 'Clé Control Plane',
+            fingerprint: 'Empreinte',
+            algorithm: 'Algorithme',
+            createdAt: 'Créée le',
+            agentsOnline: 'Agents en ligne',
+            rotateCPKey: 'Regénérer la clé',
+            rotateCPWarning: 'Attention : La rotation de la clé CP nécessite que tous les agents connectés mettent à jour leur clé stockée.',
+            agentKeys: 'Clés des Agents',
+            agentOffline: 'Hors ligne',
+            rotateKey: 'Regénérer',
+            noAgents: 'Aucun agent connecté'
         }
     },
 

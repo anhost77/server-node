@@ -1,8 +1,55 @@
 import pm2 from 'pm2';
 import path from 'node:path';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execAsync = promisify(exec);
 
 export class ProcessManager {
     constructor(private onLog: (data: string, stream: 'stdout' | 'stderr') => void) { }
+
+    /**
+     * Detect which ports a process is listening on
+     * Uses ss command on Linux to find listening ports by PID
+     */
+    async getProcessPorts(pid: number): Promise<number[]> {
+        try {
+            // Use ss to find listening TCP ports for this PID
+            const { stdout } = await execAsync(
+                `ss -tlnp 2>/dev/null | grep "pid=${pid}" | awk '{print $4}' | grep -oE '[0-9]+$' | sort -u`,
+                { timeout: 5000 }
+            );
+            const ports = stdout.trim().split('\n')
+                .filter(Boolean)
+                .map(Number)
+                .filter(p => p > 0 && p < 65536);
+            return ports;
+        } catch {
+            return [];
+        }
+    }
+
+    /**
+     * Get all listening ports for a PM2 app by name
+     */
+    async getAppPorts(appName: string): Promise<number[]> {
+        await this.connect();
+        return new Promise((resolve) => {
+            pm2.describe(appName, async (err: any, procDesc: any) => {
+                if (err || !procDesc || procDesc.length === 0) {
+                    resolve([]);
+                    return;
+                }
+                const proc = procDesc[0];
+                if (proc.pm2_env?.status !== 'online' || !proc.pid) {
+                    resolve([]);
+                    return;
+                }
+                const ports = await this.getProcessPorts(proc.pid);
+                resolve(ports);
+            });
+        });
+    }
 
     private connect(): Promise<void> {
         return new Promise((resolve, reject) => {
