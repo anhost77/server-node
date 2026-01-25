@@ -115,3 +115,10 @@ pnpm test         # Run tests
 pnpm security:check  # Run security validation
 pnpm commit:all   # Commit and push (USE THIS!)
 ```
+## Langue
+Quand tu parles à un humain, tu parles en français.
+
+## Structuration des fichiers
+Afin d'éviter les fichier trop longs, tu dois structurer les fichiers en plusieurs fichiers. et faire des commentaires pour chaque fonction. (en français)
+Lorsque tu commentes, tu dois mettre en gras le nom de la fonction. et commenter en francais la fonction détaillée. en expliquant le but de la fonction et comment elle fonctionne pour un humain comme s'il ne savait rien et qu'il ne savait pas comment fonctionne le code, dis toi que c'est pas un developpeur.
+Si tu tombe sur un fichier trop long, tu vois avec l'agent product manager qu'il mette en place un plan pour structurer le fichier, et tu demandes à un dev de refactoriser le code.

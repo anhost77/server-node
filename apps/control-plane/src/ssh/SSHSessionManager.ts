@@ -320,6 +320,96 @@ export class SSHSessionManager {
   }
 
   /**
+   * Run agent update (for servers with old agent that don't support UPDATE_AGENT)
+   */
+  async runUpdate(sessionId: string, controlPlaneUrl: string): Promise<boolean> {
+    const session = this.sessions.get(sessionId);
+    if (!session) throw new Error('SESSION_NOT_FOUND');
+
+    session.status = 'installing';
+    this.sendStatus(session, 1, 'Starting agent update');
+
+    // Simple update script - downloads bundle, extracts, restarts service
+    const updateScript = `
+      set -e
+      INSTALL_DIR="$HOME/.server-flow/agent-bundle"
+      echo "📦 Downloading latest agent bundle..."
+      curl -L --progress-bar "${controlPlaneUrl}/agent-bundle.tar.gz" -o /tmp/agent-bundle-update.tar.gz
+      echo "📂 Backing up current bundle..."
+      if [ -d "$INSTALL_DIR" ]; then
+        rm -rf "$HOME/.server-flow/agent-bundle-backup" 2>/dev/null || true
+        mv "$INSTALL_DIR" "$HOME/.server-flow/agent-bundle-backup"
+      fi
+      mkdir -p "$INSTALL_DIR"
+      echo "📦 Extracting new bundle..."
+      tar -xzf /tmp/agent-bundle-update.tar.gz -C "$INSTALL_DIR" --no-same-owner
+      rm /tmp/agent-bundle-update.tar.gz
+      cd "$INSTALL_DIR"
+      echo "🔨 Installing dependencies..."
+      pnpm install --prod 2>&1 || npm install --production 2>&1
+      echo "🔄 Restarting agent service..."
+      sudo systemctl restart server-flow-agent || pm2 restart serverflow-agent || true
+      echo "✨ Update complete!"
+    `;
+
+    return new Promise((resolve) => {
+      session.client.exec(updateScript, { pty: true }, (err, stream) => {
+        if (err) {
+          this.sendToSocket(session.socket, { type: 'ERROR', code: 'UPDATE_FAILED', message: err.message });
+          resolve(false);
+          return;
+        }
+
+        stream.on('data', (data: Buffer) => {
+          const text = data.toString();
+          this.sendOutput(session, text);
+
+          // Parse update progress
+          if (text.includes('Downloading')) {
+            this.sendStatus(session, 1, 'Downloading agent bundle');
+          } else if (text.includes('Backing up')) {
+            this.sendStatus(session, 2, 'Backing up current version');
+          } else if (text.includes('Extracting')) {
+            this.sendStatus(session, 2, 'Extracting new bundle');
+          } else if (text.includes('Installing dependencies')) {
+            this.sendStatus(session, 3, 'Installing dependencies');
+          } else if (text.includes('Restarting')) {
+            this.sendStatus(session, 4, 'Restarting agent');
+          } else if (text.includes('Update complete')) {
+            session.status = 'complete';
+            this.sendStatus(session, 4, 'Update complete');
+          }
+        });
+
+        stream.stderr.on('data', (data: Buffer) => {
+          const text = data.toString();
+          if (!text.includes('% Total') && !text.includes('Dload')) {
+            this.sendOutput(session, text, true);
+          }
+        });
+
+        stream.on('close', (code: number) => {
+          if (code === 0) {
+            session.status = 'complete';
+            this.sendStatus(session, 4, 'Update complete');
+            setTimeout(() => {
+              this.sendToSocket(session.socket, { type: 'COMPLETE' });
+              resolve(true);
+            }, 100);
+          } else {
+            this.sendToSocket(session.socket, {
+              type: 'ERROR',
+              code: 'UPDATE_EXIT_CODE',
+              message: `Update exited with code ${code}`,
+            });
+            resolve(false);
+          }
+        });
+      });
+    });
+  }
+
+  /**
    * Send raw input to the SSH shell (for interactive mode)
    */
   sendInput(sessionId: string, data: string): void {

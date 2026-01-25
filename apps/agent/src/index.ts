@@ -9,6 +9,7 @@ import { ExecutionManager } from './execution.js';
 import { NginxManager } from './nginx.js';
 import { ProcessManager } from './process.js';
 import { SystemMonitor } from './monitor.js';
+import { InfrastructureManager, type RuntimeType, type DatabaseType } from './infrastructure.js';
 import { AgentMessage, ServerMessageSchema } from '@server-flow/shared';
 import {
     verifyCommand,
@@ -21,6 +22,21 @@ import {
 
 const CONFIG_DIR = path.join(os.homedir(), '.server-flow');
 const REG_FILE = path.join(CONFIG_DIR, 'registration.json');
+const BUNDLE_DIR = path.join(os.homedir(), '.server-flow', 'agent-bundle');
+
+// Read agent version from package.json
+function getAgentVersion(): string {
+    try {
+        const pkgPath = path.join(BUNDLE_DIR, 'package.json');
+        if (fs.existsSync(pkgPath)) {
+            const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+            return pkg.version || '0.0.0';
+        }
+    } catch { }
+    return '0.0.0';
+}
+
+const AGENT_VERSION = getAgentVersion();
 
 const fastify = Fastify({ logger: false });
 const identity = getOrGenerateIdentity();
@@ -102,9 +118,9 @@ function connectToControlPlane() {
         monitor.logConnection('connecting', 'Establishing secure channel...');
 
         if (registrationToken && !isRegistered()) {
-            ws.send(JSON.stringify({ type: 'REGISTER', token: registrationToken, pubKey: identity.publicKey }));
+            ws.send(JSON.stringify({ type: 'REGISTER', token: registrationToken, pubKey: identity.publicKey, version: AGENT_VERSION }));
         } else {
-            ws.send(JSON.stringify({ type: 'CONNECT', pubKey: identity.publicKey }));
+            ws.send(JSON.stringify({ type: 'CONNECT', pubKey: identity.publicKey, version: AGENT_VERSION }));
         }
     });
 
@@ -215,6 +231,80 @@ function connectToControlPlane() {
                             requestId,
                             error: `Failed to read logs: ${err.message}`
                         }));
+                    }
+                })();
+                return;
+            }
+
+            // Handle UPDATE_AGENT (self-update mechanism)
+            if (raw.type === 'UPDATE_AGENT') {
+                const sendStatus = (status: string, message?: string, newVersion?: string) => {
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({
+                            type: 'AGENT_UPDATE_STATUS',
+                            serverId: currentServerId,
+                            status,
+                            message,
+                            newVersion
+                        }));
+                    }
+                };
+
+                (async () => {
+                    try {
+                        const { exec } = await import('node:child_process');
+                        const { promisify } = await import('node:util');
+                        const execAsync = promisify(exec);
+
+                        sendStatus('downloading', 'Downloading latest agent bundle...');
+
+                        // Download new bundle
+                        const bundleUrl = `${controlPlaneUrl}/agent-bundle.tar.gz`;
+                        const tempBundle = path.join(os.tmpdir(), 'agent-bundle-update.tar.gz');
+
+                        await execAsync(`curl -L --progress-bar "${bundleUrl}" -o "${tempBundle}"`);
+
+                        sendStatus('installing', 'Installing update...');
+
+                        // Backup current bundle (just in case)
+                        const backupDir = path.join(os.homedir(), '.server-flow', 'agent-bundle-backup');
+                        if (fs.existsSync(BUNDLE_DIR)) {
+                            if (fs.existsSync(backupDir)) {
+                                fs.rmSync(backupDir, { recursive: true });
+                            }
+                            fs.renameSync(BUNDLE_DIR, backupDir);
+                        }
+
+                        // Extract new bundle
+                        fs.mkdirSync(BUNDLE_DIR, { recursive: true });
+                        await execAsync(`tar -xzf "${tempBundle}" -C "${BUNDLE_DIR}" --no-same-owner`);
+                        fs.unlinkSync(tempBundle);
+
+                        // Install dependencies
+                        await execAsync(`cd "${BUNDLE_DIR}" && pnpm install --prod 2>&1 || npm install --production 2>&1`);
+
+                        // Read new version
+                        const newVersion = getAgentVersion();
+
+                        sendStatus('restarting', 'Restarting agent...', newVersion);
+
+                        // Restart via systemd (the service will reconnect automatically)
+                        setTimeout(async () => {
+                            try {
+                                await execAsync('sudo systemctl restart server-flow-agent');
+                            } catch {
+                                // If systemd fails, try pm2
+                                try {
+                                    await execAsync('pm2 restart serverflow-agent');
+                                } catch {
+                                    // Last resort: exit and let systemd restart us
+                                    process.exit(0);
+                                }
+                            }
+                        }, 1000);
+
+                    } catch (err: any) {
+                        sendStatus('failed', `Update failed: ${err.message}`);
                     }
                 })();
                 return;
@@ -372,6 +462,75 @@ function connectToControlPlane() {
                         sendStatus(ok ? `${actionStr}_success` : `${actionStr}_failed`);
                     });
                 }
+            }
+            // ============================================
+            // Infrastructure Handlers (Story 7.7)
+            // ============================================
+            else if (msg.type === 'GET_SERVER_STATUS') {
+                const infraManager = new InfrastructureManager((message, stream) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'INFRASTRUCTURE_LOG',
+                            serverId: currentServerId,
+                            message,
+                            stream
+                        }));
+                    }
+                });
+                infraManager.getServerStatus().then(status => {
+                    ws.send(JSON.stringify({
+                        type: 'SERVER_STATUS_RESPONSE',
+                        serverId: currentServerId,
+                        status
+                    }));
+                });
+            }
+            else if (msg.type === 'INSTALL_RUNTIME') {
+                const runtime = msg.runtime as RuntimeType;
+                const infraManager = new InfrastructureManager((message, stream) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'INFRASTRUCTURE_LOG',
+                            serverId: currentServerId,
+                            message,
+                            stream
+                        }));
+                    }
+                });
+                infraManager.installRuntime(runtime).then(result => {
+                    ws.send(JSON.stringify({
+                        type: 'RUNTIME_INSTALLED',
+                        serverId: currentServerId,
+                        runtime,
+                        success: result.success,
+                        version: result.version,
+                        error: result.error
+                    }));
+                });
+            }
+            else if (msg.type === 'CONFIGURE_DATABASE') {
+                const database = msg.database as DatabaseType;
+                const dbName = msg.dbName;
+                const infraManager = new InfrastructureManager((message, stream) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'INFRASTRUCTURE_LOG',
+                            serverId: currentServerId,
+                            message,
+                            stream
+                        }));
+                    }
+                });
+                infraManager.configureDatabase(database, dbName).then(result => {
+                    ws.send(JSON.stringify({
+                        type: 'DATABASE_CONFIGURED',
+                        serverId: currentServerId,
+                        database,
+                        success: result.success,
+                        connectionString: result.connectionString,
+                        error: result.error
+                    }));
+                });
             }
         } catch (err) { }
     });

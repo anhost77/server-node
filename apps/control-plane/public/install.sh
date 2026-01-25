@@ -185,14 +185,14 @@ rm "$HOME/.server-flow/agent-bundle.tar.gz"
 cd "$INSTALL_DIR"
 
 echo "🔨 Initializing workspace (Installing Deps)..."
-pnpm install --filter @server-flow/agent --filter @server-flow/shared > /dev/null 2>&1
+pnpm install --prod 2>&1 || npm install --production 2>&1
 
 # 5. CREATE SYSTEMD SERVICE
 echo "⚙️  Configuring background service (systemd)..."
 
 SERVICE_FILE="/etc/systemd/system/server-flow-agent.service"
-PNPM_PATH=$(which pnpm)
 USER_NAME=$(whoami)
+NODE_PATH=$(which node)
 
 SERVICE_CONTENT="[Unit]
 Description=ServerFlow Agent
@@ -203,7 +203,7 @@ Type=simple
 User=$USER_NAME
 WorkingDirectory=$INSTALL_DIR
 ExecStartPre=-/bin/bash -c 'fuser -k 3001/tcp || true'
-ExecStart=$PNPM_PATH --filter @server-flow/agent dev -- --token $TOKEN --url $URL
+ExecStart=$NODE_PATH dist/index.js --token $TOKEN --url $URL
 Restart=always
 RestartSec=5
 Environment=NODE_ENV=production

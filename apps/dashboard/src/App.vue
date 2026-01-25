@@ -15,10 +15,34 @@ const proxies = ref<any[]>([])
 const auditLogs = ref<any[]>([])
 const activeMenu = ref('infrastructure')
 const selectedServerId = ref<string | null>(null)
+const serverSettingsMode = ref(false)
+
+// Server Settings State (Story 7.7)
+const infraStatus = ref<{
+  runtimes: Array<{ type: string; installed: boolean; version?: string; estimatedSize: string }>;
+  databases: Array<{ type: string; installed: boolean; running: boolean; version?: string }>;
+  system: { os: string; osVersion: string; cpu: number; ram: string; disk: string; uptime: string };
+} | null>(null)
+const infraStatusLoading = ref(false)
+const installingRuntime = ref<string | null>(null)
+const configuringDatabase = ref<string | null>(null)
+const infrastructureLogs = ref<{ message: string; stream: 'stdout' | 'stderr' }[]>([])
+const showDbConfigModal = ref(false)
+const dbConfigType = ref<'postgresql' | 'mysql' | 'redis'>('postgresql')
+const dbConfigName = ref('')
+const lastConnectionString = ref<string | null>(null)
+const showConnectionStringModal = ref(false)
 
 // Server Alias Editing
 const editingAlias = ref(false)
 const newAlias = ref('')
+
+// Agent Update State
+const bundleVersion = ref<string | null>(null)
+const updatingAgent = ref<string | null>(null)
+const updateStatus = ref<{ status: string; message?: string; newVersion?: string } | null>(null)
+const showSshUpdateModal = ref(false)
+const sshUpdateTargetServer = ref<any>(null)
 
 // Mobile Menu State
 const mobileMenuOpen = ref(false)
@@ -585,6 +609,7 @@ function connectWS() {
          servers.value = Array.isArray(data) ? data : Object.values(data)
          apps.value = msg.apps || []
          proxies.value = msg.proxies || []
+         bundleVersion.value = msg.bundleVersion || null
       } 
       else if (msg.type === 'SERVER_STATUS') {
         const s = servers.value.find(s => s.id === msg.serverId)
@@ -633,6 +658,57 @@ function connectWS() {
             if (consoleContainerMini.value) consoleContainerMini.value.scrollTop = consoleContainerMini.value.scrollHeight
             if (consoleContainerLarge.value) consoleContainerLarge.value.scrollTop = consoleContainerLarge.value.scrollHeight
           })
+        }
+      }
+      // Infrastructure messages (Story 7.7)
+      else if (msg.type === 'SERVER_STATUS_RESPONSE') {
+        if (msg.serverId === selectedServerId.value) {
+          infraStatus.value = msg.status
+          infraStatusLoading.value = false
+        }
+      }
+      else if (msg.type === 'INFRASTRUCTURE_LOG') {
+        if (msg.serverId === selectedServerId.value) {
+          infrastructureLogs.value.push({ message: msg.message, stream: msg.stream })
+          nextTick(() => {
+            const container = document.querySelector('.infra-console-body')
+            if (container) container.scrollTop = container.scrollHeight
+          })
+        }
+      }
+      else if (msg.type === 'RUNTIME_INSTALLED') {
+        if (msg.serverId === selectedServerId.value) {
+          installingRuntime.value = null
+          if (msg.success) {
+            // Refresh server status to show new version
+            requestServerStatus()
+          }
+        }
+      }
+      else if (msg.type === 'DATABASE_CONFIGURED') {
+        if (msg.serverId === selectedServerId.value) {
+          configuringDatabase.value = null
+          if (msg.success && msg.connectionString) {
+            lastConnectionString.value = msg.connectionString
+            showConnectionStringModal.value = true
+            // Refresh server status
+            requestServerStatus()
+          }
+        }
+      }
+      // Agent Update Status
+      else if (msg.type === 'AGENT_UPDATE_STATUS') {
+        updateStatus.value = { status: msg.status, message: msg.message, newVersion: msg.newVersion }
+        if (msg.status === 'success' || msg.status === 'failed') {
+          // Update finished
+          setTimeout(() => {
+            updatingAgent.value = null
+            updateStatus.value = null
+            if (msg.status === 'success') {
+              // Agent will reconnect with new version, refresh data
+              setTimeout(refreshData, 3000)
+            }
+          }, 2000)
         }
       }
     } catch(e) {}
@@ -711,6 +787,9 @@ async function generateToken() {
     loading.value = false
   }
 }
+
+// SSH Update Mode (for old agents)
+const sshUpdateMode = ref(false)
 
 // SSH Assisted Installation Functions
 function resetSSHSession() {
@@ -862,6 +941,123 @@ function cancelSSHInstallation() {
     sshWs = null
   }
   resetSSHSession()
+  sshUpdateMode.value = false
+  showSshUpdateModal.value = false
+}
+
+async function startSSHUpdate() {
+  if (!sshForm.value.host || !sshForm.value.username) {
+    showAlert('Missing Info', 'Please enter server address and username', 'error')
+    return
+  }
+
+  if (sshForm.value.authType === 'password' && !sshForm.value.password) {
+    showAlert('Missing Info', 'Please enter password', 'error')
+    return
+  }
+
+  if (sshForm.value.authType === 'key' && !sshForm.value.privateKey) {
+    showAlert('Missing Info', 'Please paste your SSH private key', 'error')
+    return
+  }
+
+  sshUpdateMode.value = true
+  resetSSHSession()
+  sshSession.value.status = 'connecting'
+  sshSession.value.message = 'Connecting to server...'
+  sshSession.value.totalSteps = 4 // Update has fewer steps
+
+  // Get temporary auth token for WebSocket
+  let sshToken: string
+  try {
+    const tokenRes = await fetch(`${baseUrl}/api/ssh/token`, {
+      method: 'POST',
+      credentials: 'include'
+    })
+    if (!tokenRes.ok) {
+      showAlert('Auth Error', 'Failed to authenticate for SSH session', 'error')
+      resetSSHSession()
+      return
+    }
+    const tokenData = await tokenRes.json()
+    sshToken = tokenData.token
+  } catch (e) {
+    showAlert('Connection Error', 'Failed to connect to server', 'error')
+    resetSSHSession()
+    return
+  }
+
+  // Connect via WebSocket with token in URL
+  const sshWsUrl = baseUrl.replace('http', 'ws') + `/api/ssh/session?token=${sshToken}`
+  sshWs = new WebSocket(sshWsUrl)
+
+  sshWs.onopen = () => {
+    // Send connection request with autoUpdate flag
+    sshWs?.send(JSON.stringify({
+      type: 'CONNECT',
+      host: sshForm.value.host,
+      port: sshForm.value.port,
+      username: sshForm.value.username,
+      password: sshForm.value.authType === 'password' ? sshForm.value.password : undefined,
+      privateKey: sshForm.value.authType === 'key' ? sshForm.value.privateKey : undefined,
+      autoUpdate: true
+    }))
+  }
+
+  sshWs.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data)
+      switch (msg.type) {
+        case 'CONNECTED':
+          sshSession.value.id = msg.sessionId
+          sshSession.value.status = 'preflight'
+          // Immediately start update (no preflight needed for update)
+          sshWs?.send(JSON.stringify({ type: 'START_UPDATE' }))
+          break
+
+        case 'STATUS':
+          sshSession.value.step = msg.step
+          sshSession.value.totalSteps = msg.total || 4
+          sshSession.value.message = msg.message
+          sshSession.value.status = 'installing'
+          break
+
+        case 'OUTPUT':
+          sshSession.value.output.push(msg.data)
+          nextTick(() => {
+            if (sshTerminalRef.value) {
+              sshTerminalRef.value.scrollTop = sshTerminalRef.value.scrollHeight
+            }
+          })
+          break
+
+        case 'COMPLETE':
+          sshSession.value.status = 'complete'
+          sshSession.value.message = t('infrastructure.updateSuccess')
+          setTimeout(() => refreshData(), 2000)
+          break
+
+        case 'ERROR':
+          sshSession.value.status = 'error'
+          sshSession.value.message = msg.message
+          break
+      }
+    } catch (e) {
+      console.error('[SSH Update] Message parse error:', e)
+    }
+  }
+
+  sshWs.onerror = () => {
+    sshSession.value.status = 'error'
+    sshSession.value.message = 'WebSocket connection failed'
+  }
+
+  sshWs.onclose = (e) => {
+    if (sshSession.value.status !== 'complete' && sshSession.value.status !== 'error') {
+      sshSession.value.status = 'error'
+      sshSession.value.message = 'Connection closed unexpectedly'
+    }
+  }
 }
 
 async function triggerProvision() {
@@ -984,6 +1180,107 @@ function serviceAction(service: string, action: string) {
       action
     }));
   })
+}
+
+// Server Settings Functions (Story 7.7)
+function openServerSettings() {
+  serverSettingsMode.value = true
+  infrastructureLogs.value = []
+  requestServerStatus()
+}
+
+function closeServerSettings() {
+  serverSettingsMode.value = false
+  infraStatus.value = null
+}
+
+function requestServerStatus() {
+  const targetId = activeServer.value?.id
+  if (!targetId) return
+
+  infraStatusLoading.value = true
+  infrastructureLogs.value = []
+  ws?.send(JSON.stringify({
+    type: 'GET_SERVER_STATUS',
+    serverId: targetId
+  }))
+}
+
+function updateAgent(serverId: string) {
+  if (updatingAgent.value) return
+
+  // Find the server to check if it has a version
+  const server = servers.value.find(s => s.id === serverId)
+
+  // If server has no version (old agent), use SSH update
+  if (!server?.agentVersion) {
+    sshUpdateTargetServer.value = server
+    showSshUpdateModal.value = true
+    // Pre-fill SSH form with server info
+    sshForm.value.host = server?.ip || ''
+    sshForm.value.port = 22
+    sshForm.value.username = 'root'
+    sshForm.value.password = ''
+    sshForm.value.privateKey = ''
+    resetSSHSession()
+    return
+  }
+
+  // Server has version, use WebSocket update
+  updatingAgent.value = serverId
+  updateStatus.value = { status: 'starting', message: 'Initiating update...' }
+  ws?.send(JSON.stringify({
+    type: 'UPDATE_AGENT',
+    serverId
+  }))
+}
+
+function installRuntime(runtime: string) {
+  const targetId = activeServer.value?.id
+  if (!targetId || installingRuntime.value) return
+
+  installingRuntime.value = runtime
+  infrastructureLogs.value = []
+  ws?.send(JSON.stringify({
+    type: 'INSTALL_RUNTIME',
+    serverId: targetId,
+    runtime
+  }))
+}
+
+function openDbConfigModal(dbType: 'postgresql' | 'mysql' | 'redis') {
+  dbConfigType.value = dbType
+  dbConfigName.value = dbType === 'redis' ? '' : 'myapp'
+  showDbConfigModal.value = true
+}
+
+function configureDatabase() {
+  const targetId = activeServer.value?.id
+  if (!targetId || configuringDatabase.value) return
+
+  configuringDatabase.value = dbConfigType.value
+  showDbConfigModal.value = false
+  infrastructureLogs.value = []
+  ws?.send(JSON.stringify({
+    type: 'CONFIGURE_DATABASE',
+    serverId: targetId,
+    database: dbConfigType.value,
+    dbName: dbConfigName.value
+  }))
+}
+
+function copyConnectionString() {
+  if (lastConnectionString.value) {
+    navigator.clipboard.writeText(lastConnectionString.value)
+  }
+}
+
+function clearInfraLogs() {
+  infrastructureLogs.value = []
+}
+
+function copyInfraLogs() {
+  navigator.clipboard.writeText(infrastructureLogs.value.map(l => l.message).join('\n'))
 }
 
 // Port management helpers
@@ -2047,6 +2344,199 @@ function openNewCannedResponse() {
                <span class="console-stream">{{ log.stream }}</span>
                <span class="console-content">{{ log.data }}</span>
             </div>
+        </div>
+     </div>
+  </div>
+
+  <!-- Database Config Modal (Story 7.7) -->
+  <div v-if="showDbConfigModal" class="modal-overlay" style="z-index: 10000;" @click.self="showDbConfigModal = false">
+     <div class="glass-card db-config-modal">
+        <div class="modal-header">
+           <h3>Setup {{ dbConfigType === 'postgresql' ? 'PostgreSQL' : dbConfigType === 'mysql' ? 'MySQL' : 'Redis' }}</h3>
+           <button class="close-btn" @click="showDbConfigModal = false">×</button>
+        </div>
+        <div class="modal-body">
+           <p class="modal-description">
+              {{ dbConfigType === 'redis'
+                 ? 'Redis will be installed and configured with a secure password.'
+                 : 'Enter a database name. A secure password will be generated automatically.' }}
+           </p>
+           <div class="form-group" v-if="dbConfigType !== 'redis'">
+              <label>Database Name</label>
+              <input type="text" v-model="dbConfigName" placeholder="myapp" />
+           </div>
+           <div class="security-notice">
+              <span>🔒</span>
+              <span>The connection string will be shown once. Copy and save it securely.</span>
+           </div>
+        </div>
+        <div class="modal-footer">
+           <button class="secondary" @click="showDbConfigModal = false">Cancel</button>
+           <button class="premium-btn" @click="configureDatabase()" :disabled="configuringDatabase !== null">
+              {{ configuringDatabase ? 'Setting up...' : 'Setup Database' }}
+           </button>
+        </div>
+     </div>
+  </div>
+
+  <!-- Connection String Modal (Story 7.7) -->
+  <div v-if="showConnectionStringModal" class="modal-overlay" style="z-index: 10001;" @click.self="showConnectionStringModal = false">
+     <div class="glass-card connection-string-modal">
+        <div class="modal-header success">
+           <h3>✅ Database Configured</h3>
+           <button class="close-btn" @click="showConnectionStringModal = false">×</button>
+        </div>
+        <div class="modal-body">
+           <p class="modal-description">
+              Your database has been configured successfully. Copy the connection string below and add it to your app's environment variables.
+           </p>
+           <div class="connection-string-box">
+              <code>{{ lastConnectionString }}</code>
+              <button class="copy-btn" @click="copyConnectionString()">📋 Copy</button>
+           </div>
+           <div class="warning-notice">
+              <span>⚠️</span>
+              <span>This connection string is shown only once. Make sure to save it securely!</span>
+           </div>
+        </div>
+        <div class="modal-footer">
+           <button class="premium-btn" @click="showConnectionStringModal = false">Got it</button>
+        </div>
+     </div>
+  </div>
+
+  <!-- SSH Update Modal -->
+  <div v-if="showSshUpdateModal" class="modal-overlay" style="z-index: 10002;" @click.self="!sshUpdateMode && (showSshUpdateModal = false)">
+     <div class="glass-card ssh-update-modal">
+        <div class="modal-header">
+           <h3>🔄 {{ t('infrastructure.updateAgent') }}</h3>
+           <button v-if="!sshUpdateMode" class="close-btn" @click="showSshUpdateModal = false">×</button>
+        </div>
+
+        <!-- Form State -->
+        <div v-if="sshSession.status === 'idle'" class="modal-body">
+           <p class="modal-description">
+              {{ t('infrastructure.sshUpdateDescription') || 'SSH connection required to update agent on this server.' }}
+           </p>
+
+           <div class="server-target">
+              <span class="server-label">{{ t('infrastructure.targetServer') || 'Target Server' }}:</span>
+              <span class="server-name">{{ sshUpdateTargetServer?.name }}</span>
+              <span class="server-ip">({{ sshUpdateTargetServer?.ip }})</span>
+           </div>
+
+           <div class="ssh-fields">
+              <div class="form-group">
+                 <label>{{ t('infrastructure.username') }}</label>
+                 <input v-model="sshForm.username" placeholder="root" />
+              </div>
+
+              <div class="form-group">
+                 <label>{{ t('infrastructure.authentication') }}</label>
+                 <div class="auth-toggle">
+                    <button
+                       :class="['auth-btn', { active: sshForm.authType === 'password' }]"
+                       @click="sshForm.authType = 'password'"
+                    >{{ t('infrastructure.passwordAuth') }}</button>
+                    <button
+                       :class="['auth-btn', { active: sshForm.authType === 'key' }]"
+                       @click="sshForm.authType = 'key'"
+                    >{{ t('infrastructure.sshKey') }}</button>
+                 </div>
+              </div>
+
+              <div v-if="sshForm.authType === 'password'" class="form-group">
+                 <label>{{ t('infrastructure.passwordAuth') }}</label>
+                 <input v-model="sshForm.password" type="password" :placeholder="t('infrastructure.enterPassword')" />
+              </div>
+
+              <div v-else class="form-group">
+                 <label>{{ t('infrastructure.privateKey') }}</label>
+                 <textarea
+                    v-model="sshForm.privateKey"
+                    :placeholder="t('infrastructure.pastePrivateKey')"
+                    rows="3"
+                    class="key-textarea"
+                 ></textarea>
+              </div>
+           </div>
+
+           <div class="privacy-notice-inline">
+              🔒 {{ t('infrastructure.credentialsNotStored') || 'Credentials are never stored - used only for this session' }}
+           </div>
+        </div>
+
+        <!-- Progress State -->
+        <div v-else class="modal-body ssh-progress">
+           <div class="progress-steps compact">
+              <div
+                 v-for="(step, idx) in [
+                    { name: t('infrastructure.connecting') || 'Connecting', icon: '🔗' },
+                    { name: t('infrastructure.downloadingBundle') || 'Downloading bundle', icon: '📦' },
+                    { name: t('infrastructure.installingDeps') || 'Installing dependencies', icon: '⚙️' },
+                    { name: t('infrastructure.restartingAgent') || 'Restarting agent', icon: '🚀' }
+                 ]"
+                 :key="idx"
+                 :class="['progress-step', {
+                    completed: sshSession.step > idx + 1,
+                    active: sshSession.step === idx + 1,
+                    error: sshSession.status === 'error' && sshSession.step === idx + 1
+                 }]"
+              >
+                 <span class="step-icon">
+                    <template v-if="sshSession.step > idx + 1">✅</template>
+                    <template v-else-if="sshSession.step === idx + 1 && sshSession.status !== 'error'">
+                       <span class="spinner"></span>
+                    </template>
+                    <template v-else-if="sshSession.status === 'error' && sshSession.step === idx + 1">❌</template>
+                    <template v-else>○</template>
+                 </span>
+                 <span class="step-name">{{ step.name }}</span>
+              </div>
+           </div>
+
+           <div :class="['status-message', sshSession.status]">
+              {{ sshSession.message }}
+           </div>
+
+           <div class="ssh-terminal compact">
+              <div v-for="(line, idx) in sshSession.output" :key="idx" class="terminal-line">{{ line }}</div>
+              <div v-if="sshSession.output.length === 0" class="terminal-placeholder">
+                 {{ t('infrastructure.waitingForOutput') || 'Waiting for output...' }}
+              </div>
+           </div>
+
+           <div class="progress-bar-container">
+              <div
+                 class="progress-bar-fill"
+                 :style="{ width: ((sshSession.step / sshSession.totalSteps) * 100) + '%' }"
+              ></div>
+           </div>
+        </div>
+
+        <div class="modal-footer">
+           <template v-if="sshSession.status === 'idle'">
+              <button class="secondary" @click="showSshUpdateModal = false">{{ t('common.cancel') }}</button>
+              <button class="premium-btn" @click="startSSHUpdate()">
+                 🚀 {{ t('infrastructure.startUpdate') || 'Start Update' }}
+              </button>
+           </template>
+           <template v-else-if="sshSession.status === 'complete'">
+              <button class="premium-btn" @click="showSshUpdateModal = false; resetSSHSession()">
+                 ✅ {{ t('common.done') || 'Done' }}
+              </button>
+           </template>
+           <template v-else-if="sshSession.status === 'error'">
+              <button class="secondary" @click="resetSSHSession()">{{ t('common.tryAgain') || 'Try Again' }}</button>
+              <button class="premium-btn" @click="showSshUpdateModal = false; resetSSHSession()">
+                 {{ t('common.close') }}
+              </button>
+           </template>
+           <template v-else>
+              <button class="secondary" @click="cancelSSHInstallation(); showSshUpdateModal = false">
+                 {{ t('common.cancel') }}
+              </button>
+           </template>
         </div>
      </div>
   </div>
@@ -4586,7 +5076,11 @@ function openNewCannedResponse() {
                        <div class="node-info">
                           <span class="node-id">{{ server.id.slice(0, 8) }}{{ server.alias ? ` (${server.alias})` : '' }}</span>
                           <span :class="['node-status', server.status]">{{ t('infrastructure.' + server.status) }}</span>
+                          <span v-if="server.agentVersion" class="node-version">v{{ server.agentVersion }}</span>
                        </div>
+                       <span v-if="server.updateAvailable && server.status === 'online'" class="update-badge" @click.stop="updateAgent(server.id)">
+                          {{ updatingAgent === server.id ? '⏳' : '⬆️' }} {{ t('infrastructure.updateAvailable') || 'Update' }}
+                       </span>
                     </div>
                     <div class="node-card-stats">
                        <div class="node-stat">
@@ -4613,28 +5107,33 @@ function openNewCannedResponse() {
            </div>
 
            <!-- Node Details -->
-           <div v-else-if="activeServer" class="grid-layout">
+           <div v-else-if="activeServer && !serverSettingsMode" class="grid-layout">
               <div class="node-detail-header">
                  <button class="back-btn" @click="selectedServerId = null">← {{ t('common.back') }}</button>
                  <h1 class="gradient-text">{{ activeServer.alias || t('infrastructure.serverDetails') }}</h1>
-                 <div class="alias-editor">
-                    <template v-if="!editingAlias">
-                       <button class="edit-alias-btn" @click="editingAlias = true; newAlias = activeServer.alias || ''">
-                          {{ activeServer.alias ? '✏️' : '+ ' + t('infrastructure.setAlias') }}
-                       </button>
-                    </template>
-                    <template v-else>
-                       <input
-                          v-model="newAlias"
-                          type="text"
-                          :placeholder="t('infrastructure.aliasPlaceholder')"
-                          class="alias-input"
-                          @keyup.enter="saveAlias"
-                          @keyup.escape="editingAlias = false"
-                       />
-                       <button class="save-alias-btn" @click="saveAlias">✓</button>
-                       <button class="cancel-alias-btn" @click="editingAlias = false">✗</button>
-                    </template>
+                 <div class="header-actions">
+                    <button class="settings-btn" @click="openServerSettings()" title="Server Settings">
+                       ⚙️ {{ t('infrastructure.serverSettings') || 'Settings' }}
+                    </button>
+                    <div class="alias-editor">
+                       <template v-if="!editingAlias">
+                          <button class="edit-alias-btn" @click="editingAlias = true; newAlias = activeServer.alias || ''">
+                             {{ activeServer.alias ? '✏️' : '+ ' + t('infrastructure.setAlias') }}
+                          </button>
+                       </template>
+                       <template v-else>
+                          <input
+                             v-model="newAlias"
+                             type="text"
+                             :placeholder="t('infrastructure.aliasPlaceholder')"
+                             class="alias-input"
+                             @keyup.enter="saveAlias"
+                             @keyup.escape="editingAlias = false"
+                          />
+                          <button class="save-alias-btn" @click="saveAlias">✓</button>
+                          <button class="cancel-alias-btn" @click="editingAlias = false">✗</button>
+                       </template>
+                    </div>
                  </div>
               </div>
 
@@ -4761,6 +5260,261 @@ function openNewCannedResponse() {
                        <div v-for="(log, idx) in logs" :key="idx" class="line"><span class="line-content">{{ log.data }}</span></div>
                     </div>
                  </div>
+              </div>
+           </div>
+
+           <!-- Server Settings View (Story 7.7) -->
+           <div v-else-if="activeServer && serverSettingsMode" class="server-settings-view">
+              <div class="node-detail-header">
+                 <button class="back-btn" @click="closeServerSettings()">← {{ t('common.back') }}</button>
+                 <h1 class="gradient-text">⚙️ {{ t('infrastructure.serverSettings') || 'Server Settings' }} - {{ activeServer.alias || activeServer.id.slice(0, 8) }}</h1>
+                 <button class="refresh-btn" @click="requestServerStatus()" :disabled="infraStatusLoading">
+                    {{ infraStatusLoading ? '...' : '↻ Refresh' }}
+                 </button>
+              </div>
+
+              <!-- Server Info Bar -->
+              <div class="glass-card server-info-bar" v-if="infraStatus">
+                 <div class="info-item">
+                    <span class="info-label">OS</span>
+                    <span class="info-value">{{ infraStatus.system.os }} {{ infraStatus.system.osVersion }}</span>
+                 </div>
+                 <div class="info-item">
+                    <span class="info-label">CPU</span>
+                    <span class="info-value">{{ infraStatus.system.cpu }} cores</span>
+                 </div>
+                 <div class="info-item">
+                    <span class="info-label">RAM</span>
+                    <span class="info-value">{{ infraStatus.system.ram }}</span>
+                 </div>
+                 <div class="info-item">
+                    <span class="info-label">Disk</span>
+                    <span class="info-value">{{ infraStatus.system.disk }}</span>
+                 </div>
+                 <div class="info-item">
+                    <span class="info-label">Uptime</span>
+                    <span class="info-value">{{ infraStatus.system.uptime }}</span>
+                 </div>
+              </div>
+              <div v-else-if="infraStatusLoading" class="loading-bar">
+                 Loading server status...
+              </div>
+
+              <!-- Runtimes Section -->
+              <div class="settings-section">
+                 <h2>📦 {{ t('infrastructure.runtimes') || 'Runtimes' }}</h2>
+                 <div class="runtime-grid" v-if="infraStatus">
+                    <!-- Node.js (always installed) -->
+                    <div class="runtime-card installed">
+                       <div class="runtime-icon">🟢</div>
+                       <div class="runtime-info">
+                          <span class="runtime-name">Node.js</span>
+                          <span class="runtime-version">{{ infraStatus.runtimes.find(r => r.type === 'nodejs')?.version || 'installed' }}</span>
+                       </div>
+                       <span class="runtime-badge installed">✓ Installed</span>
+                    </div>
+
+                    <!-- Python -->
+                    <div class="runtime-card" :class="{ installed: infraStatus.runtimes.find(r => r.type === 'python')?.installed }">
+                       <div class="runtime-icon">🐍</div>
+                       <div class="runtime-info">
+                          <span class="runtime-name">Python</span>
+                          <span class="runtime-version" v-if="infraStatus.runtimes.find(r => r.type === 'python')?.installed">
+                             {{ infraStatus.runtimes.find(r => r.type === 'python')?.version }}
+                          </span>
+                          <span class="runtime-size" v-else>~200MB</span>
+                       </div>
+                       <button
+                          v-if="!infraStatus.runtimes.find(r => r.type === 'python')?.installed"
+                          class="install-btn"
+                          @click="installRuntime('python')"
+                          :disabled="installingRuntime !== null"
+                       >
+                          {{ installingRuntime === 'python' ? 'Installing...' : 'Install' }}
+                       </button>
+                       <span v-else class="runtime-badge installed">✓ Installed</span>
+                    </div>
+
+                    <!-- Go -->
+                    <div class="runtime-card" :class="{ installed: infraStatus.runtimes.find(r => r.type === 'go')?.installed }">
+                       <div class="runtime-icon">🔵</div>
+                       <div class="runtime-info">
+                          <span class="runtime-name">Go</span>
+                          <span class="runtime-version" v-if="infraStatus.runtimes.find(r => r.type === 'go')?.installed">
+                             {{ infraStatus.runtimes.find(r => r.type === 'go')?.version }}
+                          </span>
+                          <span class="runtime-size" v-else>~500MB</span>
+                       </div>
+                       <button
+                          v-if="!infraStatus.runtimes.find(r => r.type === 'go')?.installed"
+                          class="install-btn"
+                          @click="installRuntime('go')"
+                          :disabled="installingRuntime !== null"
+                       >
+                          {{ installingRuntime === 'go' ? 'Installing...' : 'Install' }}
+                       </button>
+                       <span v-else class="runtime-badge installed">✓ Installed</span>
+                    </div>
+
+                    <!-- Docker -->
+                    <div class="runtime-card" :class="{ installed: infraStatus.runtimes.find(r => r.type === 'docker')?.installed }">
+                       <div class="runtime-icon">🐳</div>
+                       <div class="runtime-info">
+                          <span class="runtime-name">Docker</span>
+                          <span class="runtime-version" v-if="infraStatus.runtimes.find(r => r.type === 'docker')?.installed">
+                             {{ infraStatus.runtimes.find(r => r.type === 'docker')?.version }}
+                          </span>
+                          <span class="runtime-size" v-else>~500MB</span>
+                       </div>
+                       <button
+                          v-if="!infraStatus.runtimes.find(r => r.type === 'docker')?.installed"
+                          class="install-btn"
+                          @click="installRuntime('docker')"
+                          :disabled="installingRuntime !== null"
+                       >
+                          {{ installingRuntime === 'docker' ? 'Installing...' : 'Install' }}
+                       </button>
+                       <span v-else class="runtime-badge installed">✓ Installed</span>
+                    </div>
+
+                    <!-- Rust -->
+                    <div class="runtime-card" :class="{ installed: infraStatus.runtimes.find(r => r.type === 'rust')?.installed }">
+                       <div class="runtime-icon">🦀</div>
+                       <div class="runtime-info">
+                          <span class="runtime-name">Rust</span>
+                          <span class="runtime-version" v-if="infraStatus.runtimes.find(r => r.type === 'rust')?.installed">
+                             {{ infraStatus.runtimes.find(r => r.type === 'rust')?.version }}
+                          </span>
+                          <span class="runtime-size" v-else>~1GB</span>
+                       </div>
+                       <button
+                          v-if="!infraStatus.runtimes.find(r => r.type === 'rust')?.installed"
+                          class="install-btn"
+                          @click="installRuntime('rust')"
+                          :disabled="installingRuntime !== null"
+                       >
+                          {{ installingRuntime === 'rust' ? 'Installing...' : 'Install' }}
+                       </button>
+                       <span v-else class="runtime-badge installed">✓ Installed</span>
+                    </div>
+
+                    <!-- Ruby -->
+                    <div class="runtime-card" :class="{ installed: infraStatus.runtimes.find(r => r.type === 'ruby')?.installed }">
+                       <div class="runtime-icon">💎</div>
+                       <div class="runtime-info">
+                          <span class="runtime-name">Ruby</span>
+                          <span class="runtime-version" v-if="infraStatus.runtimes.find(r => r.type === 'ruby')?.installed">
+                             {{ infraStatus.runtimes.find(r => r.type === 'ruby')?.version }}
+                          </span>
+                          <span class="runtime-size" v-else>~300MB</span>
+                       </div>
+                       <button
+                          v-if="!infraStatus.runtimes.find(r => r.type === 'ruby')?.installed"
+                          class="install-btn"
+                          @click="installRuntime('ruby')"
+                          :disabled="installingRuntime !== null"
+                       >
+                          {{ installingRuntime === 'ruby' ? 'Installing...' : 'Install' }}
+                       </button>
+                       <span v-else class="runtime-badge installed">✓ Installed</span>
+                    </div>
+                 </div>
+              </div>
+
+              <!-- Databases Section -->
+              <div class="settings-section">
+                 <h2>🗄️ {{ t('infrastructure.databases') || 'Databases' }}</h2>
+                 <div class="database-grid" v-if="infraStatus">
+                    <!-- PostgreSQL -->
+                    <div class="database-card" :class="{ configured: infraStatus.databases.find(d => d.type === 'postgresql')?.installed }">
+                       <div class="db-icon">🐘</div>
+                       <div class="db-info">
+                          <span class="db-name">PostgreSQL</span>
+                          <span class="db-status" v-if="infraStatus.databases.find(d => d.type === 'postgresql')?.installed">
+                             {{ infraStatus.databases.find(d => d.type === 'postgresql')?.running ? '🟢 Running' : '🔴 Stopped' }}
+                          </span>
+                          <span class="db-status" v-else>Not configured</span>
+                       </div>
+                       <button
+                          v-if="!infraStatus.databases.find(d => d.type === 'postgresql')?.installed"
+                          class="setup-btn"
+                          @click="openDbConfigModal('postgresql')"
+                          :disabled="configuringDatabase !== null"
+                       >
+                          {{ configuringDatabase === 'postgresql' ? 'Setting up...' : 'Setup' }}
+                       </button>
+                       <span v-else class="db-badge configured">✓ Configured</span>
+                    </div>
+
+                    <!-- MySQL -->
+                    <div class="database-card" :class="{ configured: infraStatus.databases.find(d => d.type === 'mysql')?.installed }">
+                       <div class="db-icon">🐬</div>
+                       <div class="db-info">
+                          <span class="db-name">MySQL</span>
+                          <span class="db-status" v-if="infraStatus.databases.find(d => d.type === 'mysql')?.installed">
+                             {{ infraStatus.databases.find(d => d.type === 'mysql')?.running ? '🟢 Running' : '🔴 Stopped' }}
+                          </span>
+                          <span class="db-status" v-else>Not configured</span>
+                       </div>
+                       <button
+                          v-if="!infraStatus.databases.find(d => d.type === 'mysql')?.installed"
+                          class="setup-btn"
+                          @click="openDbConfigModal('mysql')"
+                          :disabled="configuringDatabase !== null"
+                       >
+                          {{ configuringDatabase === 'mysql' ? 'Setting up...' : 'Setup' }}
+                       </button>
+                       <span v-else class="db-badge configured">✓ Configured</span>
+                    </div>
+
+                    <!-- Redis -->
+                    <div class="database-card" :class="{ configured: infraStatus.databases.find(d => d.type === 'redis')?.installed }">
+                       <div class="db-icon">⚡</div>
+                       <div class="db-info">
+                          <span class="db-name">Redis</span>
+                          <span class="db-status" v-if="infraStatus.databases.find(d => d.type === 'redis')?.installed">
+                             {{ infraStatus.databases.find(d => d.type === 'redis')?.running ? '🟢 Running' : '🔴 Stopped' }}
+                          </span>
+                          <span class="db-status" v-else>Not configured</span>
+                       </div>
+                       <button
+                          v-if="!infraStatus.databases.find(d => d.type === 'redis')?.installed"
+                          class="setup-btn"
+                          @click="openDbConfigModal('redis')"
+                          :disabled="configuringDatabase !== null"
+                       >
+                          {{ configuringDatabase === 'redis' ? 'Setting up...' : 'Setup' }}
+                       </button>
+                       <span v-else class="db-badge configured">✓ Configured</span>
+                    </div>
+                 </div>
+              </div>
+
+              <!-- Live Console Section -->
+              <div class="settings-section">
+                 <div class="console-header">
+                    <h2>📋 {{ t('infrastructure.installConsole') || 'Installation Console' }}</h2>
+                    <div class="console-actions">
+                       <button class="console-btn" @click="clearInfraLogs()">Clear</button>
+                       <button class="console-btn" @click="copyInfraLogs()">Copy</button>
+                    </div>
+                 </div>
+                 <div class="infra-console glass-card">
+                    <div class="infra-console-body">
+                       <div v-if="infrastructureLogs.length === 0" class="console-empty">
+                          Waiting for installation logs...
+                       </div>
+                       <div v-for="(log, idx) in infrastructureLogs" :key="idx" :class="['console-line', log.stream]">
+                          {{ log.message }}
+                       </div>
+                    </div>
+                 </div>
+              </div>
+
+              <!-- Backups Section (Placeholder) -->
+              <div class="settings-section disabled-section">
+                 <h2>💾 {{ t('infrastructure.backups') || 'Backups' }} <span class="coming-soon">Coming Soon</span></h2>
+                 <p class="section-description">Configure automatic backups to S3, Rsync, or other storage providers.</p>
               </div>
            </div>
         </div>
@@ -6303,6 +7057,32 @@ nav a:hover, nav a.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
 }
 .node-status.online { color: #10b981; }
 .node-status.offline { color: #ef4444; }
+.node-version {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  font-family: monospace;
+}
+.update-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  text-transform: uppercase;
+}
+.update-badge:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+}
+.node-card {
+  position: relative;
+}
 .node-card-stats {
   display: flex;
   gap: 24px;
@@ -12025,6 +12805,715 @@ nav a:hover, nav a.active { color: #fff; background: rgba(255, 255, 255, 0.1); }
   .hamburger-line {
     height: 2px;
   }
+}
+
+/* ==================== SERVER SETTINGS STYLES (Story 7.7) ==================== */
+.server-settings-view {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.server-settings-view .node-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.server-settings-view .refresh-btn {
+  margin-left: auto;
+  padding: 8px 16px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  color: #3b82f6;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.server-settings-view .refresh-btn:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.server-settings-view .refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.server-info-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding: 16px 24px;
+}
+
+.server-info-bar .info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.server-info-bar .info-label {
+  font-size: 0.7rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.server-info-bar .info-value {
+  font-size: 0.95rem;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.loading-bar {
+  padding: 16px 24px;
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 12px;
+  text-align: center;
+  color: #64748b;
+}
+
+.settings-section {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.settings-section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 16px;
+  color: #1e293b;
+}
+
+.settings-section.disabled-section {
+  opacity: 0.6;
+}
+
+.settings-section .coming-soon {
+  font-size: 0.7rem;
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 8px;
+  font-weight: 500;
+}
+
+.settings-section .section-description {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.runtime-grid, .database-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.runtime-card, .database-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s;
+}
+
+.runtime-card.installed, .database-card.configured {
+  background: rgba(34, 197, 94, 0.05);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.runtime-icon, .db-icon {
+  font-size: 2rem;
+}
+
+.runtime-info, .db-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.runtime-name, .db-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.runtime-version {
+  font-size: 0.8rem;
+  color: #22c55e;
+}
+
+.runtime-size, .db-status {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.runtime-badge, .db-badge {
+  font-size: 0.7rem;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.runtime-badge.installed, .db-badge.configured {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+}
+
+.install-btn, .setup-btn {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.install-btn:hover:not(:disabled), .setup-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.install-btn:disabled, .setup-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.console-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.console-header h2 {
+  margin-bottom: 0;
+}
+
+.console-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.console-btn {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.console-btn:hover {
+  background: white;
+  border-color: #cbd5e1;
+}
+
+.infra-console {
+  background: #1a1f2e;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.infra-console-body {
+  padding: 16px;
+  min-height: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.85rem;
+}
+
+.infra-console-body .console-empty {
+  color: #64748b;
+  text-align: center;
+  padding: 40px 0;
+}
+
+.infra-console-body .console-line {
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+
+.infra-console-body .console-line.stdout {
+  color: #e2e8f0;
+}
+
+.infra-console-body .console-line.stderr {
+  color: #ef4444;
+}
+
+/* Header Actions */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-btn {
+  padding: 8px 16px;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 8px;
+  color: #8b5cf6;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.settings-btn:hover {
+  background: rgba(139, 92, 246, 0.2);
+}
+
+/* Database Config Modal */
+.db-config-modal, .connection-string-modal {
+  width: 90%;
+  max-width: 480px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.db-config-modal .modal-header,
+.connection-string-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.db-config-modal .modal-header h3,
+.connection-string-modal .modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #1e293b;
+}
+
+.connection-string-modal .modal-header.success {
+  background: rgba(34, 197, 94, 0.1);
+  border-bottom-color: rgba(34, 197, 94, 0.2);
+}
+
+.connection-string-modal .modal-header.success h3 {
+  color: #22c55e;
+}
+
+.db-config-modal .close-btn,
+.connection-string-modal .close-btn {
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.db-config-modal .close-btn:hover,
+.connection-string-modal .close-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #1e293b;
+}
+
+.db-config-modal .modal-body,
+.connection-string-modal .modal-body {
+  padding: 20px;
+}
+
+.modal-description {
+  margin: 0 0 16px;
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.db-config-modal .form-group {
+  margin-bottom: 16px;
+}
+
+.db-config-modal .form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.db-config-modal .form-group input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.db-config-modal .form-group input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.security-notice, .warning-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #3b82f6;
+}
+
+.warning-notice {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+}
+
+.db-config-modal .modal-footer,
+.connection-string-modal .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.connection-string-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #1a1f2e;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.connection-string-box code {
+  flex: 1;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.85rem;
+  color: #22c55e;
+  word-break: break-all;
+}
+
+.connection-string-box .copy-btn {
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.connection-string-box .copy-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* SSH Update Modal */
+.ssh-update-modal {
+  width: 520px;
+  max-width: 95vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+.ssh-update-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ssh-update-modal .modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.ssh-update-modal .close-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.ssh-update-modal .close-btn:hover {
+  color: white;
+}
+
+.ssh-update-modal .modal-body {
+  padding: 1.5rem;
+}
+
+.ssh-update-modal .modal-description {
+  margin: 0 0 1.25rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+.ssh-update-modal .server-target {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ssh-update-modal .server-target .server-label {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+}
+
+.ssh-update-modal .server-target .server-name {
+  font-weight: 600;
+  color: white;
+}
+
+.ssh-update-modal .server-target .server-ip {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+}
+
+.ssh-update-modal .ssh-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ssh-update-modal .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ssh-update-modal .form-group label {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.ssh-update-modal .form-group input,
+.ssh-update-modal .form-group textarea {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: white;
+  font-size: 0.9rem;
+}
+
+.ssh-update-modal .form-group input:focus,
+.ssh-update-modal .form-group textarea:focus {
+  outline: none;
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.ssh-update-modal .auth-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.ssh-update-modal .auth-btn {
+  flex: 1;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.85rem;
+}
+
+.ssh-update-modal .auth-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.ssh-update-modal .auth-btn.active {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.4);
+  color: white;
+}
+
+.ssh-update-modal .key-textarea {
+  min-height: 80px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.8rem;
+}
+
+.ssh-update-modal .privacy-notice-inline {
+  margin-top: 1rem;
+  padding: 10px 14px;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: rgba(34, 197, 94, 0.9);
+}
+
+.ssh-update-modal .ssh-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ssh-update-modal .progress-steps.compact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ssh-update-modal .progress-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.ssh-update-modal .progress-step.active {
+  background: rgba(99, 102, 241, 0.15);
+  color: white;
+}
+
+.ssh-update-modal .progress-step.completed {
+  background: rgba(34, 197, 94, 0.1);
+  color: rgba(34, 197, 94, 0.9);
+}
+
+.ssh-update-modal .progress-step.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: rgba(239, 68, 68, 0.9);
+}
+
+.ssh-update-modal .step-icon {
+  width: 20px;
+  text-align: center;
+}
+
+.ssh-update-modal .spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(99, 102, 241, 0.3);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.ssh-update-modal .status-message {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.ssh-update-modal .status-message.connecting,
+.ssh-update-modal .status-message.installing {
+  background: rgba(99, 102, 241, 0.1);
+  color: rgba(99, 102, 241, 0.9);
+}
+
+.ssh-update-modal .status-message.complete {
+  background: rgba(34, 197, 94, 0.1);
+  color: rgba(34, 197, 94, 0.9);
+}
+
+.ssh-update-modal .status-message.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: rgba(239, 68, 68, 0.9);
+}
+
+.ssh-update-modal .ssh-terminal.compact {
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
+  padding: 12px;
+  max-height: 150px;
+  overflow-y: auto;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.75rem;
+}
+
+.ssh-update-modal .terminal-line {
+  color: rgba(255, 255, 255, 0.7);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.ssh-update-modal .terminal-placeholder {
+  color: rgba(255, 255, 255, 0.3);
+  font-style: italic;
+}
+
+.ssh-update-modal .progress-bar-container {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.ssh-update-modal .progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  transition: width 0.3s ease;
+}
+
+.ssh-update-modal .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ssh-update-modal .modal-footer .secondary {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ssh-update-modal .modal-footer .secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 /* ==================== PRINT STYLES ==================== */

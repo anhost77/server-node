@@ -42,7 +42,9 @@ export default {
         details: 'Détails',
         settings: 'Paramètres',
         logout: 'Déconnexion',
-        profile: 'Profil'
+        profile: 'Profil',
+        done: 'Terminé',
+        tryAgain: 'Réessayer'
     },
 
     // Auth
@@ -150,7 +152,41 @@ export default {
         sshKey: 'Clé SSH',
         enterPassword: 'Entrez le mot de passe SSH',
         requirements: 'Prérequis :',
-        requirementsDesc: 'Debian/Ubuntu, accès root ou sudo, connectivité internet'
+        requirementsDesc: 'Debian/Ubuntu, accès root ou sudo, connectivité internet',
+
+        // Server Settings (Story 7.7)
+        serverSettings: 'Paramètres du serveur',
+        runtimes: 'Runtimes',
+        databases: 'Bases de données',
+        backups: 'Sauvegardes',
+        installConsole: 'Console d\'installation',
+        comingSoon: 'Bientôt disponible',
+        installed: 'Installé',
+        notInstalled: 'Non installé',
+        configured: 'Configuré',
+        notConfigured: 'Non configuré',
+        install: 'Installer',
+        setup: 'Configurer',
+        settingUp: 'Configuration...',
+        databaseName: 'Nom de la base',
+        connectionString: 'Chaîne de connexion',
+        connectionStringWarning: 'Cette chaîne de connexion n\'est affichée qu\'une seule fois. Assurez-vous de la sauvegarder !',
+        setupDatabase: 'Configurer la base',
+        databaseConfigured: 'Base de données configurée',
+        copyConnectionString: 'Copiez et sauvegardez cette chaîne de connexion dans votre fichier .env',
+        updateAvailable: 'Mettre à jour',
+        updating: 'Mise à jour...',
+        updateSuccess: 'Agent mis à jour !',
+        updateFailed: 'Échec de la mise à jour',
+        updateAgent: 'Mettre à jour l\'agent',
+        sshUpdateDescription: 'Connexion SSH requise pour mettre à jour l\'agent sur ce serveur.',
+        targetServer: 'Serveur cible',
+        credentialsNotStored: 'Les identifiants ne sont jamais stockés - utilisés uniquement pour cette session',
+        downloadingBundle: 'Téléchargement du bundle',
+        installingDeps: 'Installation des dépendances',
+        restartingAgent: 'Redémarrage de l\'agent',
+        waitingForOutput: 'En attente de la sortie...',
+        startUpdate: 'Démarrer la mise à jour'
     },
 
     // Applications

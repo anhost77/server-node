@@ -42,7 +42,9 @@ export default {
         details: 'Details',
         settings: 'Settings',
         logout: 'Logout',
-        profile: 'Profile'
+        profile: 'Profile',
+        done: 'Done',
+        tryAgain: 'Try Again'
     },
 
     // Auth
@@ -150,7 +152,41 @@ export default {
         sshKey: 'SSH Key',
         enterPassword: 'Enter SSH password',
         requirements: 'Requirements:',
-        requirementsDesc: 'Debian/Ubuntu, root or sudo access, internet connectivity'
+        requirementsDesc: 'Debian/Ubuntu, root or sudo access, internet connectivity',
+
+        // Server Settings (Story 7.7)
+        serverSettings: 'Server Settings',
+        runtimes: 'Runtimes',
+        databases: 'Databases',
+        backups: 'Backups',
+        installConsole: 'Installation Console',
+        comingSoon: 'Coming Soon',
+        installed: 'Installed',
+        notInstalled: 'Not Installed',
+        configured: 'Configured',
+        notConfigured: 'Not Configured',
+        install: 'Install',
+        setup: 'Setup',
+        settingUp: 'Setting up...',
+        databaseName: 'Database Name',
+        connectionString: 'Connection String',
+        connectionStringWarning: 'This connection string is shown only once. Make sure to save it securely!',
+        setupDatabase: 'Setup Database',
+        databaseConfigured: 'Database Configured',
+        copyConnectionString: 'Copy and save this connection string to your .env file',
+        updateAvailable: 'Update',
+        updating: 'Updating...',
+        updateSuccess: 'Agent updated successfully!',
+        updateFailed: 'Update failed',
+        updateAgent: 'Update Agent',
+        sshUpdateDescription: 'SSH connection required to update agent on this server.',
+        targetServer: 'Target Server',
+        credentialsNotStored: 'Credentials are never stored - used only for this session',
+        downloadingBundle: 'Downloading bundle',
+        installingDeps: 'Installing dependencies',
+        restartingAgent: 'Restarting agent',
+        waitingForOutput: 'Waiting for output...',
+        startUpdate: 'Start Update'
     },
 
     // Applications

@@ -165,8 +165,21 @@ fastify.addHook('onRequest', async (req, reply) => {
 });
 
 // Real-time State
-interface AgentSession { pubKey: string; nodeId: string; socket: any; authorized: boolean; nonce?: string; }
+interface AgentSession { pubKey: string; nodeId: string; socket: any; authorized: boolean; nonce?: string; version?: string; }
 const agentSessions = new Map<string, AgentSession>();
+
+// Get current agent bundle version from package.json
+function getAgentBundleVersion(): string {
+    try {
+        const pkgPath = path.join(__dirname, '../../agent/package.json');
+        if (fs.existsSync(pkgPath)) {
+            const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+            return pkg.version || '0.0.0';
+        }
+    } catch { }
+    return '0.0.0';
+}
+const AGENT_BUNDLE_VERSION = getAgentBundleVersion();
 const dashboardSessions = new Map<string, Set<any>>(); // Map userId -> Set of sockets
 const serverMetricsCache = new Map<string, { cpu: number; ram: number; disk: number; ip?: string; updatedAt: number }>(); // nodeId -> metrics
 const pendingLogRequests = new Map<string, { resolve: (logs: string) => void; timeout: NodeJS.Timeout }>(); // requestId -> resolver
@@ -1262,10 +1275,23 @@ fastify.register(async function (fastify) {
 
         const state = userNodes.map(n => {
             const active = Array.from(agentSessions.values()).find(sess => sess.nodeId === n.id && sess.authorized);
-            return { ...n, status: active ? 'online' : 'offline' };
+            // updateAvailable is true if agent is online AND (no version reported OR different version)
+            const needsUpdate = active && (!active.version || active.version !== AGENT_BUNDLE_VERSION);
+            return {
+                ...n,
+                status: active ? 'online' : 'offline',
+                agentVersion: active?.version || null,
+                updateAvailable: needsUpdate
+            };
         });
 
-        socket.send(JSON.stringify({ type: 'INITIAL_STATE', servers: state, apps: userApps, proxies: userProxies }));
+        socket.send(JSON.stringify({
+            type: 'INITIAL_STATE',
+            servers: state,
+            apps: userApps,
+            proxies: userProxies,
+            bundleVersion: AGENT_BUNDLE_VERSION
+        }));
 
         socket.on('message', async (data: Buffer) => {
             try {
@@ -1355,6 +1381,13 @@ fastify.register(async function (fastify) {
                     return;
                 }
 
+                // Infrastructure messages (Story 7.7) + Agent Update
+                if (['GET_SERVER_STATUS', 'INSTALL_RUNTIME', 'CONFIGURE_DATABASE', 'UPDATE_AGENT'].includes(msg.type)) {
+                    const ok = await sendToAgentById(nodeId, msg, userId);
+                    if (!ok) console.error(`❌ Infrastructure command failed: ${msg.type}`);
+                    return;
+                }
+
                 if (['PROVISION_DOMAIN', 'SERVICE_ACTION', 'APP_ACTION', 'DELETE_PROXY'].includes(msg.type)) {
                     // Check domain limit for PROVISION_DOMAIN
                     if (msg.type === 'PROVISION_DOMAIN') {
@@ -1405,10 +1438,10 @@ fastify.register(async function (fastify) {
             try {
                 const msg = JSON.parse(message.toString());
                 if (msg.type === 'CONNECT') {
-                    console.log('📡 Agent connecting, pubKey:', msg.pubKey.substring(0, 10));
+                    console.log('📡 Agent connecting, pubKey:', msg.pubKey.substring(0, 10), 'version:', msg.version || 'unknown');
                     const node = await db.select().from(schema.nodes).where(eq(schema.nodes.pubKey, msg.pubKey)).get();
                     if (!node) return socket.send(JSON.stringify({ type: 'ERROR', message: 'Not registered' }));
-                    agentSessions.set(connectionId, { pubKey: msg.pubKey, nodeId: node.id, socket, authorized: false, nonce });
+                    agentSessions.set(connectionId, { pubKey: msg.pubKey, nodeId: node.id, socket, authorized: false, nonce, version: msg.version });
                     socket.send(JSON.stringify({ type: 'CHALLENGE', nonce }));
                 }
                 else if (msg.type === 'RESPONSE') {
@@ -1433,8 +1466,8 @@ fastify.register(async function (fastify) {
                     if (!tokenData || tokenData.expiresAt < Date.now()) return socket.send(JSON.stringify({ type: 'ERROR', message: 'Invalid token' }));
                     const nodeId = randomUUID();
                     await db.insert(schema.nodes).values({ id: nodeId, ownerId: tokenData.ownerId, pubKey: msg.pubKey }).run();
-                    console.log(`🚀 Node reg [${nodeId}]`);
-                    agentSessions.set(connectionId, { pubKey: msg.pubKey, nodeId, socket, authorized: true });
+                    console.log(`🚀 Node reg [${nodeId}] version:`, msg.version || 'unknown');
+                    agentSessions.set(connectionId, { pubKey: msg.pubKey, nodeId, socket, authorized: true, version: msg.version });
                     // Include CP public key so agent can verify future commands
                     socket.send(JSON.stringify({
                         type: 'REGISTERED',
@@ -1483,6 +1516,14 @@ fastify.register(async function (fastify) {
                                 }
                             }
                         }
+                    }
+                }
+                // Infrastructure response messages (Story 7.7) + Agent Update
+                else if (['SERVER_STATUS_RESPONSE', 'INFRASTRUCTURE_LOG', 'RUNTIME_INSTALLED', 'DATABASE_CONFIGURED', 'AGENT_UPDATE_STATUS'].includes(msg.type)) {
+                    const sess = agentSessions.get(connectionId);
+                    if (sess?.authorized) {
+                        console.log(`🔧 [${sess.nodeId}] Infrastructure: ${msg.type}`);
+                        broadcastToDashboards({ ...msg, serverId: sess.nodeId });
                     }
                 }
                 // Handle log response from agent
@@ -1956,6 +1997,14 @@ fastify.register(async function (fastify) {
                     const controlPlaneUrl = process.env.CONTROL_PLANE_URL || `http://${localIp}:3000`;
                     console.log('🌐 Control Plane URL for manual installation:', controlPlaneUrl);
                     await sshManager.runInstallation(sessionId, controlPlaneUrl, token);
+                }
+
+                // Agent update trigger (for old agents without UPDATE_AGENT support)
+                else if (msg.type === 'START_UPDATE' && sessionId) {
+                    const localIp = getLocalIpAddress();
+                    const controlPlaneUrl = process.env.CONTROL_PLANE_URL || `http://${localIp}:3000`;
+                    console.log('🔄 Starting SSH-based agent update');
+                    await sshManager.runUpdate(sessionId, controlPlaneUrl);
                 }
 
                 // Send input to SSH shell

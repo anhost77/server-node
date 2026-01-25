@@ -84,4 +84,5 @@ development_status:
   7-5-vps-providers-integration: done  # Hetzner, DigitalOcean, Vultr APIs (backend)
   7-6-managed-servers-ui: backlog  # Dashboard UI for managed servers (currently hidden)
   7-7-multi-runtime-installer: in-progress  # DISCUSSION: How to install runtimes on servers
+  7-8-one-click-agent-update: done  # Dashboard update button + SSH fallback for old agents
   epic-7-retrospective: optional
