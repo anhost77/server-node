@@ -1284,7 +1284,11 @@ export class InfrastructureManager {
             { type: 'postfix', installed: false, running: false },
             { type: 'dovecot', installed: false, running: false },
             { type: 'rspamd', installed: false, running: false },
-            { type: 'opendkim', installed: false, running: false }
+            { type: 'opendkim', installed: false, running: false },
+            // Backup Tools
+            { type: 'rsync', installed: false, running: false },
+            { type: 'rclone', installed: false, running: false },
+            { type: 'restic', installed: false, running: false }
         ];
 
         // Run all version checks in parallel for better performance
@@ -1303,7 +1307,10 @@ export class InfrastructureManager {
             postfixVersion,
             dovecotVersion,
             rspamdVersion,
-            opendkimInstalled
+            opendkimInstalled,
+            rsyncVersion,
+            rcloneVersion,
+            resticVersion
         ] = await Promise.all([
             this.getCommandVersion('nginx', ['-v']),
             this.getCommandVersion('haproxy', ['-v']),
@@ -1319,7 +1326,10 @@ export class InfrastructureManager {
             this.getCommandVersion('postconf', ['mail_version']),
             this.getCommandVersion('dovecot', ['--version']),
             this.getCommandVersion('rspamd', ['--version']),
-            this.commandExists('opendkim')
+            this.commandExists('opendkim'),
+            this.getCommandVersion('rsync', ['--version']),
+            this.getCommandVersion('rclone', ['--version']),
+            this.getCommandVersion('restic', ['version'])
         ]);
 
         // Collect services that need running status checks
@@ -1446,6 +1456,27 @@ export class InfrastructureManager {
             services[14].installed = true;
             services[14].version = 'installed';
             runningChecks.push(this.isServiceRunning('opendkim').then(r => ({ index: 14, running: r })));
+        }
+
+        // rsync (not a daemon - no running check)
+        if (rsyncVersion) {
+            services[15].installed = true;
+            services[15].version = rsyncVersion;
+            services[15].running = false;
+        }
+
+        // rclone (not a daemon - no running check)
+        if (rcloneVersion) {
+            services[16].installed = true;
+            services[16].version = rcloneVersion;
+            services[16].running = false;
+        }
+
+        // restic (not a daemon - no running check)
+        if (resticVersion) {
+            services[17].installed = true;
+            services[17].version = resticVersion;
+            services[17].running = false;
         }
 
         // Execute all running checks in parallel
