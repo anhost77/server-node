@@ -150,7 +150,7 @@ const mailServices = [
   { type: 'dovecot', name: 'Dovecot', icon: 'DC', size: '~40MB', description: 'IMAP/POP3 Server', canRemove: true },
   { type: 'rspamd', name: 'Rspamd', icon: 'RS', size: '~100MB', description: 'Antispam Filter', canRemove: true },
   { type: 'opendkim', name: 'OpenDKIM', icon: 'DK', size: '~10MB', description: 'DKIM Signing', canRemove: true },
-  { type: 'clamav', name: 'ClamAV', icon: 'AV', size: '~200MB', description: 'Antivirus Scanner', canRemove: true },
+  { type: 'clamav', name: 'ClamAV', icon: 'AV', size: '~500MB', description: 'Antivirus Scanner', canRemove: true, warning: '⚠️ Installation gourmande en ressources (RAM/CPU). Peut prendre 5-10 min.' },
   { type: 'spf-policyd', name: 'SPF Policy', icon: 'SP', size: '~5MB', description: 'SPF Verification', canRemove: true }
 ]
 
@@ -998,13 +998,14 @@ function confirmReconfigureDatabase() {
             <div class="flex-1 min-w-0">
               <h3 class="font-semibold text-slate-800 text-sm">{{ svc.name }}</h3>
               <p class="text-xs text-slate-500">{{ svc.description }}</p>
+              <p v-if="svc.warning && !getService(svc.type)?.installed" class="text-xs text-amber-600 mt-0.5 font-medium">{{ svc.warning }}</p>
               <p v-if="getService(svc.type)?.installed" class="text-xs font-medium mt-0.5">
                 <span class="inline-flex items-center gap-1" :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-500'">
                   <span class="w-1.5 h-1.5 rounded-full" :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"></span>
                   {{ getService(svc.type)?.running ? t('infrastructure.running') : t('infrastructure.stopped') }}
                 </span>
               </p>
-              <p v-else class="text-xs text-slate-400 mt-0.5">{{ svc.size }}</p>
+              <p v-else-if="!svc.warning" class="text-xs text-slate-400 mt-0.5">{{ svc.size }}</p>
               <p v-if="getService(svc.type)?.version" class="text-xs text-slate-500">
                 v{{ getService(svc.type)?.version }}
               </p>
