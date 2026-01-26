@@ -2106,7 +2106,7 @@ maxretry = 3
         // Add Grafana repository
         await this.runCommand('apt-get', ['install', '-y', 'apt-transport-https', 'software-properties-common']);
         await this.runCommand('curl', ['-sSLo', '/tmp/grafana.gpg.key', 'https://apt.grafana.com/gpg.key']);
-        await this.runCommand('gpg', ['--dearmor', '-o', '/usr/share/keyrings/grafana.gpg', '/tmp/grafana.gpg.key']);
+        await this.runCommand('gpg', ['--batch', '--yes', '--dearmor', '-o', '/usr/share/keyrings/grafana.gpg', '/tmp/grafana.gpg.key']);
 
         const repoLine = 'deb [signed-by=/usr/share/keyrings/grafana.gpg] https://apt.grafana.com stable main';
         fs.writeFileSync('/etc/apt/sources.list.d/grafana.list', repoLine + '\n');
@@ -2298,8 +2298,8 @@ info_log_path = /var/log/dovecot-info.log
 
         const codename = await this.runCommandSilent('lsb_release', ['-cs']);
 
-        await this.runCommand('wget', ['-qO-', 'https://rspamd.com/apt-stable/gpg.key', '-O', '/tmp/rspamd.gpg.key']);
-        await this.runCommand('gpg', ['--dearmor', '-o', '/usr/share/keyrings/rspamd.gpg', '/tmp/rspamd.gpg.key']);
+        await this.runCommand('wget', ['-qO', '/tmp/rspamd.gpg.key', 'https://rspamd.com/apt-stable/gpg.key']);
+        await this.runCommand('gpg', ['--batch', '--yes', '--dearmor', '-o', '/usr/share/keyrings/rspamd.gpg', '/tmp/rspamd.gpg.key']);
 
         const repoLine = `deb [signed-by=/usr/share/keyrings/rspamd.gpg] https://rspamd.com/apt-stable/ ${codename.trim()} main`;
         fs.writeFileSync('/etc/apt/sources.list.d/rspamd.list', repoLine + '\n');
@@ -2424,7 +2424,7 @@ ${hostname}
         // Add MongoDB repository
         await this.runCommand('apt-get', ['install', '-y', 'gnupg', 'curl']);
         await this.runCommand('curl', ['-fsSL', 'https://www.mongodb.org/static/pgp/server-7.0.asc', '-o', '/tmp/mongodb.asc']);
-        await this.runCommand('gpg', ['--dearmor', '-o', '/usr/share/keyrings/mongodb-server-7.0.gpg', '/tmp/mongodb.asc']);
+        await this.runCommand('gpg', ['--batch', '--yes', '--dearmor', '-o', '/usr/share/keyrings/mongodb-server-7.0.gpg', '/tmp/mongodb.asc']);
 
         // Detect OS version
         let osCodename = 'bookworm'; // Debian 12 default
