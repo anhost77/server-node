@@ -84,7 +84,9 @@ export default {
         users: 'Usuarios',
         plans: 'Planes',
         subscriptions: 'Suscripciones',
-        supportAdmin: 'Soporte Admin'
+        supportAdmin: 'Soporte Admin',
+        security: 'Seguridad',
+        securityKeys: 'Seguridad y Claves'
     },
 
     // Infrastructure
@@ -149,7 +151,64 @@ export default {
         sshKey: 'Clave SSH',
         enterPassword: 'Introduce la contraseña SSH',
         requirements: 'Requisitos:',
-        requirementsDesc: 'Debian/Ubuntu, acceso root o sudo, conectividad a internet'
+        requirementsDesc: 'Debian/Ubuntu, acceso root o sudo, conectividad a internet',
+
+        // Server Settings
+        serverSettings: 'Configuración del servidor',
+        runtimes: 'Entornos de ejecución',
+        databases: 'Bases de datos',
+        backups: 'Copias de seguridad',
+        installConsole: 'Consola de instalación',
+        loadServerLogs: 'Cargar logs del servidor',
+        clearServerLogs: 'Limpiar servidor',
+        serverLogFile: 'Archivo de logs del servidor',
+        loadingLogs: 'Cargando logs desde el servidor...',
+        waitingForLogs: 'Esperando logs de instalación... Haz clic en "Cargar logs del servidor" para obtener los logs almacenados.',
+        comingSoon: 'Próximamente',
+        installed: 'Instalado',
+        notInstalled: 'No instalado',
+        configured: 'Configurado',
+        notConfigured: 'No configurado',
+        install: 'Instalar',
+        setup: 'Configurar',
+        settingUp: 'Configurando...',
+        databaseName: 'Nombre de la base de datos',
+        connectionString: 'Cadena de conexión',
+        connectionStringWarning: 'Esta cadena de conexión solo se muestra una vez. ¡Asegúrate de guardarla!',
+        setupDatabase: 'Configurar base de datos',
+        databaseConfigured: 'Base de datos configurada',
+        copyConnectionString: 'Copia y guarda esta cadena de conexión en tu archivo .env',
+        installingRuntime: 'Instalando {runtime}',
+        updatingRuntime: 'Actualizando {runtime}',
+        removingRuntime: 'Eliminando {runtime}',
+        configuringDb: 'Configurando {db}',
+        reconfiguringDb: 'Reconfigurando {db}',
+        removingDb: 'Eliminando {db}',
+        logsFor: 'Registros de {service}',
+        serverLogs: 'Registros del servidor',
+        operationInProgress: 'Operación en progreso...',
+        pleaseWait: 'Por favor espera...',
+        operationComplete: 'Operación completada',
+        viewLogs: 'Ver registros',
+        reconfigure: 'Reconfigurar',
+
+        // Services sections
+        networkProxy: 'Red y Proxy',
+        security: 'Seguridad',
+        monitoring: 'Monitoreo',
+        dns: 'DNS',
+        mail: 'Servidor de Correo',
+        installingService: 'Instalando {service}',
+        removingService: 'Eliminando {service}',
+
+        // Status and controls
+        running: 'En ejecución',
+        stopped: 'Detenido',
+        start: 'Iniciar',
+        stop: 'Detener',
+        starting: 'Iniciando...',
+        stopping: 'Deteniendo...',
+        criticalService: 'Servicio crítico (no se puede eliminar)'
     },
 
     // Applications
@@ -719,5 +778,27 @@ export default {
         today: 'Hoy',
         yesterday: 'Ayer',
         never: 'Nunca'
+    },
+
+    // Security (User)
+    security: {
+        title: 'Seguridad y Claves',
+        subtitle: 'Ver y gestionar las claves de cifrado de sus servidores',
+        loadingData: 'Cargando datos de seguridad...',
+        ed25519Info: 'Cifrado Ed25519',
+        ed25519Description: 'Toda la comunicación entre sus servidores y el control plane está asegurada mediante firmas criptográficas Ed25519. Las huellas mostradas son hashes SHA256 de las claves públicas.',
+        serverKeys: 'Claves de sus servidores',
+        serverKeysDescription: 'Claves de cifrado para cada uno de sus servidores conectados',
+        noServers: 'Aún no hay servidores conectados',
+        server: 'Servidor',
+        fingerprint: 'Huella',
+        algorithm: 'Algoritmo',
+        status: 'Estado',
+        clickToCopy: 'Clic para copiar',
+        rotateKey: 'Rotar clave',
+        tips: 'Consejos de seguridad',
+        tip1: 'Rote regularmente las claves de sus servidores (especialmente después de cambios de equipo)',
+        tip2: 'Verifique las huellas al conectar para prevenir ataques man-in-the-middle',
+        tip3: 'Mantenga sus servidores actualizados para los últimos parches de seguridad'
     }
 };

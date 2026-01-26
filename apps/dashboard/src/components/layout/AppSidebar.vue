@@ -125,6 +125,13 @@ function handleLogoClick() {
         >
           {{ t('nav.mcpTokens') }}
         </a>
+        <a
+          href="#"
+          :class="{ active: activeMenu === 'security' }"
+          @click.prevent="handleNavClick('security')"
+        >
+          {{ t('nav.securityKeys') }}
+        </a>
       </nav>
     </div>
 

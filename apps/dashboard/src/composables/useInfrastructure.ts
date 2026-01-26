@@ -3,7 +3,7 @@ import { useWebSocket } from './useWebSocket'
 
 // Types
 export interface Runtime {
-  type: 'nodejs' | 'python' | 'go' | 'docker' | 'rust' | 'ruby'
+  type: 'nodejs' | 'python' | 'php' | 'go' | 'docker' | 'rust' | 'ruby'
   installed: boolean
   version?: string
   latestVersion?: string
@@ -11,7 +11,14 @@ export interface Runtime {
 }
 
 export interface Database {
-  type: 'postgresql' | 'mysql' | 'redis'
+  type: 'postgresql' | 'mysql' | 'redis' | 'mongodb'
+  installed: boolean
+  running: boolean
+  version?: string
+}
+
+export interface Service {
+  type: 'nginx' | 'haproxy' | 'keepalived' | 'certbot' | 'fail2ban' | 'ufw' | 'wireguard' | 'pm2' | 'netdata' | 'loki' | 'bind9' | 'postfix' | 'dovecot' | 'rspamd' | 'opendkim'
   installed: boolean
   running: boolean
   version?: string
@@ -28,6 +35,7 @@ export interface InfraStatus {
   }
   runtimes: Runtime[]
   databases: Database[]
+  services: Service[]
 }
 
 export interface InfraLog {
@@ -44,6 +52,12 @@ const removingRuntime = ref<string | null>(null)
 const configuringDatabase = ref<string | null>(null)
 const reconfiguringDatabase = ref<string | null>(null)
 const removingDatabase = ref<string | null>(null)
+const installingService = ref<string | null>(null)
+const removingService = ref<string | null>(null)
+const startingService = ref<string | null>(null)
+const stoppingService = ref<string | null>(null)
+const startingDatabase = ref<string | null>(null)
+const stoppingDatabase = ref<string | null>(null)
 const infrastructureLogs = ref<InfraLog[]>([])
 const fetchingRemoteLogs = ref(false)
 const remoteLogFilePath = ref<string | null>(null)
@@ -178,6 +192,75 @@ export function useInfrastructure() {
   function openRemoveDatabaseModal(dbType: string) {
     databaseToRemove.value = dbType
     showRemoveDatabaseModal.value = true
+  }
+
+  // Install service
+  function installService(serverId: string, service: string) {
+    if (installingService.value) return
+    installingService.value = service
+    infrastructureLogs.value = []
+    send({
+      type: 'INSTALL_SERVICE',
+      serverId,
+      service
+    })
+  }
+
+  // Remove service
+  function removeService(serverId: string, service: string, purge: boolean = false) {
+    if (removingService.value) return
+    removingService.value = service
+    infrastructureLogs.value = []
+    send({
+      type: 'REMOVE_SERVICE',
+      serverId,
+      service,
+      purge
+    })
+  }
+
+  // Start service
+  function startService(serverId: string, service: string) {
+    if (startingService.value) return
+    startingService.value = service
+    send({
+      type: 'START_SERVICE',
+      serverId,
+      service
+    })
+  }
+
+  // Stop service
+  function stopService(serverId: string, service: string) {
+    if (stoppingService.value) return
+    stoppingService.value = service
+    send({
+      type: 'STOP_SERVICE',
+      serverId,
+      service
+    })
+  }
+
+  // Start database
+  function startDatabase(serverId: string, database: string) {
+    if (startingDatabase.value) return
+    startingDatabase.value = database
+    send({
+      type: 'START_DATABASE',
+      serverId,
+      database
+    })
+  }
+
+  // Stop database
+  function stopDatabase(serverId: string, database: string) {
+    if (stoppingDatabase.value) return
+    stoppingDatabase.value = database
+    send({
+      type: 'STOP_DATABASE',
+      serverId,
+      database
+    })
   }
 
   // Remove database
@@ -316,6 +399,60 @@ export function useInfrastructure() {
       }
     }))
 
+    unsubs.push(onMessage('SERVICE_INSTALLED', (msg) => {
+      if (msg.serverId === serverId) {
+        installingService.value = null
+        if (msg.success) {
+          requestServerStatus(serverId)
+        }
+      }
+    }))
+
+    unsubs.push(onMessage('SERVICE_REMOVED', (msg) => {
+      if (msg.serverId === serverId) {
+        removingService.value = null
+        if (msg.success) {
+          requestServerStatus(serverId)
+        }
+      }
+    }))
+
+    unsubs.push(onMessage('SERVICE_STARTED', (msg) => {
+      if (msg.serverId === serverId) {
+        startingService.value = null
+        if (msg.success) {
+          requestServerStatus(serverId)
+        }
+      }
+    }))
+
+    unsubs.push(onMessage('SERVICE_STOPPED', (msg) => {
+      if (msg.serverId === serverId) {
+        stoppingService.value = null
+        if (msg.success) {
+          requestServerStatus(serverId)
+        }
+      }
+    }))
+
+    unsubs.push(onMessage('DATABASE_STARTED', (msg) => {
+      if (msg.serverId === serverId) {
+        startingDatabase.value = null
+        if (msg.success) {
+          requestServerStatus(serverId)
+        }
+      }
+    }))
+
+    unsubs.push(onMessage('DATABASE_STOPPED', (msg) => {
+      if (msg.serverId === serverId) {
+        stoppingDatabase.value = null
+        if (msg.success) {
+          requestServerStatus(serverId)
+        }
+      }
+    }))
+
     unsubs.push(onMessage('INFRASTRUCTURE_LOG', (msg) => {
       if (msg.serverId === serverId) {
         infrastructureLogs.value.push({
@@ -362,6 +499,12 @@ export function useInfrastructure() {
     configuringDatabase,
     reconfiguringDatabase,
     removingDatabase,
+    installingService,
+    removingService,
+    startingService,
+    stoppingService,
+    startingDatabase,
+    stoppingDatabase,
     infrastructureLogs,
     fetchingRemoteLogs,
     remoteLogFilePath,
@@ -391,6 +534,12 @@ export function useInfrastructure() {
     openRemoveDatabaseModal,
     removeDatabase,
     openRemoveRuntimeModal,
+    installService,
+    removeService,
+    startService,
+    stopService,
+    startDatabase,
+    stopDatabase,
     fetchRemoteLogs,
     clearRemoteLogs,
     clearInfraLogs,

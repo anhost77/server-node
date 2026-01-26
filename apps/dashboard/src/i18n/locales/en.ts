@@ -87,7 +87,8 @@ export default {
         plans: 'Plans',
         subscriptions: 'Subscriptions',
         supportAdmin: 'Support Admin',
-        security: 'Security'
+        security: 'Security',
+        securityKeys: 'Security & Keys'
     },
 
     // Infrastructure
@@ -226,7 +227,40 @@ export default {
         reconfigureDbTitle: 'Reconfigure {db}',
         reconfigureDbDesc: 'This will create a new database and user with a new password. The old database will remain unchanged.',
         newDbName: 'New Database Name',
-        backupsDesc: 'Configure automatic backups to S3, Rsync, or other storage providers.'
+        backupsDesc: 'Configure automatic backups to S3, Rsync, or other storage providers.',
+
+        // Console Modal
+        installingRuntime: 'Installing {runtime}',
+        updatingRuntime: 'Updating {runtime}',
+        removingRuntime: 'Removing {runtime}',
+        configuringDb: 'Configuring {db}',
+        reconfiguringDb: 'Reconfiguring {db}',
+        removingDb: 'Removing {db}',
+        logsFor: 'Logs for {service}',
+        serverLogs: 'Server Logs',
+        operationInProgress: 'Operation in progress...',
+        pleaseWait: 'Please wait...',
+        operationComplete: 'Operation Complete',
+        viewLogs: 'View Logs',
+        reconfigure: 'Reconfigure',
+
+        // Services sections
+        networkProxy: 'Network & Proxy',
+        security: 'Security',
+        monitoring: 'Monitoring',
+        dns: 'DNS',
+        mail: 'Mail Server',
+        installingService: 'Installing {service}',
+        removingService: 'Removing {service}',
+
+        // Status and controls
+        running: 'Running',
+        stopped: 'Stopped',
+        start: 'Start',
+        stop: 'Stop',
+        starting: 'Starting...',
+        stopping: 'Stopping...',
+        criticalService: 'Critical service (cannot be removed)'
     },
 
     // Applications
@@ -856,5 +890,27 @@ export default {
         today: 'Today',
         yesterday: 'Yesterday',
         never: 'Never'
+    },
+
+    // Security (User)
+    security: {
+        title: 'Security & Keys',
+        subtitle: 'View and manage your server encryption keys',
+        loadingData: 'Loading security data...',
+        ed25519Info: 'Ed25519 Encryption',
+        ed25519Description: 'All communication between your servers and the control plane is secured using Ed25519 cryptographic signatures. The fingerprints shown are SHA256 hashes of the public keys for easy verification.',
+        serverKeys: 'Your Server Keys',
+        serverKeysDescription: 'Encryption keys for each of your connected servers',
+        noServers: 'No servers connected yet',
+        server: 'Server',
+        fingerprint: 'Fingerprint',
+        algorithm: 'Algorithm',
+        status: 'Status',
+        clickToCopy: 'Click to copy',
+        rotateKey: 'Rotate Key',
+        tips: 'Security Tips',
+        tip1: 'Regularly rotate your server keys to maintain security (especially after team changes)',
+        tip2: 'Verify fingerprints match when connecting to ensure no man-in-the-middle attacks',
+        tip3: 'Keep your servers updated to benefit from the latest security patches'
     }
 };

@@ -5,6 +5,7 @@ export { default as McpView } from './McpView.vue'
 export { default as SupportView } from './SupportView.vue'
 export { default as SettingsView } from './SettingsView.vue'
 export { default as ServerSettingsView } from './ServerSettingsView.vue'
+export { default as SecurityView } from './SecurityView.vue'
 
 // Admin Views
 export * from './admin'

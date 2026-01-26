@@ -38,6 +38,7 @@ import {
   SupportView,
   SettingsView,
   ServerSettingsView,
+  SecurityView,
   AdminUsersView,
   AdminPlansView,
   AdminMetricsView,
@@ -150,6 +151,14 @@ const dbSecurityOptions = ref({
 const removingRuntime = ref<string | null>(null)
 const removingDatabase = ref<string | null>(null)
 const reconfiguringDatabase = ref<string | null>(null)
+
+// Service Installation State
+const installingService = ref<string | null>(null)
+const removingService = ref<string | null>(null)
+const startingService = ref<string | null>(null)
+const stoppingService = ref<string | null>(null)
+const startingDatabase = ref<string | null>(null)
+const stoppingDatabase = ref<string | null>(null)
 const showRemoveRuntimeModal = ref(false)
 const showRemoveDatabaseModal = ref(false)
 const showReconfigureDatabaseModal = ref(false)
@@ -803,6 +812,55 @@ function connectWS() {
           if (msg.success && msg.connectionString) {
             lastConnectionString.value = msg.connectionString
             showConnectionStringModal.value = true
+            requestServerStatus()
+          }
+        }
+      }
+      // Service Installation/Removal Response
+      else if (msg.type === 'SERVICE_INSTALLED') {
+        if (msg.serverId === selectedServerId.value) {
+          installingService.value = null
+          if (msg.success) {
+            requestServerStatus()
+          }
+        }
+      }
+      else if (msg.type === 'SERVICE_REMOVED') {
+        if (msg.serverId === selectedServerId.value) {
+          removingService.value = null
+          if (msg.success) {
+            requestServerStatus()
+          }
+        }
+      }
+      else if (msg.type === 'SERVICE_STARTED') {
+        if (msg.serverId === selectedServerId.value) {
+          startingService.value = null
+          if (msg.success) {
+            requestServerStatus()
+          }
+        }
+      }
+      else if (msg.type === 'SERVICE_STOPPED') {
+        if (msg.serverId === selectedServerId.value) {
+          stoppingService.value = null
+          if (msg.success) {
+            requestServerStatus()
+          }
+        }
+      }
+      else if (msg.type === 'DATABASE_STARTED') {
+        if (msg.serverId === selectedServerId.value) {
+          startingDatabase.value = null
+          if (msg.success) {
+            requestServerStatus()
+          }
+        }
+      }
+      else if (msg.type === 'DATABASE_STOPPED') {
+        if (msg.serverId === selectedServerId.value) {
+          stoppingDatabase.value = null
+          if (msg.success) {
             requestServerStatus()
           }
         }
@@ -1654,6 +1712,81 @@ function handleReconfigureDatabase(dbType: string, dbName: string) {
     database: dbType,
     dbName: dbName,
     resetPassword: true
+  }))
+}
+
+// Service Installation Functions
+function installService(serviceType: string) {
+  const targetId = activeServer.value?.id
+  if (!targetId || installingService.value) return
+
+  installingService.value = serviceType
+  infrastructureLogs.value = []
+  ws?.send(JSON.stringify({
+    type: 'INSTALL_SERVICE',
+    serverId: targetId,
+    service: serviceType
+  }))
+}
+
+function removeService(serviceType: string) {
+  const targetId = activeServer.value?.id
+  if (!targetId || removingService.value) return
+
+  removingService.value = serviceType
+  infrastructureLogs.value = []
+  ws?.send(JSON.stringify({
+    type: 'REMOVE_SERVICE',
+    serverId: targetId,
+    service: serviceType
+  }))
+}
+
+function startService(serviceType: string) {
+  const targetId = activeServer.value?.id
+  if (!targetId || startingService.value) return
+
+  startingService.value = serviceType
+  ws?.send(JSON.stringify({
+    type: 'START_SERVICE',
+    serverId: targetId,
+    service: serviceType
+  }))
+}
+
+function stopService(serviceType: string) {
+  const targetId = activeServer.value?.id
+  if (!targetId || stoppingService.value) return
+
+  stoppingService.value = serviceType
+  ws?.send(JSON.stringify({
+    type: 'STOP_SERVICE',
+    serverId: targetId,
+    service: serviceType
+  }))
+}
+
+function startDatabase(dbType: string) {
+  const targetId = activeServer.value?.id
+  if (!targetId || startingDatabase.value) return
+
+  startingDatabase.value = dbType
+  ws?.send(JSON.stringify({
+    type: 'START_DATABASE',
+    serverId: targetId,
+    database: dbType
+  }))
+}
+
+function stopDatabase(dbType: string) {
+  const targetId = activeServer.value?.id
+  if (!targetId || stoppingDatabase.value) return
+
+  stoppingDatabase.value = dbType
+  ws?.send(JSON.stringify({
+    type: 'STOP_DATABASE',
+    serverId: targetId,
+    database: dbType
   }))
 }
 
@@ -3447,6 +3580,9 @@ function openNewCannedResponse() {
         <!-- SUPPORT VIEW -->
         <SupportView v-else-if="activeMenu === 'support'" />
 
+        <!-- SECURITY VIEW -->
+        <SecurityView v-else-if="activeMenu === 'security'" />
+
         <!-- ADMIN USERS VIEW -->
         <AdminUsersView v-else-if="activeMenu === 'admin-users'" />
 
@@ -4188,6 +4324,12 @@ function openNewCannedResponse() {
              :configuring-database="configuringDatabase"
              :reconfiguring-database="reconfiguringDatabase"
              :removing-database="removingDatabase"
+             :installing-service="installingService"
+             :removing-service="removingService"
+             :starting-service="startingService"
+             :stopping-service="stoppingService"
+             :starting-database="startingDatabase"
+             :stopping-database="stoppingDatabase"
              :infrastructure-logs="infrastructureLogs"
              :fetching-remote-logs="fetchingRemoteLogs"
              :remote-log-file-path="remoteLogFilePath"
@@ -4199,6 +4341,12 @@ function openNewCannedResponse() {
              @configure-database="handleConfigureDatabase"
              @reconfigure-database="handleReconfigureDatabase"
              @remove-database="removeDatabase"
+             @start-database="startDatabase"
+             @stop-database="stopDatabase"
+             @install-service="installService"
+             @remove-service="removeService"
+             @start-service="startService"
+             @stop-service="stopService"
              @fetch-service-logs="fetchServiceLogs"
              @fetch-remote-logs="fetchRemoteLogs"
              @clear-remote-logs="clearRemoteLogs"

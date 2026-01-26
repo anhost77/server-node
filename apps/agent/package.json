@@ -1,6 +1,6 @@
 {
     "name": "@server-flow/agent",
-    "version": "0.1.14",
+    "version": "0.1.26",
     "type": "module",
     "private": true,
     "scripts": {

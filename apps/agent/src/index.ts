@@ -9,7 +9,7 @@ import { ExecutionManager } from './execution.js';
 import { NginxManager } from './nginx.js';
 import { ProcessManager } from './process.js';
 import { SystemMonitor } from './monitor.js';
-import { InfrastructureManager, type RuntimeType, type DatabaseType } from './infrastructure.js';
+import { InfrastructureManager, type RuntimeType, type DatabaseType, type ServiceType } from './infrastructure.js';
 import { AgentMessage, ServerMessageSchema } from '@server-flow/shared';
 import {
     verifyCommand,
@@ -27,16 +27,16 @@ const BUNDLE_DIR = path.join(os.homedir(), '.server-flow', 'agent-bundle');
 // Read agent version from package.json
 function getAgentVersion(): string {
     try {
-        // Try agent's own package.json first (in bundle structure: apps/agent/package.json)
-        const agentPkgPath = path.join(BUNDLE_DIR, 'apps', 'agent', 'package.json');
-        if (fs.existsSync(agentPkgPath)) {
-            const pkg = JSON.parse(fs.readFileSync(agentPkgPath, 'utf-8'));
-            return pkg.version || '0.0.0';
-        }
-        // Fallback to root package.json (for dev mode)
+        // Try flat bundle structure first (new structure: package.json at root)
         const rootPkgPath = path.join(BUNDLE_DIR, 'package.json');
         if (fs.existsSync(rootPkgPath)) {
             const pkg = JSON.parse(fs.readFileSync(rootPkgPath, 'utf-8'));
+            return pkg.version || '0.0.0';
+        }
+        // Fallback to nested structure (old structure: apps/agent/package.json)
+        const agentPkgPath = path.join(BUNDLE_DIR, 'apps', 'agent', 'package.json');
+        if (fs.existsSync(agentPkgPath)) {
+            const pkg = JSON.parse(fs.readFileSync(agentPkgPath, 'utf-8'));
             return pkg.version || '0.0.0';
         }
     } catch { }
@@ -352,9 +352,47 @@ function connectToControlPlane() {
                         }
                         sendLog('✅ Dependencies installed\n');
 
+                        // Link local @server-flow/shared package (workspace symlinks don't always work)
+                        const sharedSrc = path.join(BUNDLE_DIR, 'packages', 'shared');
+                        const sharedDest = path.join(BUNDLE_DIR, 'node_modules', '@server-flow', 'shared');
+                        if (fs.existsSync(sharedSrc) && !fs.existsSync(sharedDest)) {
+                            sendLog('🔗 Linking @server-flow/shared...\n');
+                            fs.mkdirSync(path.join(BUNDLE_DIR, 'node_modules', '@server-flow'), { recursive: true });
+                            fs.cpSync(sharedSrc, sharedDest, { recursive: true });
+                            sendLog('✅ Shared package linked\n');
+                        }
+
                         // Read new version
                         const newVersion = getAgentVersion();
                         sendLog(`\n🆕 New version: ${newVersion}\n`);
+
+                        // Update systemd service file to match new bundle structure
+                        sendLog('\n🔧 Updating systemd service configuration...\n');
+                        const systemdServicePath = '/etc/systemd/system/server-flow-agent.service';
+                        const newServiceContent = `[Unit]
+Description=ServerFlow Agent
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=${BUNDLE_DIR}
+ExecStart=/usr/bin/node ${BUNDLE_DIR}/dist/index.js --url ${controlPlaneUrl}
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
+`;
+                        try {
+                            // Write new service file
+                            await execAsync(`echo '${newServiceContent.replace(/'/g, "'\\''")}' | sudo tee ${systemdServicePath} > /dev/null`);
+                            await execAsync('sudo systemctl daemon-reload');
+                            sendLog('✅ Systemd service updated\n');
+                        } catch (svcErr: any) {
+                            sendLog(`⚠️ Warning: Could not update systemd service: ${svcErr.message}\n`, 'stderr');
+                        }
 
                         sendStatus('restarting', 'Restarting agent...', newVersion);
                         sendLog('\n🔄 Restarting agent service...\n');
@@ -496,6 +534,158 @@ function connectToControlPlane() {
                         database,
                         success: result.success,
                         connectionString: result.connectionString,
+                        error: result.error
+                    }));
+                });
+                return;
+            }
+
+            // Handle INSTALL_SERVICE (Network, Security, Monitoring services)
+            if (raw.type === 'INSTALL_SERVICE') {
+                const service = raw.service as ServiceType;
+                const infraManager = new InfrastructureManager((message, stream) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'INFRASTRUCTURE_LOG',
+                            serverId: currentServerId,
+                            message,
+                            stream
+                        }));
+                    }
+                });
+                infraManager.installService(service).then(result => {
+                    ws.send(JSON.stringify({
+                        type: 'SERVICE_INSTALLED',
+                        serverId: currentServerId,
+                        service,
+                        success: result.success,
+                        version: result.version,
+                        error: result.error
+                    }));
+                });
+                return;
+            }
+
+            // Handle REMOVE_SERVICE
+            if (raw.type === 'REMOVE_SERVICE') {
+                const service = raw.service as ServiceType;
+                const purge = raw.purge as boolean;
+                const infraManager = new InfrastructureManager((message, stream) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'INFRASTRUCTURE_LOG',
+                            serverId: currentServerId,
+                            message,
+                            stream
+                        }));
+                    }
+                });
+                infraManager.removeService(service, purge).then(result => {
+                    ws.send(JSON.stringify({
+                        type: 'SERVICE_REMOVED',
+                        serverId: currentServerId,
+                        service,
+                        success: result.success,
+                        error: result.error
+                    }));
+                });
+                return;
+            }
+
+            // Handle START_SERVICE
+            if (raw.type === 'START_SERVICE') {
+                const service = raw.service as ServiceType;
+                const infraManager = new InfrastructureManager((message, stream) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'INFRASTRUCTURE_LOG',
+                            serverId: currentServerId,
+                            message,
+                            stream
+                        }));
+                    }
+                });
+                infraManager.startService(service).then(result => {
+                    ws.send(JSON.stringify({
+                        type: 'SERVICE_STARTED',
+                        serverId: currentServerId,
+                        service,
+                        success: result.success,
+                        error: result.error
+                    }));
+                });
+                return;
+            }
+
+            // Handle STOP_SERVICE
+            if (raw.type === 'STOP_SERVICE') {
+                const service = raw.service as ServiceType;
+                const infraManager = new InfrastructureManager((message, stream) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'INFRASTRUCTURE_LOG',
+                            serverId: currentServerId,
+                            message,
+                            stream
+                        }));
+                    }
+                });
+                infraManager.stopService(service).then(result => {
+                    ws.send(JSON.stringify({
+                        type: 'SERVICE_STOPPED',
+                        serverId: currentServerId,
+                        service,
+                        success: result.success,
+                        error: result.error
+                    }));
+                });
+                return;
+            }
+
+            // Handle START_DATABASE
+            if (raw.type === 'START_DATABASE') {
+                const database = raw.database as DatabaseType;
+                const infraManager = new InfrastructureManager((message, stream) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'INFRASTRUCTURE_LOG',
+                            serverId: currentServerId,
+                            message,
+                            stream
+                        }));
+                    }
+                });
+                infraManager.startDatabase(database).then(result => {
+                    ws.send(JSON.stringify({
+                        type: 'DATABASE_STARTED',
+                        serverId: currentServerId,
+                        database,
+                        success: result.success,
+                        error: result.error
+                    }));
+                });
+                return;
+            }
+
+            // Handle STOP_DATABASE
+            if (raw.type === 'STOP_DATABASE') {
+                const database = raw.database as DatabaseType;
+                const infraManager = new InfrastructureManager((message, stream) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'INFRASTRUCTURE_LOG',
+                            serverId: currentServerId,
+                            message,
+                            stream
+                        }));
+                    }
+                });
+                infraManager.stopDatabase(database).then(result => {
+                    ws.send(JSON.stringify({
+                        type: 'DATABASE_STOPPED',
+                        serverId: currentServerId,
+                        database,
+                        success: result.success,
                         error: result.error
                     }));
                 });

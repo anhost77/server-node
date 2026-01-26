@@ -84,7 +84,9 @@ export default {
         users: 'Utenti',
         plans: 'Piani',
         subscriptions: 'Abbonamenti',
-        supportAdmin: 'Supporto Admin'
+        supportAdmin: 'Supporto Admin',
+        security: 'Sicurezza',
+        securityKeys: 'Sicurezza e Chiavi'
     },
 
     // Infrastructure
@@ -149,7 +151,64 @@ export default {
         sshKey: 'Chiave SSH',
         enterPassword: 'Inserisci la password SSH',
         requirements: 'Requisiti:',
-        requirementsDesc: 'Debian/Ubuntu, accesso root o sudo, connettività internet'
+        requirementsDesc: 'Debian/Ubuntu, accesso root o sudo, connettività internet',
+
+        // Server Settings
+        serverSettings: 'Impostazioni server',
+        runtimes: 'Runtime',
+        databases: 'Database',
+        backups: 'Backup',
+        installConsole: 'Console di installazione',
+        loadServerLogs: 'Carica log server',
+        clearServerLogs: 'Cancella server',
+        serverLogFile: 'File log server',
+        loadingLogs: 'Caricamento log dal server...',
+        waitingForLogs: 'In attesa dei log di installazione... Clicca su "Carica log server" per recuperare i log salvati.',
+        comingSoon: 'Prossimamente',
+        installed: 'Installato',
+        notInstalled: 'Non installato',
+        configured: 'Configurato',
+        notConfigured: 'Non configurato',
+        install: 'Installa',
+        setup: 'Configura',
+        settingUp: 'Configurazione...',
+        databaseName: 'Nome database',
+        connectionString: 'Stringa di connessione',
+        connectionStringWarning: 'Questa stringa di connessione viene mostrata solo una volta. Assicurati di salvarla!',
+        setupDatabase: 'Configura database',
+        databaseConfigured: 'Database configurato',
+        copyConnectionString: 'Copia e salva questa stringa di connessione nel tuo file .env',
+        installingRuntime: 'Installazione di {runtime}',
+        updatingRuntime: 'Aggiornamento di {runtime}',
+        removingRuntime: 'Rimozione di {runtime}',
+        configuringDb: 'Configurazione di {db}',
+        reconfiguringDb: 'Riconfigurazione di {db}',
+        removingDb: 'Rimozione di {db}',
+        logsFor: 'Log per {service}',
+        serverLogs: 'Log server',
+        operationInProgress: 'Operazione in corso...',
+        pleaseWait: 'Attendere...',
+        operationComplete: 'Operazione completata',
+        viewLogs: 'Visualizza log',
+        reconfigure: 'Riconfigura',
+
+        // Services sections
+        networkProxy: 'Rete e Proxy',
+        security: 'Sicurezza',
+        monitoring: 'Monitoraggio',
+        dns: 'DNS',
+        mail: 'Server Mail',
+        installingService: 'Installazione di {service}',
+        removingService: 'Rimozione di {service}',
+
+        // Status and controls
+        running: 'In esecuzione',
+        stopped: 'Fermato',
+        start: 'Avvia',
+        stop: 'Ferma',
+        starting: 'Avvio in corso...',
+        stopping: 'Arresto in corso...',
+        criticalService: 'Servizio critico (non può essere rimosso)'
     },
 
     // Applications
@@ -719,5 +778,27 @@ export default {
         today: 'Oggi',
         yesterday: 'Ieri',
         never: 'Mai'
+    },
+
+    // Security (User)
+    security: {
+        title: 'Sicurezza e Chiavi',
+        subtitle: 'Visualizza e gestisci le chiavi di crittografia dei tuoi server',
+        loadingData: 'Caricamento dati di sicurezza...',
+        ed25519Info: 'Crittografia Ed25519',
+        ed25519Description: 'Tutta la comunicazione tra i tuoi server e il control plane è protetta da firme crittografiche Ed25519. Le impronte mostrate sono hash SHA256 delle chiavi pubbliche.',
+        serverKeys: 'Chiavi dei tuoi server',
+        serverKeysDescription: 'Chiavi di crittografia per ciascuno dei tuoi server connessi',
+        noServers: 'Nessun server ancora connesso',
+        server: 'Server',
+        fingerprint: 'Impronta',
+        algorithm: 'Algoritmo',
+        status: 'Stato',
+        clickToCopy: 'Clicca per copiare',
+        rotateKey: 'Ruota chiave',
+        tips: 'Consigli di sicurezza',
+        tip1: 'Ruota regolarmente le chiavi dei tuoi server (specialmente dopo cambi del team)',
+        tip2: 'Verifica le impronte durante la connessione per prevenire attacchi man-in-the-middle',
+        tip3: 'Mantieni i tuoi server aggiornati per le ultime patch di sicurezza'
     }
 };

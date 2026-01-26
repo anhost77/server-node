@@ -87,7 +87,8 @@ export default {
         plans: 'Plans',
         subscriptions: 'Abonnements',
         supportAdmin: 'Support Admin',
-        security: 'Sécurité'
+        security: 'Sécurité',
+        securityKeys: 'Sécurité & Clés'
     },
 
     // Infrastructure
@@ -226,7 +227,40 @@ export default {
         reconfigureDbTitle: 'Reconfigurer {db}',
         reconfigureDbDesc: 'Cela créera une nouvelle base de données et un nouvel utilisateur avec un nouveau mot de passe. L\'ancienne base restera inchangée.',
         newDbName: 'Nouveau nom de base',
-        backupsDesc: 'Configurez les sauvegardes automatiques vers S3, Rsync ou d\'autres fournisseurs de stockage.'
+        backupsDesc: 'Configurez les sauvegardes automatiques vers S3, Rsync ou d\'autres fournisseurs de stockage.',
+
+        // Console Modal
+        installingRuntime: 'Installation de {runtime}',
+        updatingRuntime: 'Mise à jour de {runtime}',
+        removingRuntime: 'Suppression de {runtime}',
+        configuringDb: 'Configuration de {db}',
+        reconfiguringDb: 'Reconfiguration de {db}',
+        removingDb: 'Suppression de {db}',
+        logsFor: 'Logs de {service}',
+        serverLogs: 'Logs du serveur',
+        operationInProgress: 'Opération en cours...',
+        pleaseWait: 'Veuillez patienter...',
+        operationComplete: 'Opération terminée',
+        viewLogs: 'Voir les logs',
+        reconfigure: 'Reconfigurer',
+
+        // Services sections
+        networkProxy: 'Réseau & Proxy',
+        security: 'Sécurité',
+        monitoring: 'Monitoring',
+        dns: 'DNS',
+        mail: 'Serveur Mail',
+        installingService: 'Installation de {service}',
+        removingService: 'Suppression de {service}',
+
+        // Status and controls
+        running: 'En cours',
+        stopped: 'Arrêté',
+        start: 'Démarrer',
+        stop: 'Arrêter',
+        starting: 'Démarrage...',
+        stopping: 'Arrêt...',
+        criticalService: 'Service critique (ne peut pas être supprimé)'
     },
 
     // Applications
@@ -856,5 +890,27 @@ export default {
         today: 'Aujourd\'hui',
         yesterday: 'Hier',
         never: 'Jamais'
+    },
+
+    // Security (User)
+    security: {
+        title: 'Sécurité & Clés',
+        subtitle: 'Visualisez et gérez les clés de chiffrement de vos serveurs',
+        loadingData: 'Chargement des données de sécurité...',
+        ed25519Info: 'Chiffrement Ed25519',
+        ed25519Description: 'Toutes les communications entre vos serveurs et le control plane sont sécurisées par des signatures cryptographiques Ed25519. Les empreintes affichées sont des hash SHA256 des clés publiques pour faciliter la vérification.',
+        serverKeys: 'Clés de vos serveurs',
+        serverKeysDescription: 'Clés de chiffrement pour chacun de vos serveurs connectés',
+        noServers: 'Aucun serveur connecté pour le moment',
+        server: 'Serveur',
+        fingerprint: 'Empreinte',
+        algorithm: 'Algorithme',
+        status: 'Statut',
+        clickToCopy: 'Cliquez pour copier',
+        rotateKey: 'Rotation de clé',
+        tips: 'Conseils de sécurité',
+        tip1: 'Effectuez régulièrement une rotation de vos clés serveur pour maintenir la sécurité (surtout après des changements d\'équipe)',
+        tip2: 'Vérifiez que les empreintes correspondent lors de la connexion pour éviter les attaques man-in-the-middle',
+        tip3: 'Gardez vos serveurs à jour pour bénéficier des derniers correctifs de sécurité'
     }
 };

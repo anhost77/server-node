@@ -1474,7 +1474,7 @@ fastify.register(async function (fastify) {
                 }
 
                 // Infrastructure messages (Story 7.7) + Agent Update + Logs + Removal/Reconfiguration
-                if (['GET_SERVER_STATUS', 'INSTALL_RUNTIME', 'UPDATE_RUNTIME', 'CONFIGURE_DATABASE', 'UPDATE_AGENT', 'GET_INFRASTRUCTURE_LOGS', 'CLEAR_INFRASTRUCTURE_LOGS', 'GET_SERVICE_LOGS', 'REMOVE_RUNTIME', 'REMOVE_DATABASE', 'RECONFIGURE_DATABASE'].includes(msg.type)) {
+                if (['GET_SERVER_STATUS', 'INSTALL_RUNTIME', 'UPDATE_RUNTIME', 'CONFIGURE_DATABASE', 'UPDATE_AGENT', 'GET_INFRASTRUCTURE_LOGS', 'CLEAR_INFRASTRUCTURE_LOGS', 'GET_SERVICE_LOGS', 'REMOVE_RUNTIME', 'REMOVE_DATABASE', 'RECONFIGURE_DATABASE', 'INSTALL_SERVICE', 'REMOVE_SERVICE'].includes(msg.type)) {
                     const ok = await sendToAgentById(nodeId, msg, userId);
                     if (!ok) console.error(`❌ Infrastructure command failed: ${msg.type}`);
                     return;
@@ -1611,7 +1611,7 @@ fastify.register(async function (fastify) {
                     }
                 }
                 // Infrastructure response messages (Story 7.7) + Agent Update + Removal/Reconfiguration
-                else if (['SERVER_STATUS_RESPONSE', 'INFRASTRUCTURE_LOG', 'RUNTIME_INSTALLED', 'RUNTIME_UPDATED', 'DATABASE_CONFIGURED', 'AGENT_UPDATE_STATUS', 'AGENT_UPDATE_LOG', 'INFRASTRUCTURE_LOGS_RESPONSE', 'INFRASTRUCTURE_LOGS_CLEARED', 'SERVICE_LOGS_RESPONSE', 'RUNTIME_REMOVED', 'DATABASE_REMOVED', 'DATABASE_RECONFIGURED'].includes(msg.type)) {
+                else if (['SERVER_STATUS_RESPONSE', 'INFRASTRUCTURE_LOG', 'RUNTIME_INSTALLED', 'RUNTIME_UPDATED', 'DATABASE_CONFIGURED', 'AGENT_UPDATE_STATUS', 'AGENT_UPDATE_LOG', 'INFRASTRUCTURE_LOGS_RESPONSE', 'INFRASTRUCTURE_LOGS_CLEARED', 'SERVICE_LOGS_RESPONSE', 'RUNTIME_REMOVED', 'DATABASE_REMOVED', 'DATABASE_RECONFIGURED', 'SERVICE_INSTALLED', 'SERVICE_REMOVED'].includes(msg.type)) {
                     const sess = agentSessions.get(connectionId);
                     if (sess?.authorized) {
                         console.log(`🔧 [${sess.nodeId}] Infrastructure: ${msg.type}`);
@@ -2799,6 +2799,77 @@ fastify.get('/api/security/public-key', async () => {
     return {
         publicKey: getCPPublicKey(),
         algorithm: 'Ed25519'
+    };
+});
+
+// ============ USER SECURITY API ============
+
+// Get user's server keys (non-admin)
+fastify.get('/api/user/security', async (req) => {
+    const userId = (req as any).userId;
+
+    // Get only the user's own nodes
+    const userNodes = await db.select().from(schema.nodes).where(eq(schema.nodes.ownerId, userId)).all();
+
+    return {
+        servers: userNodes.map(node => {
+            const isOnline = Array.from(agentSessions.values()).some(
+                s => s.nodeId === node.id && s.authorized
+            );
+            return {
+                id: node.id,
+                alias: node.alias || node.hostname || 'Unknown',
+                fingerprint: getKeyFingerprint(node.pubKey),
+                isOnline,
+                algorithm: 'Ed25519'
+            };
+        })
+    };
+});
+
+// Rotate user's own agent key
+fastify.post('/api/user/security/rotate-agent-key/:nodeId', async (req, reply) => {
+    const userId = (req as any).userId;
+    const { nodeId } = req.params as { nodeId: string };
+
+    // Verify the node belongs to the user
+    const node = await db.select().from(schema.nodes)
+        .where(and(eq(schema.nodes.id, nodeId), eq(schema.nodes.ownerId, userId)))
+        .get();
+
+    if (!node) {
+        return reply.status(404).send({ error: 'Server not found' });
+    }
+
+    // Find the agent session
+    let agentSession: any = null;
+    agentSessions.forEach(session => {
+        if (session.nodeId === nodeId && session.authorized) {
+            agentSession = session;
+        }
+    });
+
+    if (!agentSession) {
+        return reply.status(400).send({ error: 'Agent is offline. Cannot rotate key.' });
+    }
+
+    // Generate a new registration token for re-registration
+    const token = randomUUID();
+    await db.insert(schema.registrationTokens).values({
+        id: token,
+        ownerId: userId,
+        expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
+    }).run();
+
+    // Send command to agent to regenerate identity
+    const signedCmd = createSignedCommand('REGENERATE_IDENTITY', {
+        registrationToken: token
+    });
+    agentSession.socket.send(JSON.stringify(signedCmd));
+
+    return {
+        success: true,
+        message: 'Agent will regenerate identity and re-register'
     };
 });
 

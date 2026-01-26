@@ -84,7 +84,9 @@ export default {
         users: 'Benutzer',
         plans: 'Tarife',
         subscriptions: 'Abonnements',
-        supportAdmin: 'Support Admin'
+        supportAdmin: 'Support Admin',
+        security: 'Sicherheit',
+        securityKeys: 'Sicherheit & Schlüssel'
     },
 
     // Infrastructure
@@ -149,7 +151,64 @@ export default {
         sshKey: 'SSH-Schlüssel',
         enterPassword: 'SSH-Passwort eingeben',
         requirements: 'Anforderungen:',
-        requirementsDesc: 'Debian/Ubuntu, Root- oder Sudo-Zugriff, Internetverbindung'
+        requirementsDesc: 'Debian/Ubuntu, Root- oder Sudo-Zugriff, Internetverbindung',
+
+        // Server Settings
+        serverSettings: 'Server-Einstellungen',
+        runtimes: 'Laufzeiten',
+        databases: 'Datenbanken',
+        backups: 'Backups',
+        installConsole: 'Installationskonsole',
+        loadServerLogs: 'Server-Logs laden',
+        clearServerLogs: 'Server leeren',
+        serverLogFile: 'Server-Logdatei',
+        loadingLogs: 'Lade Logs vom Server...',
+        waitingForLogs: 'Warte auf Installationsprotokolle... Klicken Sie auf "Server-Logs laden", um gespeicherte Logs abzurufen.',
+        comingSoon: 'Demnächst verfügbar',
+        installed: 'Installiert',
+        notInstalled: 'Nicht installiert',
+        configured: 'Konfiguriert',
+        notConfigured: 'Nicht konfiguriert',
+        install: 'Installieren',
+        setup: 'Einrichten',
+        settingUp: 'Einrichtung...',
+        databaseName: 'Datenbankname',
+        connectionString: 'Verbindungszeichenfolge',
+        connectionStringWarning: 'Diese Verbindungszeichenfolge wird nur einmal angezeigt. Speichern Sie sie sicher!',
+        setupDatabase: 'Datenbank einrichten',
+        databaseConfigured: 'Datenbank konfiguriert',
+        copyConnectionString: 'Kopieren und speichern Sie diese Verbindungszeichenfolge in Ihrer .env-Datei',
+        installingRuntime: '{runtime} wird installiert',
+        updatingRuntime: '{runtime} wird aktualisiert',
+        removingRuntime: '{runtime} wird entfernt',
+        configuringDb: '{db} wird konfiguriert',
+        reconfiguringDb: '{db} wird neu konfiguriert',
+        removingDb: '{db} wird entfernt',
+        logsFor: 'Protokolle für {service}',
+        serverLogs: 'Server-Protokolle',
+        operationInProgress: 'Operation läuft...',
+        pleaseWait: 'Bitte warten...',
+        operationComplete: 'Operation abgeschlossen',
+        viewLogs: 'Protokolle anzeigen',
+        reconfigure: 'Neu konfigurieren',
+
+        // Services sections
+        networkProxy: 'Netzwerk & Proxy',
+        security: 'Sicherheit',
+        monitoring: 'Monitoring',
+        dns: 'DNS',
+        mail: 'Mail-Server',
+        installingService: '{service} wird installiert',
+        removingService: '{service} wird entfernt',
+
+        // Status and controls
+        running: 'Läuft',
+        stopped: 'Gestoppt',
+        start: 'Starten',
+        stop: 'Stoppen',
+        starting: 'Wird gestartet...',
+        stopping: 'Wird gestoppt...',
+        criticalService: 'Kritischer Dienst (kann nicht entfernt werden)'
     },
 
     // Applications
@@ -719,5 +778,27 @@ export default {
         today: 'Heute',
         yesterday: 'Gestern',
         never: 'Nie'
+    },
+
+    // Security (User)
+    security: {
+        title: 'Sicherheit & Schlüssel',
+        subtitle: 'Server-Verschlüsselungsschlüssel anzeigen und verwalten',
+        loadingData: 'Sicherheitsdaten werden geladen...',
+        ed25519Info: 'Ed25519-Verschlüsselung',
+        ed25519Description: 'Die gesamte Kommunikation zwischen Ihren Servern und der Control Plane ist durch Ed25519-Signaturen gesichert. Die angezeigten Fingerabdrücke sind SHA256-Hashes der öffentlichen Schlüssel.',
+        serverKeys: 'Ihre Server-Schlüssel',
+        serverKeysDescription: 'Verschlüsselungsschlüssel für jeden Ihrer verbundenen Server',
+        noServers: 'Noch keine Server verbunden',
+        server: 'Server',
+        fingerprint: 'Fingerabdruck',
+        algorithm: 'Algorithmus',
+        status: 'Status',
+        clickToCopy: 'Klicken zum Kopieren',
+        rotateKey: 'Schlüssel rotieren',
+        tips: 'Sicherheitstipps',
+        tip1: 'Rotieren Sie regelmäßig Ihre Server-Schlüssel (besonders nach Teamänderungen)',
+        tip2: 'Überprüfen Sie die Fingerabdrücke beim Verbinden um Man-in-the-Middle-Angriffe zu verhindern',
+        tip3: 'Halten Sie Ihre Server aktuell für die neuesten Sicherheits-Patches'
     }
 };

@@ -43,8 +43,9 @@ function getPrivilegedPrefix(): string[] {
 }
 
 // Types
-export type RuntimeType = 'nodejs' | 'python' | 'go' | 'docker' | 'rust' | 'ruby';
-export type DatabaseType = 'postgresql' | 'mysql' | 'redis';
+export type RuntimeType = 'nodejs' | 'python' | 'php' | 'go' | 'docker' | 'rust' | 'ruby';
+export type DatabaseType = 'postgresql' | 'mysql' | 'redis' | 'mongodb';
+export type ServiceType = 'nginx' | 'haproxy' | 'keepalived' | 'certbot' | 'fail2ban' | 'ufw' | 'wireguard' | 'pm2' | 'netdata' | 'loki' | 'bind9' | 'postfix' | 'dovecot' | 'rspamd' | 'opendkim';
 
 // Protected runtimes that cannot be removed (required by the agent)
 const PROTECTED_RUNTIMES: RuntimeType[] = ['nodejs', 'python'];
@@ -104,6 +105,13 @@ export interface DatabaseInfo {
     version?: string;
 }
 
+export interface ServiceInfo {
+    type: ServiceType;
+    installed: boolean;
+    running: boolean;
+    version?: string;
+}
+
 export interface SystemInfo {
     os: string;
     osVersion: string;
@@ -116,6 +124,7 @@ export interface SystemInfo {
 export interface ServerStatus {
     runtimes: RuntimeInfo[];
     databases: DatabaseInfo[];
+    services: ServiceInfo[];
     system: SystemInfo;
 }
 
@@ -141,6 +150,12 @@ export interface DbSecurityOptions {
 export class InfrastructureManager {
     private onLog: LogFn;
     private currentService: string | null = null;
+
+    // Cache STATIQUE pour éviter les détections répétées (TTL: 5 secondes)
+    // Statique car une nouvelle instance est créée à chaque message WebSocket
+    private static statusCache: ServerStatus | null = null;
+    private static statusCacheTimestamp: number = 0;
+    private static readonly STATUS_CACHE_TTL_MS = 5000;
 
     constructor(onLog: LogFn) {
         // Ensure log directory exists
@@ -265,14 +280,43 @@ export class InfrastructureManager {
     // ============================================
 
     /**
-     * Get complete server status including runtimes, databases, and system info
+     * Get complete server status including runtimes, databases, services, and system info
+     * Utilise un cache de 5 secondes pour éviter les détections répétées
+     * et améliorer les performances lors de requêtes fréquentes.
+     *
+     * @param forceRefresh - Force une nouvelle détection même si le cache est valide
      */
-    async getServerStatus(): Promise<ServerStatus> {
-        return {
+    async getServerStatus(forceRefresh = false): Promise<ServerStatus> {
+        const now = Date.now();
+        const cacheAge = now - InfrastructureManager.statusCacheTimestamp;
+
+        // Retourne le cache si valide et pas de forceRefresh
+        if (!forceRefresh && InfrastructureManager.statusCache && cacheAge < InfrastructureManager.STATUS_CACHE_TTL_MS) {
+            return InfrastructureManager.statusCache;
+        }
+
+        // Effectue la détection complète
+        const status: ServerStatus = {
             runtimes: await this.detectRuntimes(),
             databases: await this.detectDatabases(),
+            services: await this.detectServices(),
             system: await this.getSystemInfo()
         };
+
+        // Met à jour le cache statique
+        InfrastructureManager.statusCache = status;
+        InfrastructureManager.statusCacheTimestamp = now;
+
+        return status;
+    }
+
+    /**
+     * Invalide le cache du status serveur (statique, partagé entre instances)
+     * Appelé automatiquement après chaque opération réussie
+     */
+    invalidateStatusCache(): void {
+        InfrastructureManager.statusCache = null;
+        InfrastructureManager.statusCacheTimestamp = 0;
     }
 
     /**
@@ -301,11 +345,15 @@ export class InfrastructureManager {
                 case 'ruby':
                     version = await this.installRuby();
                     break;
+                case 'php':
+                    version = await this.installPhp();
+                    break;
                 default:
                     throw new Error(`Unknown runtime: ${type}`);
             }
             this.onLog(`\n✅ ${type} ${version} installed successfully\n`, 'stdout');
             this.setCurrentService(null);
+            this.invalidateStatusCache();
             return { success: true, version };
         } catch (err: any) {
             this.onLog(`\n❌ Failed to install ${type}: ${err.message}\n`, 'stderr');
@@ -356,10 +404,290 @@ export class InfrastructureManager {
             // SECURITY: Connection string is returned via WebSocket result only
             // NEVER log credentials to files!
             this.setCurrentService(null);
+            this.invalidateStatusCache();
             return { success: true, connectionString };
         } catch (err: any) {
             this.onLog(`\n❌ Failed to configure ${type}: ${err.message}\n`, 'stderr');
             this.setCurrentService(null);
+            return { success: false, error: err.message };
+        }
+    }
+
+    /**
+     * Install a service (nginx, haproxy, pm2, etc.)
+     */
+    async installService(type: ServiceType): Promise<{ success: boolean; version?: string; error?: string }> {
+        this.setCurrentService(type);
+        this.onLog(`\n📦 Installing ${type}...\n`, 'stdout');
+
+        try {
+            let version: string;
+            switch (type) {
+                case 'nginx':
+                    version = await this.installNginx();
+                    break;
+                case 'haproxy':
+                    version = await this.installHaproxy();
+                    break;
+                case 'keepalived':
+                    version = await this.installKeepalived();
+                    break;
+                case 'certbot':
+                    version = await this.installCertbot();
+                    break;
+                case 'fail2ban':
+                    version = await this.installFail2ban();
+                    break;
+                case 'ufw':
+                    version = await this.installUfw();
+                    break;
+                case 'wireguard':
+                    version = await this.installWireguard();
+                    break;
+                case 'pm2':
+                    version = await this.installPm2();
+                    break;
+                case 'netdata':
+                    version = await this.installNetdata();
+                    break;
+                case 'loki':
+                    version = await this.installLoki();
+                    break;
+                case 'bind9':
+                    version = await this.installBind9();
+                    break;
+                case 'postfix':
+                    version = await this.installPostfix();
+                    break;
+                case 'dovecot':
+                    version = await this.installDovecot();
+                    break;
+                case 'rspamd':
+                    version = await this.installRspamd();
+                    break;
+                case 'opendkim':
+                    version = await this.installOpendkim();
+                    break;
+                default:
+                    throw new Error(`Unknown service: ${type}`);
+            }
+            this.onLog(`\n✅ ${type} ${version} installed successfully\n`, 'stdout');
+            this.setCurrentService(null);
+            this.invalidateStatusCache();
+            return { success: true, version };
+        } catch (err: any) {
+            this.onLog(`\n❌ Failed to install ${type}: ${err.message}\n`, 'stderr');
+            this.setCurrentService(null);
+            return { success: false, error: err.message };
+        }
+    }
+
+    /**
+     * Remove a service
+     */
+    async removeService(type: ServiceType, purge: boolean = false): Promise<{ success: boolean; error?: string }> {
+        this.setCurrentService(type);
+        this.onLog(`\n🗑️ Removing ${type}${purge ? ' (with purge)' : ''}...\n`, 'stdout');
+
+        try {
+            const removeCmd = purge ? 'purge' : 'remove';
+
+            switch (type) {
+                case 'nginx':
+                    await this.runCommand('systemctl', ['stop', 'nginx']);
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'nginx', 'nginx-common']);
+                    break;
+                case 'haproxy':
+                    await this.runCommand('systemctl', ['stop', 'haproxy']);
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'haproxy']);
+                    break;
+                case 'keepalived':
+                    await this.runCommand('systemctl', ['stop', 'keepalived']);
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'keepalived']);
+                    break;
+                case 'certbot':
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'certbot', 'python3-certbot-nginx']);
+                    break;
+                case 'fail2ban':
+                    await this.runCommand('systemctl', ['stop', 'fail2ban']);
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'fail2ban']);
+                    break;
+                case 'ufw':
+                    await this.runCommand('ufw', ['disable']);
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'ufw']);
+                    break;
+                case 'wireguard':
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'wireguard', 'wireguard-tools']);
+                    break;
+                case 'pm2':
+                    await this.runCommand('npm', ['uninstall', '-g', 'pm2']);
+                    break;
+                case 'netdata':
+                    await this.runCommand('systemctl', ['stop', 'netdata']);
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'netdata']);
+                    break;
+                case 'loki':
+                    await this.runCommand('systemctl', ['stop', 'loki']);
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'loki']);
+                    break;
+                case 'bind9':
+                    await this.runCommand('systemctl', ['stop', 'named']);
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'bind9', 'bind9utils', 'bind9-doc']);
+                    break;
+                case 'postfix':
+                    await this.runCommand('systemctl', ['stop', 'postfix']);
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'postfix', 'postfix-policyd-spf-python']);
+                    break;
+                case 'dovecot':
+                    await this.runCommand('systemctl', ['stop', 'dovecot']);
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'dovecot-core', 'dovecot-imapd', 'dovecot-pop3d', 'dovecot-lmtpd']);
+                    break;
+                case 'rspamd':
+                    await this.runCommand('systemctl', ['stop', 'rspamd']);
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'rspamd']);
+                    break;
+                case 'opendkim':
+                    await this.runCommand('systemctl', ['stop', 'opendkim']);
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'opendkim', 'opendkim-tools']);
+                    break;
+                default:
+                    throw new Error(`Unknown service: ${type}`);
+            }
+
+            await this.runCommand('apt-get', ['autoremove', '-y']);
+            this.onLog(`\n✅ ${type} removed successfully\n`, 'stdout');
+            this.setCurrentService(null);
+            this.invalidateStatusCache();
+            return { success: true };
+        } catch (err: any) {
+            this.onLog(`\n❌ Failed to remove ${type}: ${err.message}\n`, 'stderr');
+            this.setCurrentService(null);
+            return { success: false, error: err.message };
+        }
+    }
+
+    /**
+     * Start a service
+     */
+    async startService(type: ServiceType): Promise<{ success: boolean; error?: string }> {
+        this.onLog(`\n▶️ Starting ${type}...\n`, 'stdout');
+
+        try {
+            // Map service type to systemd service name
+            const serviceNames: Record<ServiceType, string> = {
+                nginx: 'nginx',
+                haproxy: 'haproxy',
+                keepalived: 'keepalived',
+                certbot: 'certbot.timer',
+                fail2ban: 'fail2ban',
+                ufw: 'ufw',
+                wireguard: 'wg-quick@wg0',
+                pm2: 'pm2-root',
+                netdata: 'netdata',
+                loki: 'loki',
+                bind9: 'named',
+                postfix: 'postfix',
+                dovecot: 'dovecot',
+                rspamd: 'rspamd',
+                opendkim: 'opendkim'
+            };
+
+            const serviceName = serviceNames[type] || type;
+            await this.runCommand('systemctl', ['start', serviceName]);
+            this.onLog(`\n✅ ${type} started successfully\n`, 'stdout');
+            this.invalidateStatusCache();
+            return { success: true };
+        } catch (err: any) {
+            this.onLog(`\n❌ Failed to start ${type}: ${err.message}\n`, 'stderr');
+            return { success: false, error: err.message };
+        }
+    }
+
+    /**
+     * Stop a service
+     */
+    async stopService(type: ServiceType): Promise<{ success: boolean; error?: string }> {
+        this.onLog(`\n⏹️ Stopping ${type}...\n`, 'stdout');
+
+        try {
+            // Map service type to systemd service name
+            const serviceNames: Record<ServiceType, string> = {
+                nginx: 'nginx',
+                haproxy: 'haproxy',
+                keepalived: 'keepalived',
+                certbot: 'certbot.timer',
+                fail2ban: 'fail2ban',
+                ufw: 'ufw',
+                wireguard: 'wg-quick@wg0',
+                pm2: 'pm2-root',
+                netdata: 'netdata',
+                loki: 'loki',
+                bind9: 'named',
+                postfix: 'postfix',
+                dovecot: 'dovecot',
+                rspamd: 'rspamd',
+                opendkim: 'opendkim'
+            };
+
+            const serviceName = serviceNames[type] || type;
+            await this.runCommand('systemctl', ['stop', serviceName]);
+            this.onLog(`\n✅ ${type} stopped successfully\n`, 'stdout');
+            this.invalidateStatusCache();
+            return { success: true };
+        } catch (err: any) {
+            this.onLog(`\n❌ Failed to stop ${type}: ${err.message}\n`, 'stderr');
+            return { success: false, error: err.message };
+        }
+    }
+
+    /**
+     * Start a database service
+     */
+    async startDatabase(type: DatabaseType): Promise<{ success: boolean; error?: string }> {
+        this.onLog(`\n▶️ Starting ${type}...\n`, 'stdout');
+
+        try {
+            // Map database type to systemd service name
+            const serviceNames: Record<DatabaseType, string> = {
+                postgresql: 'postgresql',
+                mysql: 'mysql',
+                redis: 'redis-server',
+                mongodb: 'mongod'
+            };
+
+            const serviceName = serviceNames[type] || type;
+            await this.runCommand('systemctl', ['start', serviceName]);
+            this.onLog(`\n✅ ${type} started successfully\n`, 'stdout');
+            this.invalidateStatusCache();
+            return { success: true };
+        } catch (err: any) {
+            this.onLog(`\n❌ Failed to start ${type}: ${err.message}\n`, 'stderr');
+            return { success: false, error: err.message };
+        }
+    }
+
+    /**
+     * Stop a database service
+     */
+    async stopDatabase(type: DatabaseType): Promise<{ success: boolean; error?: string }> {
+        this.onLog(`\n⏹️ Stopping ${type}...\n`, 'stdout');
+
+        try {
+            // Map database type to systemd service name
+            const serviceNames: Record<DatabaseType, string> = {
+                postgresql: 'postgresql',
+                mysql: 'mysql',
+                redis: 'redis-server',
+                mongodb: 'mongod'
+            };
+
+            const serviceName = serviceNames[type] || type;
+            await this.runCommand('systemctl', ['stop', serviceName]);
+            this.onLog(`\n✅ ${type} stopped successfully\n`, 'stdout');
+            this.invalidateStatusCache();
+            return { success: true };
+        } catch (err: any) {
+            this.onLog(`\n❌ Failed to stop ${type}: ${err.message}\n`, 'stderr');
             return { success: false, error: err.message };
         }
     }
@@ -382,6 +710,7 @@ export class InfrastructureManager {
             const checks: Record<RuntimeType, { cmd: string; args: string[] }> = {
                 nodejs: { cmd: 'node', args: ['--version'] },
                 python: { cmd: 'python3', args: ['--version'] },
+                php: { cmd: 'php', args: ['--version'] },
                 go: { cmd: 'go', args: ['version'] },
                 docker: { cmd: 'docker', args: ['--version'] },
                 rust: { cmd: 'rustc', args: ['--version'] },
@@ -410,12 +739,16 @@ export class InfrastructureManager {
                 case 'ruby':
                     newVersion = await this.updateRuby();
                     break;
+                case 'php':
+                    newVersion = await this.updatePhp();
+                    break;
                 default:
                     throw new Error(`Unknown runtime: ${type}`);
             }
 
             this.onLog(`\n✅ ${type} updated: ${oldVersion} → ${newVersion}\n`, 'stdout');
             this.setCurrentService(null);
+            this.invalidateStatusCache();
             return { success: true, oldVersion, newVersion };
         } catch (err: any) {
             this.onLog(`\n❌ Failed to update ${type}: ${err.message}\n`, 'stderr');
@@ -501,6 +834,10 @@ export class InfrastructureManager {
                     await this.runCommand('apt-get', [removeCmd, '-y', 'ruby', 'ruby-dev', 'ruby-bundler']);
                     break;
 
+                case 'php':
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'php', 'php-fpm', 'php-cli', 'php-common', 'php-mysql', 'php-pgsql', 'php-curl', 'php-gd', 'php-mbstring', 'php-xml', 'php-zip']);
+                    break;
+
                 default:
                     throw new Error(`Unknown runtime: ${type}`);
             }
@@ -510,6 +847,7 @@ export class InfrastructureManager {
 
             this.onLog(`\n✅ ${type} removed successfully\n`, 'stdout');
             this.setCurrentService(null);
+            this.invalidateStatusCache();
             return { success: true };
         } catch (err: any) {
             this.onLog(`\n❌ Failed to remove ${type}: ${err.message}\n`, 'stderr');
@@ -579,6 +917,7 @@ export class InfrastructureManager {
 
             this.onLog(`\n✅ ${type} removed successfully\n`, 'stdout');
             this.setCurrentService(null);
+            this.invalidateStatusCache();
             return { success: true };
         } catch (err: any) {
             this.onLog(`\n❌ Failed to remove ${type}: ${err.message}\n`, 'stderr');
@@ -680,6 +1019,7 @@ export class InfrastructureManager {
             // SECURITY: Connection string is returned via WebSocket result only
             // NEVER log credentials to files!
             this.setCurrentService(null);
+            this.invalidateStatusCache();
             return { success: true, connectionString };
         } catch (err: any) {
             this.onLog(`\n❌ Failed to reconfigure ${type}: ${err.message}\n`, 'stderr');
@@ -696,6 +1036,7 @@ export class InfrastructureManager {
         const runtimes: RuntimeInfo[] = [
             { type: 'nodejs', installed: false, estimatedSize: 'Installed' },
             { type: 'python', installed: false, estimatedSize: '~200MB' },
+            { type: 'php', installed: false, estimatedSize: '~100MB' },
             { type: 'go', installed: false, estimatedSize: '~500MB' },
             { type: 'docker', installed: false, estimatedSize: '~500MB' },
             { type: 'rust', installed: false, estimatedSize: '~1GB' },
@@ -706,6 +1047,7 @@ export class InfrastructureManager {
         const checks: Record<RuntimeType, { cmd: string; args: string[] }> = {
             nodejs: { cmd: 'node', args: ['--version'] },
             python: { cmd: 'python3', args: ['--version'] },
+            php: { cmd: 'php', args: ['--version'] },
             go: { cmd: 'go', args: ['version'] },
             docker: { cmd: 'docker', args: ['--version'] },
             rust: { cmd: 'rustc', args: ['--version'] },
@@ -750,6 +1092,8 @@ export class InfrastructureManager {
                     return await this.getLatestRustVersion();
                 case 'ruby':
                     return await this.getLatestAptVersion('ruby');
+                case 'php':
+                    return await this.getLatestAptVersion('php');
                 default:
                     return null;
             }
@@ -848,7 +1192,8 @@ export class InfrastructureManager {
         const databases: DatabaseInfo[] = [
             { type: 'postgresql', installed: false, running: false },
             { type: 'mysql', installed: false, running: false },
-            { type: 'redis', installed: false, running: false }
+            { type: 'redis', installed: false, running: false },
+            { type: 'mongodb', installed: false, running: false }
         ];
 
         // Check PostgreSQL
@@ -875,7 +1220,209 @@ export class InfrastructureManager {
             databases[2].running = await this.isServiceRunning('redis');
         }
 
+        // Check MongoDB
+        const mongoVersion = await this.getCommandVersion('mongod', ['--version']);
+        if (mongoVersion) {
+            databases[3].installed = true;
+            databases[3].version = mongoVersion;
+            databases[3].running = await this.isServiceRunning('mongod');
+        }
+
         return databases;
+    }
+
+    private async detectServices(): Promise<ServiceInfo[]> {
+        const services: ServiceInfo[] = [
+            // Network & Proxy
+            { type: 'nginx', installed: false, running: false },
+            { type: 'haproxy', installed: false, running: false },
+            { type: 'keepalived', installed: false, running: false },
+            { type: 'certbot', installed: false, running: false },
+            // Security
+            { type: 'fail2ban', installed: false, running: false },
+            { type: 'ufw', installed: false, running: false },
+            { type: 'wireguard', installed: false, running: false },
+            // Monitoring
+            { type: 'pm2', installed: false, running: false },
+            { type: 'netdata', installed: false, running: false },
+            { type: 'loki', installed: false, running: false },
+            // DNS
+            { type: 'bind9', installed: false, running: false },
+            // Mail Stack
+            { type: 'postfix', installed: false, running: false },
+            { type: 'dovecot', installed: false, running: false },
+            { type: 'rspamd', installed: false, running: false },
+            { type: 'opendkim', installed: false, running: false }
+        ];
+
+        // Run all version checks in parallel for better performance
+        const [
+            nginxVersion,
+            haproxyVersion,
+            keepalivedVersion,
+            certbotVersion,
+            fail2banVersion,
+            ufwInstalled,
+            wgInstalled,
+            pm2Version,
+            netdataInstalled,
+            lokiInstalled,
+            bind9Version,
+            postfixVersion,
+            dovecotVersion,
+            rspamdVersion,
+            opendkimInstalled
+        ] = await Promise.all([
+            this.getCommandVersion('nginx', ['-v']),
+            this.getCommandVersion('haproxy', ['-v']),
+            this.getCommandVersion('keepalived', ['-v']),
+            this.getCommandVersion('certbot', ['--version']),
+            this.getCommandVersion('fail2ban-client', ['--version']),
+            this.commandExists('ufw'),
+            this.commandExists('wg'),
+            this.getCommandVersion('pm2', ['--version']),
+            this.commandExists('netdata'),
+            this.commandExists('loki'),
+            this.getCommandVersion('named', ['-v']),
+            this.getCommandVersion('postconf', ['mail_version']),
+            this.getCommandVersion('dovecot', ['--version']),
+            this.getCommandVersion('rspamd', ['--version']),
+            this.commandExists('opendkim')
+        ]);
+
+        // Collect services that need running status checks
+        const runningChecks: Promise<{ index: number; running: boolean }>[] = [];
+
+        // nginx
+        if (nginxVersion) {
+            services[0].installed = true;
+            services[0].version = nginxVersion;
+            runningChecks.push(this.isServiceRunning('nginx').then(r => ({ index: 0, running: r })));
+        }
+
+        // haproxy
+        if (haproxyVersion) {
+            services[1].installed = true;
+            services[1].version = haproxyVersion;
+            runningChecks.push(this.isServiceRunning('haproxy').then(r => ({ index: 1, running: r })));
+        }
+
+        // keepalived
+        if (keepalivedVersion) {
+            services[2].installed = true;
+            services[2].version = keepalivedVersion;
+            runningChecks.push(this.isServiceRunning('keepalived').then(r => ({ index: 2, running: r })));
+        }
+
+        // certbot (no running check - it's not a daemon)
+        if (certbotVersion) {
+            services[3].installed = true;
+            services[3].version = certbotVersion;
+            services[3].running = false;
+        }
+
+        // fail2ban
+        if (fail2banVersion) {
+            services[4].installed = true;
+            services[4].version = fail2banVersion;
+            runningChecks.push(this.isServiceRunning('fail2ban').then(r => ({ index: 4, running: r })));
+        }
+
+        // ufw
+        if (ufwInstalled) {
+            services[5].installed = true;
+            services[5].version = 'installed';
+            runningChecks.push(
+                this.runCommandSilent('ufw', ['status'])
+                    .then(status => ({ index: 5, running: status.includes('Status: active') }))
+                    .catch(() => ({ index: 5, running: false }))
+            );
+        }
+
+        // wireguard
+        if (wgInstalled) {
+            services[6].installed = true;
+            services[6].version = 'installed';
+            runningChecks.push(
+                this.runCommandSilent('wg', ['show'])
+                    .then(interfaces => ({ index: 6, running: interfaces.trim().length > 0 }))
+                    .catch(() => ({ index: 6, running: false }))
+            );
+        }
+
+        // pm2
+        if (pm2Version) {
+            services[7].installed = true;
+            services[7].version = pm2Version;
+            runningChecks.push(
+                this.runCommandSilent('pm2', ['jlist'])
+                    .then(list => {
+                        const processes = JSON.parse(list);
+                        return { index: 7, running: processes.length > 0 };
+                    })
+                    .catch(() => ({ index: 7, running: false }))
+            );
+        }
+
+        // netdata
+        if (netdataInstalled) {
+            services[8].installed = true;
+            services[8].version = 'installed';
+            runningChecks.push(this.isServiceRunning('netdata').then(r => ({ index: 8, running: r })));
+        }
+
+        // loki
+        if (lokiInstalled) {
+            services[9].installed = true;
+            services[9].version = 'installed';
+            runningChecks.push(this.isServiceRunning('loki').then(r => ({ index: 9, running: r })));
+        }
+
+        // bind9
+        if (bind9Version) {
+            services[10].installed = true;
+            services[10].version = bind9Version;
+            runningChecks.push(
+                Promise.all([this.isServiceRunning('named'), this.isServiceRunning('bind9')])
+                    .then(([r1, r2]) => ({ index: 10, running: r1 || r2 }))
+            );
+        }
+
+        // postfix
+        if (postfixVersion) {
+            services[11].installed = true;
+            services[11].version = postfixVersion.replace('mail_version = ', '').trim();
+            runningChecks.push(this.isServiceRunning('postfix').then(r => ({ index: 11, running: r })));
+        }
+
+        // dovecot
+        if (dovecotVersion) {
+            services[12].installed = true;
+            services[12].version = dovecotVersion;
+            runningChecks.push(this.isServiceRunning('dovecot').then(r => ({ index: 12, running: r })));
+        }
+
+        // rspamd
+        if (rspamdVersion) {
+            services[13].installed = true;
+            services[13].version = rspamdVersion;
+            runningChecks.push(this.isServiceRunning('rspamd').then(r => ({ index: 13, running: r })));
+        }
+
+        // opendkim
+        if (opendkimInstalled) {
+            services[14].installed = true;
+            services[14].version = 'installed';
+            runningChecks.push(this.isServiceRunning('opendkim').then(r => ({ index: 14, running: r })));
+        }
+
+        // Execute all running checks in parallel
+        const runningResults = await Promise.all(runningChecks);
+        for (const { index, running } of runningResults) {
+            services[index].running = running;
+        }
+
+        return services;
     }
 
     private async getSystemInfo(): Promise<SystemInfo> {
@@ -1026,6 +1573,24 @@ export class InfrastructureManager {
         return await this.getCommandVersion('ruby', ['--version']) || 'Unknown';
     }
 
+    private async installPhp(): Promise<string> {
+        await this.runCommand('apt-get', ['update']);
+        // Install PHP with common extensions for web development
+        await this.runCommand('apt-get', ['install', '-y',
+            'php', 'php-fpm', 'php-cli', 'php-common',
+            'php-mysql', 'php-pgsql', 'php-sqlite3',
+            'php-curl', 'php-gd', 'php-mbstring',
+            'php-xml', 'php-zip', 'php-bcmath',
+            'php-intl', 'php-json'
+        ]);
+        // Install Composer (PHP package manager)
+        await this.runCommand('curl', ['-sS', 'https://getcomposer.org/installer', '-o', '/tmp/composer-setup.php']);
+        await this.runCommand('php', ['/tmp/composer-setup.php', '--install-dir=/usr/local/bin', '--filename=composer']);
+        await this.runCommand('rm', ['/tmp/composer-setup.php']);
+
+        return await this.getCommandVersion('php', ['--version']) || 'Unknown';
+    }
+
     // ============================================
     // RUNTIME UPDATERS
     // ============================================
@@ -1119,6 +1684,14 @@ export class InfrastructureManager {
         await this.runCommand('apt-get', ['upgrade', '-y', 'ruby', 'ruby-dev']);
         await this.runCommand('gem', ['update', '--system']);
         return await this.getCommandVersion('ruby', ['--version']) || 'Unknown';
+    }
+
+    private async updatePhp(): Promise<string> {
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['upgrade', '-y', 'php', 'php-fpm', 'php-cli', 'php-common']);
+        // Update Composer
+        await this.runCommand('composer', ['self-update']);
+        return await this.getCommandVersion('php', ['--version']) || 'Unknown';
     }
 
     // ============================================
@@ -1370,6 +1943,482 @@ export class InfrastructureManager {
     }
 
     // ============================================
+    // SERVICE INSTALLERS
+    // ============================================
+
+    private async installNginx(): Promise<string> {
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'nginx']);
+        await this.runCommand('systemctl', ['enable', 'nginx']);
+        await this.runCommand('systemctl', ['start', 'nginx']);
+        return await this.getCommandVersion('nginx', ['-v']) || 'installed';
+    }
+
+    private async installHaproxy(): Promise<string> {
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'haproxy']);
+        await this.runCommand('systemctl', ['enable', 'haproxy']);
+        // Don't start haproxy yet - it needs configuration first
+        this.onLog(`⚠️ HAProxy installed but not started - configure /etc/haproxy/haproxy.cfg first\n`, 'stdout');
+        return await this.getCommandVersion('haproxy', ['-v']) || 'installed';
+    }
+
+    private async installKeepalived(): Promise<string> {
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'keepalived']);
+        await this.runCommand('systemctl', ['enable', 'keepalived']);
+        // Don't start keepalived yet - it needs configuration first
+        this.onLog(`⚠️ Keepalived installed but not started - configure /etc/keepalived/keepalived.conf first\n`, 'stdout');
+        return await this.getCommandVersion('keepalived', ['-v']) || 'installed';
+    }
+
+    private async installCertbot(): Promise<string> {
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'certbot', 'python3-certbot-nginx']);
+        this.onLog(`✅ Certbot installed. Use 'certbot --nginx' to configure SSL certificates\n`, 'stdout');
+        return await this.getCommandVersion('certbot', ['--version']) || 'installed';
+    }
+
+    private async installFail2ban(): Promise<string> {
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'fail2ban']);
+        await this.runCommand('systemctl', ['enable', 'fail2ban']);
+        await this.runCommand('systemctl', ['start', 'fail2ban']);
+
+        // Create a basic local configuration
+        const localConfig = `[DEFAULT]
+bantime = 1h
+findtime = 10m
+maxretry = 5
+
+[sshd]
+enabled = true
+port = ssh
+logpath = /var/log/auth.log
+maxretry = 3
+`;
+        fs.writeFileSync('/etc/fail2ban/jail.local', localConfig);
+        await this.runCommand('systemctl', ['restart', 'fail2ban']);
+        this.onLog(`✅ Fail2ban configured with SSH protection enabled\n`, 'stdout');
+        return await this.getCommandVersion('fail2ban-client', ['--version']) || 'installed';
+    }
+
+    private async installUfw(): Promise<string> {
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'ufw']);
+
+        // Configure basic rules
+        this.onLog(`🔧 Configuring UFW firewall rules...\n`, 'stdout');
+        await this.runCommand('ufw', ['default', 'deny', 'incoming']);
+        await this.runCommand('ufw', ['default', 'allow', 'outgoing']);
+        await this.runCommand('ufw', ['allow', 'ssh']);
+        await this.runCommand('ufw', ['allow', 'http']);
+        await this.runCommand('ufw', ['allow', 'https']);
+
+        // Enable UFW (non-interactive)
+        await this.runCommand('ufw', ['--force', 'enable']);
+        this.onLog(`✅ UFW enabled with SSH, HTTP, HTTPS allowed\n`, 'stdout');
+        return 'installed';
+    }
+
+    private async installWireguard(): Promise<string> {
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'wireguard', 'wireguard-tools']);
+
+        // Generate server keys
+        const keysDir = '/etc/wireguard';
+        if (!fs.existsSync(keysDir)) {
+            fs.mkdirSync(keysDir, { recursive: true, mode: 0o700 });
+        }
+
+        this.onLog(`🔐 Generating WireGuard keys...\n`, 'stdout');
+        await this.runCommand('wg', ['genkey']);
+        this.onLog(`⚠️ WireGuard installed. Configure /etc/wireguard/wg0.conf to set up your VPN\n`, 'stdout');
+        return 'installed';
+    }
+
+    private async installPm2(): Promise<string> {
+        // Check if npm is available
+        const npmExists = await this.commandExists('npm');
+        if (!npmExists) {
+            throw new Error('npm is required to install PM2. Please install Node.js first.');
+        }
+
+        await this.runCommand('npm', ['install', '-g', 'pm2']);
+
+        // Setup PM2 startup script
+        try {
+            await this.runCommand('pm2', ['startup', 'systemd', '-u', os.userInfo().username, '--hp', os.homedir()]);
+        } catch {
+            this.onLog(`⚠️ PM2 startup script may need manual configuration\n`, 'stderr');
+        }
+
+        return await this.getCommandVersion('pm2', ['--version']) || 'installed';
+    }
+
+    private async installNetdata(): Promise<string> {
+        this.onLog(`📥 Installing Netdata monitoring...\n`, 'stdout');
+
+        // Use the official installer script
+        await this.runCommand('curl', ['-sSLo', '/tmp/netdata-kickstart.sh', 'https://get.netdata.cloud/kickstart.sh']);
+        await this.runCommand('bash', ['/tmp/netdata-kickstart.sh', '--dont-wait', '--disable-telemetry']);
+        await this.runCommandSilent('rm', ['/tmp/netdata-kickstart.sh']);
+
+        this.onLog(`✅ Netdata installed. Access dashboard at http://localhost:19999\n`, 'stdout');
+        return 'installed';
+    }
+
+    private async installLoki(): Promise<string> {
+        this.onLog(`📥 Installing Grafana Loki...\n`, 'stdout');
+
+        // Add Grafana repository
+        await this.runCommand('apt-get', ['install', '-y', 'apt-transport-https', 'software-properties-common']);
+        await this.runCommand('curl', ['-sSLo', '/tmp/grafana.gpg.key', 'https://apt.grafana.com/gpg.key']);
+        await this.runCommand('gpg', ['--dearmor', '-o', '/usr/share/keyrings/grafana.gpg', '/tmp/grafana.gpg.key']);
+
+        const repoLine = 'deb [signed-by=/usr/share/keyrings/grafana.gpg] https://apt.grafana.com stable main';
+        fs.writeFileSync('/etc/apt/sources.list.d/grafana.list', repoLine + '\n');
+
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'loki']);
+        await this.runCommand('systemctl', ['enable', 'loki']);
+        await this.runCommand('systemctl', ['start', 'loki']);
+
+        this.onLog(`✅ Loki installed. Configure at /etc/loki/config.yaml\n`, 'stdout');
+        return 'installed';
+    }
+
+    // ============================================
+    // DNS SERVER (BIND9)
+    // ============================================
+
+    private async installBind9(): Promise<string> {
+        this.onLog(`📥 Installing BIND9 DNS Server...\n`, 'stdout');
+
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'bind9', 'bind9utils', 'bind9-doc', 'dnsutils']);
+
+        // Create basic configuration
+        const namedConfOptions = `options {
+    directory "/var/cache/bind";
+
+    // Forward queries to public DNS if not authoritative
+    forwarders {
+        8.8.8.8;
+        8.8.4.4;
+        1.1.1.1;
+    };
+
+    dnssec-validation auto;
+
+    // Listen on local interfaces
+    listen-on { any; };
+    listen-on-v6 { any; };
+
+    // Allow queries from local network
+    allow-query { localhost; localnets; };
+
+    // Disable recursion for external queries (security)
+    recursion yes;
+    allow-recursion { localhost; localnets; };
+};
+`;
+        fs.writeFileSync('/etc/bind/named.conf.options', namedConfOptions);
+
+        await this.runCommand('systemctl', ['enable', 'named']);
+        await this.runCommand('systemctl', ['start', 'named']);
+
+        this.onLog(`✅ BIND9 DNS installed. Add zones in /etc/bind/named.conf.local\n`, 'stdout');
+        return await this.getCommandVersion('named', ['-v']) || 'installed';
+    }
+
+    // ============================================
+    // MAIL STACK (Postfix, Dovecot, Rspamd, OpenDKIM)
+    // ============================================
+
+    private async installPostfix(): Promise<string> {
+        this.onLog(`📥 Installing Postfix MTA...\n`, 'stdout');
+
+        // Get hostname for configuration
+        const hostname = os.hostname();
+        const domain = hostname.includes('.') ? hostname.split('.').slice(1).join('.') : hostname;
+
+        // Pre-configure postfix to avoid interactive prompts
+        const debconfSelections = `postfix postfix/main_mailer_type select Internet Site
+postfix postfix/mailname string ${hostname}
+postfix postfix/destinations string ${hostname}, localhost.localdomain, localhost
+`;
+        fs.writeFileSync('/tmp/postfix-debconf', debconfSelections);
+        await this.runCommand('bash', ['-c', 'debconf-set-selections < /tmp/postfix-debconf']);
+        await this.runCommandSilent('rm', ['/tmp/postfix-debconf']);
+
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'postfix', 'postfix-policyd-spf-python', 'libsasl2-modules']);
+
+        // Basic secure configuration
+        const mainCf = `
+# Basic settings
+myhostname = ${hostname}
+mydomain = ${domain}
+myorigin = $mydomain
+mydestination = $myhostname, localhost.$mydomain, localhost
+mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128
+
+# TLS parameters
+smtpd_tls_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem
+smtpd_tls_key_file=/etc/ssl/private/ssl-cert-snakeoil.key
+smtpd_tls_security_level=may
+smtp_tls_security_level=may
+
+# SASL authentication
+smtpd_sasl_type = dovecot
+smtpd_sasl_path = private/auth
+smtpd_sasl_auth_enable = yes
+
+# Restrictions
+smtpd_recipient_restrictions =
+    permit_mynetworks,
+    permit_sasl_authenticated,
+    reject_unauth_destination,
+    reject_rbl_client zen.spamhaus.org
+
+# Mailbox
+home_mailbox = Maildir/
+
+# Size limits
+message_size_limit = 52428800
+mailbox_size_limit = 0
+
+# Virtual domains (uncomment and configure as needed)
+# virtual_mailbox_domains = /etc/postfix/virtual_domains
+# virtual_mailbox_base = /var/mail/vhosts
+# virtual_mailbox_maps = hash:/etc/postfix/vmailbox
+# virtual_alias_maps = hash:/etc/postfix/virtual
+`;
+        fs.appendFileSync('/etc/postfix/main.cf', mainCf);
+
+        await this.runCommand('systemctl', ['enable', 'postfix']);
+        await this.runCommand('systemctl', ['restart', 'postfix']);
+
+        this.onLog(`✅ Postfix installed. Configure TLS certificates for production use.\n`, 'stdout');
+        const version = await this.getCommandVersion('postconf', ['mail_version']);
+        return version?.replace('mail_version = ', '').trim() || 'installed';
+    }
+
+    private async installDovecot(): Promise<string> {
+        this.onLog(`📥 Installing Dovecot IMAP/POP3 Server...\n`, 'stdout');
+
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'dovecot-core', 'dovecot-imapd', 'dovecot-pop3d', 'dovecot-lmtpd', 'dovecot-sieve']);
+
+        // Configure Dovecot for Maildir format
+        const dovecotLocal = `
+# Mailbox location
+mail_location = maildir:~/Maildir
+
+# Authentication
+auth_mechanisms = plain login
+
+# SSL/TLS
+ssl = yes
+ssl_cert = </etc/ssl/certs/ssl-cert-snakeoil.pem
+ssl_key = </etc/ssl/private/ssl-cert-snakeoil.key
+
+# Protocols
+protocols = imap pop3 lmtp
+
+# LMTP socket for Postfix
+service lmtp {
+  unix_listener /var/spool/postfix/private/dovecot-lmtp {
+    mode = 0600
+    user = postfix
+    group = postfix
+  }
+}
+
+# Auth socket for Postfix SASL
+service auth {
+  unix_listener /var/spool/postfix/private/auth {
+    mode = 0660
+    user = postfix
+    group = postfix
+  }
+}
+
+# Logging
+log_path = /var/log/dovecot.log
+info_log_path = /var/log/dovecot-info.log
+`;
+        fs.writeFileSync('/etc/dovecot/local.conf', dovecotLocal);
+
+        await this.runCommand('systemctl', ['enable', 'dovecot']);
+        await this.runCommand('systemctl', ['restart', 'dovecot']);
+
+        this.onLog(`✅ Dovecot installed. IMAP on port 143/993, POP3 on 110/995\n`, 'stdout');
+        return await this.getCommandVersion('dovecot', ['--version']) || 'installed';
+    }
+
+    private async installRspamd(): Promise<string> {
+        this.onLog(`📥 Installing Rspamd Antispam...\n`, 'stdout');
+
+        // Add Rspamd repository
+        await this.runCommand('apt-get', ['install', '-y', 'lsb-release', 'wget', 'gpg']);
+
+        const codename = await this.runCommandSilent('lsb_release', ['-cs']);
+
+        await this.runCommand('wget', ['-qO-', 'https://rspamd.com/apt-stable/gpg.key', '-O', '/tmp/rspamd.gpg.key']);
+        await this.runCommand('gpg', ['--dearmor', '-o', '/usr/share/keyrings/rspamd.gpg', '/tmp/rspamd.gpg.key']);
+
+        const repoLine = `deb [signed-by=/usr/share/keyrings/rspamd.gpg] https://rspamd.com/apt-stable/ ${codename.trim()} main`;
+        fs.writeFileSync('/etc/apt/sources.list.d/rspamd.list', repoLine + '\n');
+
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'rspamd', 'redis-server']);
+
+        // Basic configuration for Postfix integration
+        const milterConfig = `
+# Rspamd milter for Postfix
+milter = {
+  bind_socket = "/var/spool/postfix/rspamd/rspamd.sock mode=0666 owner=_rspamd";
+}
+`;
+        if (!fs.existsSync('/etc/rspamd/local.d')) {
+            fs.mkdirSync('/etc/rspamd/local.d', { recursive: true });
+        }
+        fs.writeFileSync('/etc/rspamd/local.d/worker-proxy.inc', milterConfig);
+
+        // Create socket directory
+        if (!fs.existsSync('/var/spool/postfix/rspamd')) {
+            fs.mkdirSync('/var/spool/postfix/rspamd', { recursive: true });
+        }
+        await this.runCommand('chown', ['_rspamd:_rspamd', '/var/spool/postfix/rspamd']);
+
+        // Configure Postfix to use Rspamd
+        await this.runCommand('postconf', ['-e', 'smtpd_milters = unix:/rspamd/rspamd.sock']);
+        await this.runCommand('postconf', ['-e', 'non_smtpd_milters = unix:/rspamd/rspamd.sock']);
+        await this.runCommand('postconf', ['-e', 'milter_default_action = accept']);
+
+        await this.runCommand('systemctl', ['enable', 'rspamd']);
+        await this.runCommand('systemctl', ['enable', 'redis-server']);
+        await this.runCommand('systemctl', ['start', 'redis-server']);
+        await this.runCommand('systemctl', ['start', 'rspamd']);
+
+        this.onLog(`✅ Rspamd installed. Web UI at http://localhost:11334\n`, 'stdout');
+        this.onLog(`⚠️ Set password: rspamadm pw --encrypt\n`, 'stdout');
+        return await this.getCommandVersion('rspamd', ['--version']) || 'installed';
+    }
+
+    private async installOpendkim(): Promise<string> {
+        this.onLog(`📥 Installing OpenDKIM...\n`, 'stdout');
+
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'opendkim', 'opendkim-tools']);
+
+        const hostname = os.hostname();
+        const domain = hostname.includes('.') ? hostname.split('.').slice(1).join('.') : hostname;
+
+        // Create directories
+        const keysDir = `/etc/opendkim/keys/${domain}`;
+        if (!fs.existsSync(keysDir)) {
+            fs.mkdirSync(keysDir, { recursive: true });
+        }
+
+        // Generate DKIM keys
+        this.onLog(`🔐 Generating DKIM keys for ${domain}...\n`, 'stdout');
+        await this.runCommand('opendkim-genkey', ['-b', '2048', '-d', domain, '-D', keysDir, '-s', 'default', '-v']);
+        await this.runCommand('chown', ['-R', 'opendkim:opendkim', '/etc/opendkim']);
+        await this.runCommand('chmod', ['600', `${keysDir}/default.private`]);
+
+        // Configure OpenDKIM
+        const opendkimConf = `
+AutoRestart             Yes
+AutoRestartRate         10/1h
+Syslog                  yes
+SyslogSuccess           Yes
+LogWhy                  Yes
+
+Canonicalization        relaxed/simple
+
+ExternalIgnoreList      refile:/etc/opendkim/TrustedHosts
+InternalHosts           refile:/etc/opendkim/TrustedHosts
+KeyTable                refile:/etc/opendkim/KeyTable
+SigningTable            refile:/etc/opendkim/SigningTable
+
+Mode                    sv
+PidFile                 /var/run/opendkim/opendkim.pid
+SignatureAlgorithm      rsa-sha256
+
+UserID                  opendkim:opendkim
+
+Socket                  inet:12301@localhost
+`;
+        fs.writeFileSync('/etc/opendkim.conf', opendkimConf);
+
+        // Trusted hosts
+        const trustedHosts = `127.0.0.1
+localhost
+${hostname}
+*.${domain}
+`;
+        fs.writeFileSync('/etc/opendkim/TrustedHosts', trustedHosts);
+
+        // Key table
+        const keyTable = `default._domainkey.${domain} ${domain}:default:${keysDir}/default.private\n`;
+        fs.writeFileSync('/etc/opendkim/KeyTable', keyTable);
+
+        // Signing table
+        const signingTable = `*@${domain} default._domainkey.${domain}\n`;
+        fs.writeFileSync('/etc/opendkim/SigningTable', signingTable);
+
+        // Configure Postfix to use OpenDKIM
+        await this.runCommand('postconf', ['-e', 'milter_protocol = 6']);
+        await this.runCommand('postconf', ['-e', 'milter_default_action = accept']);
+        await this.runCommand('postconf', ['-e', 'smtpd_milters = inet:localhost:12301']);
+        await this.runCommand('postconf', ['-e', 'non_smtpd_milters = inet:localhost:12301']);
+
+        await this.runCommand('systemctl', ['enable', 'opendkim']);
+        await this.runCommand('systemctl', ['start', 'opendkim']);
+
+        // Show the DNS record
+        const dkimPublicKey = fs.readFileSync(`${keysDir}/default.txt`, 'utf-8');
+        this.onLog(`\n📋 Add this DNS TXT record for DKIM:\n${dkimPublicKey}\n`, 'stdout');
+
+        return 'installed';
+    }
+
+    private async installMongodb(): Promise<string> {
+        this.onLog(`📥 Installing MongoDB...\n`, 'stdout');
+
+        // Add MongoDB repository
+        await this.runCommand('apt-get', ['install', '-y', 'gnupg', 'curl']);
+        await this.runCommand('curl', ['-fsSL', 'https://www.mongodb.org/static/pgp/server-7.0.asc', '-o', '/tmp/mongodb.asc']);
+        await this.runCommand('gpg', ['--dearmor', '-o', '/usr/share/keyrings/mongodb-server-7.0.gpg', '/tmp/mongodb.asc']);
+
+        // Detect OS version
+        let osCodename = 'bookworm'; // Debian 12 default
+        try {
+            const osRelease = fs.readFileSync('/etc/os-release', 'utf-8');
+            const codenameMatch = osRelease.match(/VERSION_CODENAME=(\w+)/);
+            if (codenameMatch) {
+                osCodename = codenameMatch[1];
+            }
+        } catch { }
+
+        const repoLine = `deb [signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg] https://repo.mongodb.org/apt/debian ${osCodename}/mongodb-org/7.0 main`;
+        fs.writeFileSync('/etc/apt/sources.list.d/mongodb-org-7.0.list', repoLine + '\n');
+
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'mongodb-org']);
+        await this.runCommand('systemctl', ['enable', 'mongod']);
+        await this.runCommand('systemctl', ['start', 'mongod']);
+
+        // Wait for MongoDB to start
+        await this.sleep(3000);
+
+        return await this.getCommandVersion('mongod', ['--version']) || 'installed';
+    }
+
+    // ============================================
     // HELPERS
     // ============================================
 
@@ -1423,12 +2472,11 @@ export class InfrastructureManager {
             proc.stdout.on('data', (data) => { stdout += data.toString(); });
             proc.stderr.on('data', (data) => { stderr += data.toString(); });
 
-            proc.on('close', (code) => {
-                if (code === 0) {
-                    resolve(stdout);
-                } else {
-                    reject(new Error(stderr || `Command failed with code ${code}`));
-                }
+            proc.on('close', () => {
+                // Always resolve with output - some commands (nginx -v, keepalived -v)
+                // output version to stderr and may return non-zero exit codes
+                // For version detection, we don't care about exit code - just the output
+                resolve(stdout || stderr);
             });
 
             proc.on('error', reject);
