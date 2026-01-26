@@ -160,6 +160,11 @@ export default {
         databases: 'Bases de données',
         backups: 'Sauvegardes',
         installConsole: 'Console d\'installation',
+        loadServerLogs: 'Charger logs serveur',
+        clearServerLogs: 'Vider serveur',
+        serverLogFile: 'Fichier de logs serveur',
+        loadingLogs: 'Chargement des logs depuis le serveur...',
+        waitingForLogs: 'En attente des logs d\'installation... Cliquez sur "Charger logs serveur" pour récupérer les logs stockés.',
         comingSoon: 'Bientôt disponible',
         installed: 'Installé',
         notInstalled: 'Non installé',
@@ -178,6 +183,9 @@ export default {
         updating: 'Mise à jour...',
         updateSuccess: 'Agent mis à jour !',
         updateFailed: 'Échec de la mise à jour',
+        updateFailedDescription: 'La mise à jour de l\'agent a échoué avec l\'erreur suivante :',
+        updateFailedHint: 'Vous pouvez essayer de mettre à jour manuellement via SSH ou vérifier les logs du serveur pour plus de détails.',
+        trySSHUpdate: 'Essayer via SSH',
         updateAgent: 'Mettre à jour l\'agent',
         sshUpdateDescription: 'Connexion SSH requise pour mettre à jour l\'agent sur ce serveur.',
         targetServer: 'Serveur cible',
@@ -198,7 +206,27 @@ export default {
         disconnectOnlyDesc: 'Arrête l\'agent mais garde les fichiers sur le serveur. Vous pourrez réinstaller plus tard.',
         uninstallCompletely: 'Désinstaller complètement',
         uninstallCompletelyDesc: 'Supprime l\'agent, les apps et tous les fichiers ServerFlow du serveur.',
-        agentOfflineWarning: 'L\'agent est hors ligne. Le serveur sera retiré du tableau de bord, mais l\'agent peut continuer à fonctionner sur le serveur.'
+        agentOfflineWarning: 'L\'agent est hors ligne. Le serveur sera retiré du tableau de bord, mais l\'agent peut continuer à fonctionner sur le serveur.',
+
+        // Server Settings Modals
+        setupDbTitle: 'Configurer {db}',
+        securityOptions: 'Options de sécurité',
+        setRootPassword: 'Définir un mot de passe root sécurisé',
+        removeAnonymousUsers: 'Supprimer les utilisateurs anonymes',
+        disallowRootRemote: 'Interdire la connexion root à distance',
+        removeTestDb: 'Supprimer la base de test',
+        configureHba: 'Configurer pg_hba.conf (auth par mot de passe)',
+        enableProtectedMode: 'Activer le mode protégé',
+        bindLocalhost: 'Lier à localhost uniquement',
+        installAndSecure: 'Installer et sécuriser',
+        removeRuntimeTitle: 'Supprimer {runtime} ?',
+        removeRuntimeWarning: 'Cela supprimera complètement {runtime} du serveur. Cette action est irréversible.',
+        removeDatabaseTitle: 'Supprimer {db} ?',
+        removeDatabaseWarning: 'Cela supprimera complètement {db} et toutes ses données du serveur. Cette action est irréversible.',
+        reconfigureDbTitle: 'Reconfigurer {db}',
+        reconfigureDbDesc: 'Cela créera une nouvelle base de données et un nouvel utilisateur avec un nouveau mot de passe. L\'ancienne base restera inchangée.',
+        newDbName: 'Nouveau nom de base',
+        backupsDesc: 'Configurez les sauvegardes automatiques vers S3, Rsync ou d\'autres fournisseurs de stockage.'
     },
 
     // Applications
@@ -314,6 +342,7 @@ export default {
     // Settings
     settings: {
         title: 'Paramètres',
+        subtitle: 'Gérez votre compte et vos paramètres de confidentialité',
         profile: 'Profil',
         account: 'Compte',
         security: 'Sécurité',
@@ -325,8 +354,34 @@ export default {
         currentPassword: 'Mot de passe actuel',
         newPassword: 'Nouveau mot de passe',
         confirmPassword: 'Confirmer le mot de passe',
-        deleteAccount: 'Supprimer le compte',
-        deleteWarning: 'Cette action est irréversible. Toutes vos données seront définitivement supprimées.'
+        deleteAccount: 'Supprimer mon compte',
+        deleteWarning: 'Cette action est irréversible. Toutes vos données seront définitivement supprimées.',
+        // Billing Information
+        billingInfo: 'Informations de facturation',
+        fullName: 'Nom complet',
+        company: 'Entreprise',
+        phone: 'Téléphone',
+        address: 'Adresse',
+        vatNumber: 'Numéro de TVA',
+        // Legal Agreements
+        legalAgreements: 'Accords légaux',
+        termsOfService: 'Conditions Générales d\'Utilisation et de Vente',
+        privacyPolicy: 'Politique de Confidentialité (RGPD)',
+        withdrawalWaiver: 'Renonciation au droit de rétractation',
+        acceptedOn: 'Accepté le',
+        acknowledgedOn: 'Reconnu le',
+        // GDPR Data Rights
+        dataRights: 'Vos droits sur vos données (RGPD)',
+        downloadData: 'Télécharger vos données',
+        downloadDataDesc: 'Obtenez une copie de toutes vos données personnelles que nous détenons (Article 20 - Droit à la portabilité des données)',
+        downloadDataBtn: 'Télécharger',
+        preparing: 'Préparation...',
+        deleteAccountDesc: 'Supprimez définitivement votre compte et toutes les données associées (Article 17 - Droit à l\'effacement)',
+        // Account Information
+        accountInfo: 'Informations du compte',
+        userId: 'ID utilisateur',
+        accountCreated: 'Compte créé le',
+        role: 'Rôle'
     },
 
     // Billing
@@ -653,17 +708,35 @@ export default {
         },
         security: {
             title: 'Sécurité & Clés',
+            subtitle: 'Gérez les clés de sécurité et les accès',
             cpKey: 'Clé Control Plane',
+            cpKeyDescription: 'Utilisée pour authentifier les agents se connectant au control plane',
             fingerprint: 'Empreinte',
             algorithm: 'Algorithme',
             createdAt: 'Créée le',
+            rotations: 'Rotations',
+            lastRotated: 'Dernière rotation',
             agentsOnline: 'Agents en ligne',
             rotateCPKey: 'Regénérer la clé',
+            rotating: 'Rotation...',
+            rotateWarning: 'Attention : cela déconnectera tous les agents',
+            rotateWarningDesc: 'Tous les agents devront se reconnecter avec de nouveaux tokens',
             rotateCPWarning: 'Attention : La rotation de la clé CP nécessite que tous les agents connectés mettent à jour leur clé stockée.',
             agentKeys: 'Clés des Agents',
+            agentKeysDescription: 'Clés individuelles pour chaque agent connecté',
+            serverId: 'ID Serveur',
+            status: 'Statut',
+            lastUsed: 'Dernière utilisation',
+            active: 'Actif',
+            revoked: 'Révoqué',
             agentOffline: 'Hors ligne',
             rotateKey: 'Regénérer',
-            noAgents: 'Aucun agent connecté'
+            noAgents: 'Aucun agent connecté',
+            noAgentKeys: 'Aucune clé d\'agent',
+            loadingData: 'Chargement des données de sécurité...',
+            activeAgents: 'Agents actifs',
+            totalRotations: 'Rotations totales',
+            revokedKeys: 'Clés révoquées'
         }
     },
 

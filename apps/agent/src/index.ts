@@ -27,9 +27,16 @@ const BUNDLE_DIR = path.join(os.homedir(), '.server-flow', 'agent-bundle');
 // Read agent version from package.json
 function getAgentVersion(): string {
     try {
-        const pkgPath = path.join(BUNDLE_DIR, 'package.json');
-        if (fs.existsSync(pkgPath)) {
-            const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+        // Try agent's own package.json first (in bundle structure: apps/agent/package.json)
+        const agentPkgPath = path.join(BUNDLE_DIR, 'apps', 'agent', 'package.json');
+        if (fs.existsSync(agentPkgPath)) {
+            const pkg = JSON.parse(fs.readFileSync(agentPkgPath, 'utf-8'));
+            return pkg.version || '0.0.0';
+        }
+        // Fallback to root package.json (for dev mode)
+        const rootPkgPath = path.join(BUNDLE_DIR, 'package.json');
+        if (fs.existsSync(rootPkgPath)) {
+            const pkg = JSON.parse(fs.readFileSync(rootPkgPath, 'utf-8'));
             return pkg.version || '0.0.0';
         }
     } catch { }
@@ -252,19 +259,61 @@ function connectToControlPlane() {
 
                 (async () => {
                     try {
+                        const { spawn } = await import('node:child_process');
                         const { exec } = await import('node:child_process');
                         const { promisify } = await import('node:util');
                         const execAsync = promisify(exec);
 
+                        // Helper to send log lines
+                        const sendLog = (data: string, stream: 'stdout' | 'stderr' = 'stdout') => {
+                            if (ws.readyState === WebSocket.OPEN) {
+                                ws.send(JSON.stringify({
+                                    type: 'AGENT_UPDATE_LOG',
+                                    serverId: currentServerId,
+                                    data,
+                                    stream
+                                }));
+                            }
+                        };
+
+                        // Helper to run command with streaming output
+                        const runWithLogs = (cmd: string, args: string[], cwd?: string): Promise<void> => {
+                            return new Promise((resolve, reject) => {
+                                sendLog(`$ ${cmd} ${args.join(' ')}\n`);
+                                const proc = spawn(cmd, args, { cwd: cwd || '/tmp', shell: true });
+
+                                proc.stdout?.on('data', (data) => {
+                                    sendLog(data.toString());
+                                });
+
+                                proc.stderr?.on('data', (data) => {
+                                    sendLog(data.toString(), 'stderr');
+                                });
+
+                                proc.on('close', (code) => {
+                                    if (code === 0) {
+                                        resolve();
+                                    } else {
+                                        reject(new Error(`Command exited with code ${code}`));
+                                    }
+                                });
+
+                                proc.on('error', reject);
+                            });
+                        };
+
                         sendStatus('downloading', 'Downloading latest agent bundle...');
+                        sendLog('📦 Downloading agent bundle...\n');
 
                         // Download new bundle
                         const bundleUrl = `${controlPlaneUrl}/agent-bundle.tar.gz`;
                         const tempBundle = path.join(os.tmpdir(), 'agent-bundle-update.tar.gz');
 
-                        await execAsync(`curl -L --progress-bar "${bundleUrl}" -o "${tempBundle}"`);
+                        await runWithLogs('curl', ['-L', '--progress-bar', `"${bundleUrl}"`, '-o', `"${tempBundle}"`]);
+                        sendLog('✅ Download complete\n');
 
                         sendStatus('installing', 'Installing update...');
+                        sendLog('\n📂 Extracting bundle...\n');
 
                         // Backup current bundle (just in case)
                         const backupDir = path.join(os.homedir(), '.server-flow', 'agent-bundle-backup');
@@ -273,20 +322,42 @@ function connectToControlPlane() {
                                 fs.rmSync(backupDir, { recursive: true });
                             }
                             fs.renameSync(BUNDLE_DIR, backupDir);
+                            sendLog('📁 Backed up old version\n');
                         }
 
                         // Extract new bundle
                         fs.mkdirSync(BUNDLE_DIR, { recursive: true });
-                        await execAsync(`tar -xzf "${tempBundle}" -C "${BUNDLE_DIR}" --no-same-owner`);
+                        // Use /tmp as cwd to avoid getcwd() errors when bundle dir changes
+                        await runWithLogs('tar', ['-xzf', `"${tempBundle}"`, '-C', `"${BUNDLE_DIR}"`, '--no-same-owner']);
                         fs.unlinkSync(tempBundle);
+                        sendLog('✅ Extraction complete\n');
 
-                        // Install dependencies
-                        await execAsync(`cd "${BUNDLE_DIR}" && pnpm install --prod 2>&1 || npm install --production 2>&1`);
+                        // Clean node_modules before install (pnpm structure breaks npm)
+                        const nodeModulesDir = path.join(BUNDLE_DIR, 'node_modules');
+                        if (fs.existsSync(nodeModulesDir)) {
+                            sendLog('🧹 Cleaning old node_modules...\n');
+                            fs.rmSync(nodeModulesDir, { recursive: true });
+                        }
+
+                        // Install dependencies (use cwd option, not cd command, to avoid getcwd errors)
+                        sendStatus('installing', 'Installing dependencies...');
+                        sendLog('\n📥 Installing dependencies...\n');
+
+                        try {
+                            await runWithLogs('pnpm', ['install', '--prod', '--ignore-scripts'], BUNDLE_DIR);
+                        } catch {
+                            // Fallback to npm if pnpm fails
+                            sendLog('⚠️ pnpm failed, trying npm...\n');
+                            await runWithLogs('npm', ['install', '--omit=dev', '--ignore-scripts'], BUNDLE_DIR);
+                        }
+                        sendLog('✅ Dependencies installed\n');
 
                         // Read new version
                         const newVersion = getAgentVersion();
+                        sendLog(`\n🆕 New version: ${newVersion}\n`);
 
                         sendStatus('restarting', 'Restarting agent...', newVersion);
+                        sendLog('\n🔄 Restarting agent service...\n');
 
                         // Restart via systemd (the service will reconnect automatically)
                         setTimeout(async () => {
@@ -307,6 +378,127 @@ function connectToControlPlane() {
                         sendStatus('failed', `Update failed: ${err.message}`);
                     }
                 })();
+                return;
+            }
+
+            // Handle GET_INFRASTRUCTURE_LOGS (read logs from file)
+            if (raw.type === 'GET_INFRASTRUCTURE_LOGS') {
+                const lines = raw.lines as number | undefined;
+                const logs = InfrastructureManager.readLogs(lines);
+                ws.send(JSON.stringify({
+                    type: 'INFRASTRUCTURE_LOGS_RESPONSE',
+                    serverId: currentServerId,
+                    logs,
+                    logFilePath: InfrastructureManager.getLogFilePath()
+                }));
+                return;
+            }
+
+            // Handle CLEAR_INFRASTRUCTURE_LOGS (clear logs file)
+            if (raw.type === 'CLEAR_INFRASTRUCTURE_LOGS') {
+                InfrastructureManager.clearLogs();
+                ws.send(JSON.stringify({
+                    type: 'INFRASTRUCTURE_LOGS_CLEARED',
+                    serverId: currentServerId
+                }));
+                return;
+            }
+
+            // Handle GET_SERVICE_LOGS (read logs for a specific service/runtime)
+            if (raw.type === 'GET_SERVICE_LOGS') {
+                const service = raw.service as string;
+                const lines = raw.lines as number | undefined;
+                const logs = InfrastructureManager.readServiceLogs(service, lines);
+                const hasLogs = InfrastructureManager.hasServiceLogs(service);
+                ws.send(JSON.stringify({
+                    type: 'SERVICE_LOGS_RESPONSE',
+                    serverId: currentServerId,
+                    service,
+                    logs,
+                    logFilePath: InfrastructureManager.getServiceLogFilePath(service),
+                    hasLogs
+                }));
+                return;
+            }
+
+            // Handle REMOVE_RUNTIME (Story 7.7 Extension)
+            if (raw.type === 'REMOVE_RUNTIME') {
+                const runtime = raw.runtime as RuntimeType;
+                const purge = raw.purge as boolean;
+                const infraManager = new InfrastructureManager((message, stream) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'INFRASTRUCTURE_LOG',
+                            serverId: currentServerId,
+                            message,
+                            stream
+                        }));
+                    }
+                });
+                infraManager.uninstallRuntime(runtime, purge).then(result => {
+                    ws.send(JSON.stringify({
+                        type: 'RUNTIME_REMOVED',
+                        serverId: currentServerId,
+                        runtime,
+                        success: result.success,
+                        error: result.error
+                    }));
+                });
+                return;
+            }
+
+            // Handle REMOVE_DATABASE (Story 7.7 Extension)
+            if (raw.type === 'REMOVE_DATABASE') {
+                const database = raw.database as DatabaseType;
+                const purge = raw.purge as boolean;
+                const removeData = raw.removeData as boolean;
+                const infraManager = new InfrastructureManager((message, stream) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'INFRASTRUCTURE_LOG',
+                            serverId: currentServerId,
+                            message,
+                            stream
+                        }));
+                    }
+                });
+                infraManager.removeDatabase(database, purge, removeData).then(result => {
+                    ws.send(JSON.stringify({
+                        type: 'DATABASE_REMOVED',
+                        serverId: currentServerId,
+                        database,
+                        success: result.success,
+                        error: result.error
+                    }));
+                });
+                return;
+            }
+
+            // Handle RECONFIGURE_DATABASE (Story 7.7 Extension)
+            if (raw.type === 'RECONFIGURE_DATABASE') {
+                const database = raw.database as DatabaseType;
+                const dbName = raw.dbName as string;
+                const resetPassword = raw.resetPassword as boolean;
+                const infraManager = new InfrastructureManager((message, stream) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'INFRASTRUCTURE_LOG',
+                            serverId: currentServerId,
+                            message,
+                            stream
+                        }));
+                    }
+                });
+                infraManager.reconfigureDatabase(database, dbName, resetPassword).then(result => {
+                    ws.send(JSON.stringify({
+                        type: 'DATABASE_RECONFIGURED',
+                        serverId: currentServerId,
+                        database,
+                        success: result.success,
+                        connectionString: result.connectionString,
+                        error: result.error
+                    }));
+                });
                 return;
             }
 
@@ -579,6 +771,30 @@ function connectToControlPlane() {
                         runtime,
                         success: result.success,
                         version: result.version,
+                        error: result.error
+                    }));
+                });
+            }
+            else if (msg.type === 'UPDATE_RUNTIME') {
+                const runtime = msg.runtime as RuntimeType;
+                const infraManager = new InfrastructureManager((message, stream) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'INFRASTRUCTURE_LOG',
+                            serverId: currentServerId,
+                            message,
+                            stream
+                        }));
+                    }
+                });
+                infraManager.updateRuntime(runtime).then(result => {
+                    ws.send(JSON.stringify({
+                        type: 'RUNTIME_UPDATED',
+                        serverId: currentServerId,
+                        runtime,
+                        success: result.success,
+                        oldVersion: result.oldVersion,
+                        newVersion: result.newVersion,
                         error: result.error
                     }));
                 });

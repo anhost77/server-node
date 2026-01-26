@@ -148,6 +148,37 @@ fi
 
 echo "🚀 Starting ServerFlow Agent Installation..."
 
+# 0. Ensure base tools are available (sudo, build-essential, curl)
+echo "🔧 [0/4] Checking base system requirements..."
+
+# Install sudo if not present and not running as root
+if [ "$(id -u)" -ne 0 ]; then
+    if ! check_cmd sudo; then
+        echo "❌ Error: sudo is required but not installed. Please run this script as root first."
+        exit 1
+    fi
+else
+    # Running as root - ensure sudo is available for non-root users later
+    if ! check_cmd sudo; then
+        echo "  📦 Installing sudo..."
+        apt-get update -qq && apt-get install -y -qq sudo
+    fi
+fi
+
+# Install build-essential if not present (needed for native modules)
+if ! dpkg -l build-essential >/dev/null 2>&1; then
+    echo "  📦 Installing build-essential..."
+    $SUDO apt-get update -qq && $SUDO apt-get install -y -qq build-essential
+fi
+
+# Install curl if not present
+if ! check_cmd curl; then
+    echo "  📦 Installing curl..."
+    $SUDO apt-get update -qq && $SUDO apt-get install -y -qq curl
+fi
+
+echo "  ✅ Base requirements OK"
+
 # 1. System Dependencies
 if ! check_cmd git || ! check_cmd nginx || ! check_cmd certbot; then
     echo "📦 [1/4] Installing git, nginx, certbot & tools..."
@@ -185,7 +216,7 @@ rm "$HOME/.server-flow/agent-bundle.tar.gz"
 cd "$INSTALL_DIR"
 
 echo "🔨 Initializing workspace (Installing Deps)..."
-pnpm install --prod 2>&1 || npm install --production 2>&1
+pnpm install --prod --ignore-scripts 2>&1 || npm install --omit=dev --ignore-scripts 2>&1
 
 # 5. CREATE SYSTEMD SERVICE
 echo "⚙️  Configuring background service (systemd)..."
@@ -194,6 +225,8 @@ SERVICE_FILE="/etc/systemd/system/server-flow-agent.service"
 USER_NAME=$(whoami)
 NODE_PATH=$(which node)
 
+AGENT_DIR="$INSTALL_DIR/apps/agent"
+
 SERVICE_CONTENT="[Unit]
 Description=ServerFlow Agent
 After=network.target
@@ -201,7 +234,7 @@ After=network.target
 [Service]
 Type=simple
 User=$USER_NAME
-WorkingDirectory=$INSTALL_DIR
+WorkingDirectory=$AGENT_DIR
 ExecStartPre=-/bin/bash -c 'fuser -k 3001/tcp || true'
 ExecStart=$NODE_PATH dist/index.js --token $TOKEN --url $URL
 Restart=always

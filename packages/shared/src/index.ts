@@ -17,6 +17,8 @@ export interface RuntimeInfo {
     type: RuntimeType;
     installed: boolean;
     version?: string;
+    latestVersion?: string;
+    updateAvailable?: boolean;
     estimatedSize: string;
 }
 
@@ -121,10 +123,29 @@ export const ServerMessageSchema = z.discriminatedUnion('type', [
     runtime: z.enum(['python', 'go', 'docker', 'rust', 'ruby'])
   }),
   z.object({
+    type: z.literal('UPDATE_RUNTIME'),
+    serverId: z.string(),
+    runtime: z.enum(['nodejs', 'python', 'go', 'docker', 'rust', 'ruby'])
+  }),
+  z.object({
     type: z.literal('CONFIGURE_DATABASE'),
     serverId: z.string(),
     database: z.enum(['postgresql', 'mysql', 'redis']),
-    dbName: z.string()
+    dbName: z.string(),
+    // Security options (optional - defaults to secure if not provided)
+    securityOptions: z.object({
+      // MySQL/MariaDB specific
+      setRootPassword: z.boolean().optional(),      // Generate and store root password
+      removeAnonymousUsers: z.boolean().optional(), // Remove anonymous users
+      disableRemoteRoot: z.boolean().optional(),    // Disable remote root access
+      removeTestDb: z.boolean().optional(),         // Remove test database
+      // PostgreSQL specific
+      configureHba: z.boolean().optional(),         // Configure pg_hba.conf for password auth
+      // Redis specific
+      enableProtectedMode: z.boolean().optional(),  // Enable protected-mode
+      // Common to all
+      bindLocalhost: z.boolean().optional(),        // Bind to 127.0.0.1 only
+    }).optional()
   }),
   // Agent Update (one-click update from dashboard)
   z.object({
@@ -136,6 +157,45 @@ export const ServerMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('SHUTDOWN_AGENT'),
     serverId: z.string(),
     action: z.enum(['stop', 'uninstall']) // stop = arrête le service, uninstall = supprime tout
+  }),
+  // Infrastructure Logs (read logs from remote server)
+  z.object({
+    type: z.literal('GET_INFRASTRUCTURE_LOGS'),
+    serverId: z.string(),
+    lines: z.number().optional() // Number of lines to read (default: all)
+  }),
+  z.object({
+    type: z.literal('CLEAR_INFRASTRUCTURE_LOGS'),
+    serverId: z.string()
+  }),
+  // Service-specific logs (per runtime/database)
+  z.object({
+    type: z.literal('GET_SERVICE_LOGS'),
+    serverId: z.string(),
+    service: z.string(), // runtime or database type: python, go, docker, rust, ruby, postgresql, mysql, redis
+    lines: z.number().optional()
+  }),
+  // Runtime/Database Removal (Story 7.7 Extension)
+  z.object({
+    type: z.literal('REMOVE_RUNTIME'),
+    serverId: z.string(),
+    runtime: z.enum(['go', 'docker', 'rust', 'ruby']), // Note: nodejs and python NOT allowed - required by agent/system
+    purge: z.boolean() // true = remove config files too
+  }),
+  z.object({
+    type: z.literal('REMOVE_DATABASE'),
+    serverId: z.string(),
+    database: z.enum(['postgresql', 'mysql', 'redis']),
+    purge: z.boolean(), // true = remove config files
+    removeData: z.boolean() // true = delete data directory (IRREVERSIBLE)
+  }),
+  // Database Reconfiguration (new password or new database)
+  z.object({
+    type: z.literal('RECONFIGURE_DATABASE'),
+    serverId: z.string(),
+    database: z.enum(['postgresql', 'mysql', 'redis']),
+    dbName: z.string(),
+    resetPassword: z.boolean() // true = generate new password only, false = create new database
   })
 ]);
 
@@ -169,6 +229,8 @@ export const AgentMessageSchema = z.discriminatedUnion('type', [
         type: z.string(),
         installed: z.boolean(),
         version: z.string().optional(),
+        latestVersion: z.string().optional(),
+        updateAvailable: z.boolean().optional(),
         estimatedSize: z.string()
       })),
       databases: z.array(z.object({
@@ -202,6 +264,15 @@ export const AgentMessageSchema = z.discriminatedUnion('type', [
     error: z.string().optional()
   }),
   z.object({
+    type: z.literal('RUNTIME_UPDATED'),
+    serverId: z.string(),
+    runtime: z.string(),
+    success: z.boolean(),
+    oldVersion: z.string().optional(),
+    newVersion: z.string().optional(),
+    error: z.string().optional()
+  }),
+  z.object({
     type: z.literal('DATABASE_CONFIGURED'),
     serverId: z.string(),
     database: z.string(),
@@ -217,11 +288,61 @@ export const AgentMessageSchema = z.discriminatedUnion('type', [
     message: z.string().optional(),
     newVersion: z.string().optional()
   }),
+  // Agent Update Log (streaming output during update)
+  z.object({
+    type: z.literal('AGENT_UPDATE_LOG'),
+    serverId: z.string(),
+    data: z.string(),
+    stream: z.enum(['stdout', 'stderr'])
+  }),
   // Agent Shutdown Acknowledgment
   z.object({
     type: z.literal('AGENT_SHUTDOWN_ACK'),
     serverId: z.string(),
     action: z.enum(['stop', 'uninstall'])
+  }),
+  // Infrastructure Logs Response
+  z.object({
+    type: z.literal('INFRASTRUCTURE_LOGS_RESPONSE'),
+    serverId: z.string(),
+    logs: z.string(),
+    logFilePath: z.string()
+  }),
+  z.object({
+    type: z.literal('INFRASTRUCTURE_LOGS_CLEARED'),
+    serverId: z.string()
+  }),
+  // Service-specific logs response
+  z.object({
+    type: z.literal('SERVICE_LOGS_RESPONSE'),
+    serverId: z.string(),
+    service: z.string(),
+    logs: z.string(),
+    logFilePath: z.string(),
+    hasLogs: z.boolean()
+  }),
+  // Runtime/Database Removal Responses (Story 7.7 Extension)
+  z.object({
+    type: z.literal('RUNTIME_REMOVED'),
+    serverId: z.string(),
+    runtime: z.string(),
+    success: z.boolean(),
+    error: z.string().optional()
+  }),
+  z.object({
+    type: z.literal('DATABASE_REMOVED'),
+    serverId: z.string(),
+    database: z.string(),
+    success: z.boolean(),
+    error: z.string().optional()
+  }),
+  z.object({
+    type: z.literal('DATABASE_RECONFIGURED'),
+    serverId: z.string(),
+    database: z.string(),
+    success: z.boolean(),
+    connectionString: z.string().optional(),
+    error: z.string().optional()
   })
 ]);
 

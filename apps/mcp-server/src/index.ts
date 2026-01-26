@@ -12,7 +12,7 @@ const MCP_TOKEN = process.env.MCP_API_TOKEN || "mcp-internal-token";
 const server = new Server(
     {
         name: "server-flow-mcp",
-        version: "0.2.0",
+        version: "0.3.0",
     },
     {
         capabilities: {
@@ -108,6 +108,43 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                         dryRun: { type: "boolean", description: "If true, only validate without provisioning" }
                     },
                     required: ["serverId", "domain", "port"],
+                },
+            },
+            {
+                name: "get_server_infrastructure",
+                description: "Get the infrastructure status of a server (installed runtimes, databases, system info). Results are async - check Dashboard for full details.",
+                inputSchema: {
+                    type: "object",
+                    properties: {
+                        serverId: { type: "string", description: "The server ID (first 12 chars is enough)" }
+                    },
+                    required: ["serverId"],
+                },
+            },
+            {
+                name: "install_runtime",
+                description: "Install a runtime (Python, Go, Docker, Rust, Ruby) on a server. Installation is async - monitor progress in Dashboard.",
+                inputSchema: {
+                    type: "object",
+                    properties: {
+                        serverId: { type: "string", description: "The server ID (first 12 chars is enough)" },
+                        runtime: { type: "string", enum: ["python", "go", "docker", "rust", "ruby"], description: "The runtime to install" },
+                        dryRun: { type: "boolean", description: "If true, only simulate the installation" }
+                    },
+                    required: ["serverId", "runtime"],
+                },
+            },
+            {
+                name: "update_runtime",
+                description: "Update a runtime to its latest version on a server. Update is async - monitor progress in Dashboard.",
+                inputSchema: {
+                    type: "object",
+                    properties: {
+                        serverId: { type: "string", description: "The server ID (first 12 chars is enough)" },
+                        runtime: { type: "string", enum: ["nodejs", "python", "go", "docker", "rust", "ruby"], description: "The runtime to update" },
+                        dryRun: { type: "boolean", description: "If true, only simulate the update" }
+                    },
+                    required: ["serverId", "runtime"],
                 },
             },
         ],
@@ -268,6 +305,71 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     text: `Domain provisioning requires WebSocket. Use the Dashboard UI to provision "${domain}" → port ${port} on server ${serverId}.`
                 }],
             };
+        }
+
+        case "get_server_infrastructure": {
+            const { serverId } = args;
+            try {
+                const response = await cpRequest('get', `/api/internal/servers/${serverId}/infrastructure`);
+                return {
+                    content: [{
+                        type: "text",
+                        text: `Infrastructure status request sent to server ${serverId}. ${response.data.message || 'Check Dashboard for results.'}`
+                    }],
+                };
+            } catch (error: any) {
+                return { content: [{ type: "text", text: `Error: ${error.response?.data?.error || error.message}` }], isError: true };
+            }
+        }
+
+        case "install_runtime": {
+            const { serverId, runtime, dryRun = false } = args;
+
+            if (dryRun) {
+                return {
+                    content: [{
+                        type: "text",
+                        text: `[DRY RUN] Would install ${runtime} on server ${serverId}`
+                    }],
+                };
+            }
+
+            try {
+                const response = await cpRequest('post', `/api/internal/servers/${serverId}/runtime/install`, { runtime });
+                return {
+                    content: [{
+                        type: "text",
+                        text: `✅ ${response.data.message || `Installation of ${runtime} triggered on server ${serverId}. Monitor progress in Dashboard.`}`
+                    }],
+                };
+            } catch (error: any) {
+                return { content: [{ type: "text", text: `Error: ${error.response?.data?.error || error.message}` }], isError: true };
+            }
+        }
+
+        case "update_runtime": {
+            const { serverId, runtime, dryRun = false } = args;
+
+            if (dryRun) {
+                return {
+                    content: [{
+                        type: "text",
+                        text: `[DRY RUN] Would update ${runtime} on server ${serverId}`
+                    }],
+                };
+            }
+
+            try {
+                const response = await cpRequest('post', `/api/internal/servers/${serverId}/runtime/update`, { runtime });
+                return {
+                    content: [{
+                        type: "text",
+                        text: `✅ ${response.data.message || `Update of ${runtime} triggered on server ${serverId}. Monitor progress in Dashboard.`}`
+                    }],
+                };
+            } catch (error: any) {
+                return { content: [{ type: "text", text: `Error: ${error.response?.data?.error || error.message}` }], isError: true };
+            }
         }
 
         default:

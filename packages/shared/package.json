@@ -1,6 +1,7 @@
 {
     "name": "@server-flow/shared",
     "version": "0.0.1",
+    "type": "module",
     "private": true,
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",

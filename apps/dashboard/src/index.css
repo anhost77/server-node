@@ -1,5 +1,36 @@
+@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
+/* Tailwind v4 Theme Configuration */
+@theme {
+  /* Colors mapped from CSS variables */
+  --color-bg: var(--bg-color);
+  --color-surface: var(--surface-color);
+  --color-surface-border: var(--surface-border);
+  --color-primary: var(--primary-color);
+  --color-primary-glow: var(--primary-glow);
+  --color-secondary: var(--secondary-color);
+  --color-success: var(--success-color);
+  --color-error: var(--error-color);
+  --color-warning: #f59e0b;
+  --color-text-main: var(--text-main);
+  --color-text-muted: var(--text-muted);
+  --color-glass-bg: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
+
+  /* Typography */
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  /* Custom breakpoints */
+  --breakpoint-xs: 374px;
+  --breakpoint-sm: 600px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1200px;
+}
+
+/* CSS Variables (Light Theme) */
 :root {
   --bg-color: #f5f7fa;
   --surface-color: #ffffff;
@@ -17,47 +48,51 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* Base Reset - in @layer base so Tailwind utilities take precedence */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4 {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-main);
+  }
+
+  button {
+    font-family: var(--font-sans);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
 }
 
-body {
-  background-color: var(--bg-color);
-  color: var(--text-main);
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
-}
+/* ============================================
+   Component Classes (keep as @apply)
+   ============================================ */
 
-h1,
-h2,
-h3,
-h4 {
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text-main);
-}
-
-button {
-  font-family: var(--font-sans);
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
+/* Glass Card - used 50+ times */
 .glass-card {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: 16px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07) !important;
+  transition: box-shadow 0.2s, transform 0.2s;
 }
 
-.gradient-text {
-  color: var(--text-main);
-  font-weight: 800;
+.glass-card:hover {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
+/* Premium Button - gradient with hover states */
 .premium-btn {
   background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
   color: #fff;
@@ -78,6 +113,31 @@ button {
   transform: translateY(0);
 }
 
+.premium-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Secondary Button */
+.secondary-btn,
+button.secondary {
+  background: var(--surface-color);
+  color: var(--text-main);
+  border: 1px solid var(--surface-border);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.secondary-btn:hover,
+button.secondary:hover {
+  background: var(--bg-color);
+  border-color: var(--text-muted);
+}
+
+/* Status Badge - has pseudo-elements */
 .status-badge {
   padding: 4px 12px;
   border-radius: 99px;
@@ -129,25 +189,225 @@ button {
   background: var(--text-muted);
 }
 
-/* Global Utility Colors */
-.success {
-  color: var(--success-color) !important;
+/* Modal Overlay - backdrop-filter */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
 
-.error {
-  color: var(--error-color) !important;
+/* Form Group - repeated pattern */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
 }
 
-.warning {
-  color: #f59e0b !important;
+.form-group label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-main);
 }
 
-.text-muted {
+.form-group input,
+.form-group select,
+.form-group textarea {
+  background: var(--bg-color);
+  border: 1px solid var(--surface-border);
+  color: var(--text-main);
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-group small,
+.form-help {
+  font-size: 0.8rem;
   color: var(--text-muted);
 }
 
+/* ============================================
+   Utility Classes
+   ============================================ */
 
-/* Custom Scrollbar */
+.gradient-text {
+  color: var(--text-main);
+  font-weight: 800;
+}
+
+.success { color: var(--success-color) !important; }
+.error { color: var(--error-color) !important; }
+.warning { color: #f59e0b !important; }
+
+/* ============================================
+   Security Options (Database Config Modal)
+   ============================================ */
+
+.security-section {
+  margin-top: 16px;
+}
+
+.security-section h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 8px;
+  color: var(--text-main);
+}
+
+.security-desc {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.security-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.security-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border: 2px solid var(--surface-border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.security-option:hover {
+  border-color: #cbd5e1;
+}
+
+.security-option.selected {
+  background: rgba(34, 197, 94, 0.08);
+  border-color: #22c55e;
+}
+
+.security-option.critical:not(.selected) {
+  background: rgba(239, 68, 68, 0.05);
+  border-color: #fca5a5;
+}
+
+.security-option input[type="checkbox"] {
+  display: none;
+}
+
+.security-option .checkmark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: transparent;
+  background: white;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.security-option.selected .checkmark {
+  background: #22c55e;
+  border-color: #22c55e;
+  color: white;
+}
+
+.option-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.option-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.option-title {
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+.option-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 4px 0 0;
+  line-height: 1.4;
+}
+
+.badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.badge.recommended {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.badge.critical {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-top: 16px;
+  line-height: 1.5;
+}
+
+.notice.info {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: #1e40af;
+}
+
+.notice.warning {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #b45309;
+}
+
+/* ============================================
+   Custom Scrollbar
+   ============================================ */
+
 ::-webkit-scrollbar {
   width: 6px;
 }

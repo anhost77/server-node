@@ -160,6 +160,11 @@ export default {
         databases: 'Databases',
         backups: 'Backups',
         installConsole: 'Installation Console',
+        loadServerLogs: 'Load Server Logs',
+        clearServerLogs: 'Clear Server',
+        serverLogFile: 'Server log file',
+        loadingLogs: 'Loading logs from server...',
+        waitingForLogs: 'Waiting for installation logs... Click "Load Server Logs" to fetch stored logs.',
         comingSoon: 'Coming Soon',
         installed: 'Installed',
         notInstalled: 'Not Installed',
@@ -178,6 +183,9 @@ export default {
         updating: 'Updating...',
         updateSuccess: 'Agent updated successfully!',
         updateFailed: 'Update failed',
+        updateFailedDescription: 'The agent update failed with the following error:',
+        updateFailedHint: 'You can try updating manually via SSH or check the server logs for more details.',
+        trySSHUpdate: 'Try SSH Update',
         updateAgent: 'Update Agent',
         sshUpdateDescription: 'SSH connection required to update agent on this server.',
         targetServer: 'Target Server',
@@ -198,7 +206,27 @@ export default {
         disconnectOnlyDesc: 'Stop the agent but keep files on the server. You can reinstall later.',
         uninstallCompletely: 'Uninstall completely',
         uninstallCompletelyDesc: 'Remove agent, apps and all ServerFlow files from the server.',
-        agentOfflineWarning: 'Agent is offline. The server will be removed from the dashboard, but the agent may continue running on the server.'
+        agentOfflineWarning: 'Agent is offline. The server will be removed from the dashboard, but the agent may continue running on the server.',
+
+        // Server Settings Modals
+        setupDbTitle: 'Setup {db}',
+        securityOptions: 'Security Options',
+        setRootPassword: 'Set secure root password',
+        removeAnonymousUsers: 'Remove anonymous users',
+        disallowRootRemote: 'Disallow root login remotely',
+        removeTestDb: 'Remove test database',
+        configureHba: 'Configure pg_hba.conf (password auth)',
+        enableProtectedMode: 'Enable protected mode',
+        bindLocalhost: 'Bind to localhost only',
+        installAndSecure: 'Install & Secure',
+        removeRuntimeTitle: 'Remove {runtime}?',
+        removeRuntimeWarning: 'This will completely remove {runtime} from the server. This action cannot be undone.',
+        removeDatabaseTitle: 'Remove {db}?',
+        removeDatabaseWarning: 'This will completely remove {db} and all its data from the server. This action cannot be undone.',
+        reconfigureDbTitle: 'Reconfigure {db}',
+        reconfigureDbDesc: 'This will create a new database and user with a new password. The old database will remain unchanged.',
+        newDbName: 'New Database Name',
+        backupsDesc: 'Configure automatic backups to S3, Rsync, or other storage providers.'
     },
 
     // Applications
@@ -314,6 +342,7 @@ export default {
     // Settings
     settings: {
         title: 'Settings',
+        subtitle: 'Manage your account and privacy settings',
         profile: 'Profile',
         account: 'Account',
         security: 'Security',
@@ -325,8 +354,34 @@ export default {
         currentPassword: 'Current Password',
         newPassword: 'New Password',
         confirmPassword: 'Confirm Password',
-        deleteAccount: 'Delete Account',
-        deleteWarning: 'This action is irreversible. All your data will be permanently deleted.'
+        deleteAccount: 'Delete My Account',
+        deleteWarning: 'This action is irreversible. All your data will be permanently deleted.',
+        // Billing Information
+        billingInfo: 'Billing Information',
+        fullName: 'Full Name',
+        company: 'Company',
+        phone: 'Phone',
+        address: 'Address',
+        vatNumber: 'VAT Number',
+        // Legal Agreements
+        legalAgreements: 'Legal Agreements',
+        termsOfService: 'Terms of Service & General Conditions',
+        privacyPolicy: 'Privacy Policy (GDPR)',
+        withdrawalWaiver: 'Withdrawal Right Waiver',
+        acceptedOn: 'Accepted on',
+        acknowledgedOn: 'Acknowledged on',
+        // GDPR Data Rights
+        dataRights: 'Your Data Rights (GDPR)',
+        downloadData: 'Download Your Data',
+        downloadDataDesc: 'Get a copy of all your personal data we hold (Article 20 - Right to data portability)',
+        downloadDataBtn: 'Download',
+        preparing: 'Preparing...',
+        deleteAccountDesc: 'Permanently delete your account and all associated data (Article 17 - Right to erasure)',
+        // Account Information
+        accountInfo: 'Account Information',
+        userId: 'User ID',
+        accountCreated: 'Account Created',
+        role: 'Role'
     },
 
     // Billing
@@ -653,17 +708,35 @@ export default {
         },
         security: {
             title: 'Security & Keys',
+            subtitle: 'Manage security keys and access',
             cpKey: 'Control Plane Key',
+            cpKeyDescription: 'Used to authenticate agents connecting to the control plane',
             fingerprint: 'Fingerprint',
             algorithm: 'Algorithm',
             createdAt: 'Created',
+            rotations: 'Rotations',
+            lastRotated: 'Last Rotated',
             agentsOnline: 'Agents Online',
             rotateCPKey: 'Rotate Key',
+            rotating: 'Rotating...',
+            rotateWarning: 'Warning: this will disconnect all agents',
+            rotateWarningDesc: 'All agents will need to reconnect with new tokens',
             rotateCPWarning: 'Warning: Rotating the CP key will require all connected agents to update their stored key.',
             agentKeys: 'Agent Keys',
+            agentKeysDescription: 'Individual keys for each connected agent',
+            serverId: 'Server ID',
+            status: 'Status',
+            lastUsed: 'Last Used',
+            active: 'Active',
+            revoked: 'Revoked',
             agentOffline: 'Offline',
             rotateKey: 'Rotate',
-            noAgents: 'No agents connected'
+            noAgents: 'No agents connected',
+            noAgentKeys: 'No agent keys',
+            loadingData: 'Loading security data...',
+            activeAgents: 'Active Agents',
+            totalRotations: 'Total Rotations',
+            revokedKeys: 'Revoked Keys'
         }
     },
 

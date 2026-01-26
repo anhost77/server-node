@@ -180,6 +180,21 @@ function getAgentBundleVersion(): string {
     return '0.0.0';
 }
 const AGENT_BUNDLE_VERSION = getAgentBundleVersion();
+
+// Compare semver versions: returns -1 if v1 < v2, 0 if equal, 1 if v1 > v2
+function compareVersions(v1: string, v2: string): number {
+    const parts1 = v1.split('.').map(Number);
+    const parts2 = v2.split('.').map(Number);
+    const len = Math.max(parts1.length, parts2.length);
+    for (let i = 0; i < len; i++) {
+        const p1 = parts1[i] || 0;
+        const p2 = parts2[i] || 0;
+        if (p1 < p2) return -1;
+        if (p1 > p2) return 1;
+    }
+    return 0;
+}
+
 const dashboardSessions = new Map<string, Set<any>>(); // Map userId -> Set of sockets
 const serverMetricsCache = new Map<string, { cpu: number; ram: number; disk: number; ip?: string; updatedAt: number }>(); // nodeId -> metrics
 const pendingLogRequests = new Map<string, { resolve: (logs: string) => void; timeout: NodeJS.Timeout }>(); // requestId -> resolver
@@ -278,6 +293,83 @@ fastify.get('/api/internal/servers', async (req) => {
         const active = Array.from(agentSessions.values()).find(sess => sess.nodeId === n.id && sess.authorized);
         return { ...n, status: active ? 'online' : 'offline' };
     });
+});
+
+// ==================== Infrastructure Management (Story 7.7 MCP) ====================
+
+// Get server infrastructure status (triggers GET_SERVER_STATUS on agent)
+fastify.get('/api/internal/servers/:id/infrastructure', async (req, reply) => {
+    const userId = (req as any).userId;
+    const { id } = (req.params as any);
+
+    // Vérifier que le serveur appartient à l'utilisateur
+    const node = await db.select().from(schema.nodes).where(and(eq(schema.nodes.id, id), eq(schema.nodes.ownerId, userId))).get();
+    if (!node) {
+        // Essayer avec un préfixe d'ID
+        const allNodes = await db.select().from(schema.nodes).where(eq(schema.nodes.ownerId, userId)).all();
+        const matchedNode = allNodes.find(n => n.id.startsWith(id));
+        if (!matchedNode) {
+            return reply.status(404).send({ error: 'Server not found' });
+        }
+    }
+
+    const serverId = node?.id || (await db.select().from(schema.nodes).where(eq(schema.nodes.ownerId, userId)).all()).find(n => n.id.startsWith(id))?.id;
+    if (!serverId) return reply.status(404).send({ error: 'Server not found' });
+
+    const ok = await sendToAgentById(serverId, { type: 'GET_SERVER_STATUS', serverId }, userId);
+    if (ok) {
+        addActivityLog(userId, 'infrastructure_status_requested', { serverId: serverId.slice(0, 12) }, serverId, 'info');
+        return { status: 'requested', message: 'Infrastructure status request sent. Results will be available via WebSocket.' };
+    }
+    return reply.status(503).send({ error: 'Target agent offline' });
+});
+
+// Install a runtime on a server
+fastify.post('/api/internal/servers/:id/runtime/install', async (req, reply) => {
+    const userId = (req as any).userId;
+    const { id } = (req.params as any);
+    const { runtime } = (req.body as any) || {};
+
+    const validRuntimes = ['python', 'go', 'docker', 'rust', 'ruby'];
+    if (!runtime || !validRuntimes.includes(runtime)) {
+        return reply.status(400).send({ error: `Invalid runtime. Must be one of: ${validRuntimes.join(', ')}` });
+    }
+
+    // Trouver le serveur (avec support des préfixes d'ID)
+    const allNodes = await db.select().from(schema.nodes).where(eq(schema.nodes.ownerId, userId)).all();
+    const node = allNodes.find(n => n.id === id || n.id.startsWith(id));
+    if (!node) return reply.status(404).send({ error: 'Server not found' });
+
+    const ok = await sendToAgentById(node.id, { type: 'INSTALL_RUNTIME', serverId: node.id, runtime }, userId);
+    if (ok) {
+        addActivityLog(userId, 'runtime_install_triggered', { serverId: node.id.slice(0, 12), runtime }, node.id, 'info');
+        return { status: 'triggered', message: `Installation of ${runtime} triggered. Monitor progress via WebSocket or Dashboard.` };
+    }
+    return reply.status(503).send({ error: 'Target agent offline' });
+});
+
+// Update a runtime on a server
+fastify.post('/api/internal/servers/:id/runtime/update', async (req, reply) => {
+    const userId = (req as any).userId;
+    const { id } = (req.params as any);
+    const { runtime } = (req.body as any) || {};
+
+    const validRuntimes = ['nodejs', 'python', 'go', 'docker', 'rust', 'ruby'];
+    if (!runtime || !validRuntimes.includes(runtime)) {
+        return reply.status(400).send({ error: `Invalid runtime. Must be one of: ${validRuntimes.join(', ')}` });
+    }
+
+    // Trouver le serveur (avec support des préfixes d'ID)
+    const allNodes = await db.select().from(schema.nodes).where(eq(schema.nodes.ownerId, userId)).all();
+    const node = allNodes.find(n => n.id === id || n.id.startsWith(id));
+    if (!node) return reply.status(404).send({ error: 'Server not found' });
+
+    const ok = await sendToAgentById(node.id, { type: 'UPDATE_RUNTIME', serverId: node.id, runtime }, userId);
+    if (ok) {
+        addActivityLog(userId, 'runtime_update_triggered', { serverId: node.id.slice(0, 12), runtime }, node.id, 'info');
+        return { status: 'triggered', message: `Update of ${runtime} triggered. Monitor progress via WebSocket or Dashboard.` };
+    }
+    return reply.status(503).send({ error: 'Target agent offline' });
 });
 
 // ==================== MCP Token Management ====================
@@ -1275,8 +1367,8 @@ fastify.register(async function (fastify) {
 
         const state = userNodes.map(n => {
             const active = Array.from(agentSessions.values()).find(sess => sess.nodeId === n.id && sess.authorized);
-            // updateAvailable is true if agent is online AND (no version reported OR different version)
-            const needsUpdate = active && (!active.version || active.version !== AGENT_BUNDLE_VERSION);
+            // updateAvailable is true if agent is online AND bundle version is NEWER than agent version
+            const needsUpdate = active && (!active.version || compareVersions(AGENT_BUNDLE_VERSION, active.version) > 0);
             return {
                 ...n,
                 status: active ? 'online' : 'offline',
@@ -1381,8 +1473,8 @@ fastify.register(async function (fastify) {
                     return;
                 }
 
-                // Infrastructure messages (Story 7.7) + Agent Update
-                if (['GET_SERVER_STATUS', 'INSTALL_RUNTIME', 'CONFIGURE_DATABASE', 'UPDATE_AGENT'].includes(msg.type)) {
+                // Infrastructure messages (Story 7.7) + Agent Update + Logs + Removal/Reconfiguration
+                if (['GET_SERVER_STATUS', 'INSTALL_RUNTIME', 'UPDATE_RUNTIME', 'CONFIGURE_DATABASE', 'UPDATE_AGENT', 'GET_INFRASTRUCTURE_LOGS', 'CLEAR_INFRASTRUCTURE_LOGS', 'GET_SERVICE_LOGS', 'REMOVE_RUNTIME', 'REMOVE_DATABASE', 'RECONFIGURE_DATABASE'].includes(msg.type)) {
                     const ok = await sendToAgentById(nodeId, msg, userId);
                     if (!ok) console.error(`❌ Infrastructure command failed: ${msg.type}`);
                     return;
@@ -1518,8 +1610,8 @@ fastify.register(async function (fastify) {
                         }
                     }
                 }
-                // Infrastructure response messages (Story 7.7) + Agent Update
-                else if (['SERVER_STATUS_RESPONSE', 'INFRASTRUCTURE_LOG', 'RUNTIME_INSTALLED', 'DATABASE_CONFIGURED', 'AGENT_UPDATE_STATUS'].includes(msg.type)) {
+                // Infrastructure response messages (Story 7.7) + Agent Update + Removal/Reconfiguration
+                else if (['SERVER_STATUS_RESPONSE', 'INFRASTRUCTURE_LOG', 'RUNTIME_INSTALLED', 'RUNTIME_UPDATED', 'DATABASE_CONFIGURED', 'AGENT_UPDATE_STATUS', 'AGENT_UPDATE_LOG', 'INFRASTRUCTURE_LOGS_RESPONSE', 'INFRASTRUCTURE_LOGS_CLEARED', 'SERVICE_LOGS_RESPONSE', 'RUNTIME_REMOVED', 'DATABASE_REMOVED', 'DATABASE_RECONFIGURED'].includes(msg.type)) {
                     const sess = agentSessions.get(connectionId);
                     if (sess?.authorized) {
                         console.log(`🔧 [${sess.nodeId}] Infrastructure: ${msg.type}`);

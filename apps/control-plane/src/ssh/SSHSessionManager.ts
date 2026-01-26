@@ -346,7 +346,7 @@ export class SSHSessionManager {
       rm /tmp/agent-bundle-update.tar.gz
       cd "$INSTALL_DIR"
       echo "🔨 Installing dependencies..."
-      pnpm install --prod 2>&1 || npm install --production 2>&1
+      pnpm install --prod --ignore-scripts 2>&1 || npm install --omit=dev --ignore-scripts 2>&1
       echo "🔄 Restarting agent service..."
       sudo systemctl restart server-flow-agent || pm2 restart serverflow-agent || true
       echo "✨ Update complete!"
