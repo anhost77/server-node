@@ -332,8 +332,22 @@ function connectToControlPlane() {
                         fs.unlinkSync(tempBundle);
                         sendLog('✅ Extraction complete\n');
 
-                        // Clean node_modules before install (pnpm structure breaks npm)
+                        // Preserve @server-flow/shared before cleaning node_modules
+                        // (this package is bundled locally, not available on npm)
                         const nodeModulesDir = path.join(BUNDLE_DIR, 'node_modules');
+                        const sharedPkgDir = path.join(nodeModulesDir, '@server-flow', 'shared');
+                        const sharedBackupDir = path.join(os.tmpdir(), 'server-flow-shared-backup');
+
+                        // Backup @server-flow/shared if it exists in the extracted bundle
+                        if (fs.existsSync(sharedPkgDir)) {
+                            sendLog('📦 Preserving @server-flow/shared...\n');
+                            if (fs.existsSync(sharedBackupDir)) {
+                                fs.rmSync(sharedBackupDir, { recursive: true });
+                            }
+                            fs.cpSync(sharedPkgDir, sharedBackupDir, { recursive: true });
+                        }
+
+                        // Clean node_modules before install (pnpm structure breaks npm)
                         if (fs.existsSync(nodeModulesDir)) {
                             sendLog('🧹 Cleaning old node_modules...\n');
                             fs.rmSync(nodeModulesDir, { recursive: true });
@@ -352,14 +366,14 @@ function connectToControlPlane() {
                         }
                         sendLog('✅ Dependencies installed\n');
 
-                        // Link local @server-flow/shared package (workspace symlinks don't always work)
-                        const sharedSrc = path.join(BUNDLE_DIR, 'packages', 'shared');
-                        const sharedDest = path.join(BUNDLE_DIR, 'node_modules', '@server-flow', 'shared');
-                        if (fs.existsSync(sharedSrc) && !fs.existsSync(sharedDest)) {
-                            sendLog('🔗 Linking @server-flow/shared...\n');
-                            fs.mkdirSync(path.join(BUNDLE_DIR, 'node_modules', '@server-flow'), { recursive: true });
-                            fs.cpSync(sharedSrc, sharedDest, { recursive: true });
-                            sendLog('✅ Shared package linked\n');
+                        // Restore @server-flow/shared from backup
+                        const sharedDest = path.join(nodeModulesDir, '@server-flow', 'shared');
+                        if (fs.existsSync(sharedBackupDir) && !fs.existsSync(sharedDest)) {
+                            sendLog('🔗 Restoring @server-flow/shared...\n');
+                            fs.mkdirSync(path.join(nodeModulesDir, '@server-flow'), { recursive: true });
+                            fs.cpSync(sharedBackupDir, sharedDest, { recursive: true });
+                            fs.rmSync(sharedBackupDir, { recursive: true });
+                            sendLog('✅ Shared package restored\n');
                         }
 
                         // Read new version
