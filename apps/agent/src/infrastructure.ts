@@ -45,7 +45,7 @@ function getPrivilegedPrefix(): string[] {
 // Types
 export type RuntimeType = 'nodejs' | 'python' | 'php' | 'go' | 'docker' | 'rust' | 'ruby';
 export type DatabaseType = 'postgresql' | 'mysql' | 'redis' | 'mongodb';
-export type ServiceType = 'nginx' | 'haproxy' | 'keepalived' | 'certbot' | 'fail2ban' | 'ufw' | 'wireguard' | 'pm2' | 'netdata' | 'loki' | 'bind9' | 'postfix' | 'dovecot' | 'rspamd' | 'opendkim';
+export type ServiceType = 'nginx' | 'haproxy' | 'keepalived' | 'certbot' | 'fail2ban' | 'ufw' | 'wireguard' | 'pm2' | 'netdata' | 'loki' | 'bind9' | 'postfix' | 'dovecot' | 'rspamd' | 'opendkim' | 'rsync' | 'rclone' | 'restic';
 
 // Protected runtimes that cannot be removed (required by the agent)
 const PROTECTED_RUNTIMES: RuntimeType[] = ['nodejs', 'python'];
@@ -468,6 +468,15 @@ export class InfrastructureManager {
                 case 'opendkim':
                     version = await this.installOpendkim();
                     break;
+                case 'rsync':
+                    version = await this.installRsync();
+                    break;
+                case 'rclone':
+                    version = await this.installRclone();
+                    break;
+                case 'restic':
+                    version = await this.installRestic();
+                    break;
                 default:
                     throw new Error(`Unknown service: ${type}`);
             }
@@ -550,6 +559,15 @@ export class InfrastructureManager {
                     await this.runCommand('systemctl', ['stop', 'opendkim']);
                     await this.runCommand('apt-get', [removeCmd, '-y', 'opendkim', 'opendkim-tools']);
                     break;
+                case 'rsync':
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'rsync']);
+                    break;
+                case 'rclone':
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'rclone']);
+                    break;
+                case 'restic':
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'restic']);
+                    break;
                 default:
                     throw new Error(`Unknown service: ${type}`);
             }
@@ -589,10 +607,17 @@ export class InfrastructureManager {
                 postfix: 'postfix',
                 dovecot: 'dovecot',
                 rspamd: 'rspamd',
-                opendkim: 'opendkim'
+                opendkim: 'opendkim',
+                // Backup tools (not services, but needed for type completeness)
+                rsync: '',
+                rclone: '',
+                restic: ''
             };
 
             const serviceName = serviceNames[type] || type;
+            if (!serviceName) {
+                throw new Error(`${type} is a tool, not a service - it cannot be started`);
+            }
             await this.runCommand('systemctl', ['start', serviceName]);
             this.onLog(`\n✅ ${type} started successfully\n`, 'stdout');
             this.invalidateStatusCache();
@@ -626,10 +651,17 @@ export class InfrastructureManager {
                 postfix: 'postfix',
                 dovecot: 'dovecot',
                 rspamd: 'rspamd',
-                opendkim: 'opendkim'
+                opendkim: 'opendkim',
+                // Backup tools (not services, but needed for type completeness)
+                rsync: '',
+                rclone: '',
+                restic: ''
             };
 
             const serviceName = serviceNames[type] || type;
+            if (!serviceName) {
+                throw new Error(`${type} is a tool, not a service - it cannot be stopped`);
+            }
             await this.runCommand('systemctl', ['stop', serviceName]);
             this.onLog(`\n✅ ${type} stopped successfully\n`, 'stdout');
             this.invalidateStatusCache();
@@ -2416,6 +2448,44 @@ ${hostname}
         await this.sleep(3000);
 
         return await this.getCommandVersion('mongod', ['--version']) || 'installed';
+    }
+
+    // ============================================
+    // BACKUP TOOLS
+    // ============================================
+
+    private async installRsync(): Promise<string> {
+        this.onLog(`📥 Installing Rsync...\n`, 'stdout');
+
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'rsync']);
+
+        this.onLog(`✅ Rsync installed - use 'rsync' command for file synchronization\n`, 'stdout');
+        return await this.getCommandVersion('rsync', ['--version']) || 'installed';
+    }
+
+    private async installRclone(): Promise<string> {
+        this.onLog(`📥 Installing Rclone...\n`, 'stdout');
+
+        // Use official install script for latest version
+        await this.runCommand('curl', ['-sSLo', '/tmp/rclone-install.sh', 'https://rclone.org/install.sh']);
+        await this.runCommand('bash', ['/tmp/rclone-install.sh']);
+        await this.runCommandSilent('rm', ['/tmp/rclone-install.sh']);
+
+        this.onLog(`✅ Rclone installed - configure with 'rclone config'\n`, 'stdout');
+        this.onLog(`📖 Supports: AWS S3, Google Drive, Dropbox, OneDrive, BackBlaze B2, and 40+ cloud providers\n`, 'stdout');
+        return await this.getCommandVersion('rclone', ['--version']) || 'installed';
+    }
+
+    private async installRestic(): Promise<string> {
+        this.onLog(`📥 Installing Restic...\n`, 'stdout');
+
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'restic']);
+
+        this.onLog(`✅ Restic installed - initialize a repository with 'restic init'\n`, 'stdout');
+        this.onLog(`📖 Features: encrypted backups, deduplication, supports local/S3/SFTP/REST backends\n`, 'stdout');
+        return await this.getCommandVersion('restic', ['version']) || 'installed';
     }
 
     // ============================================

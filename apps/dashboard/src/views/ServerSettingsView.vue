@@ -152,6 +152,13 @@ const mailServices = [
   { type: 'opendkim', name: 'OpenDKIM', icon: 'DK', size: '~10MB', description: 'DKIM Signing', canRemove: false }
 ]
 
+// Backup services
+const backupServices = [
+  { type: 'rsync', name: 'Rsync', icon: 'RS', size: '~5MB', description: 'File Sync', canRemove: true },
+  { type: 'rclone', name: 'Rclone', icon: 'RC', size: '~50MB', description: 'Cloud Storage Sync', canRemove: true },
+  { type: 'restic', name: 'Restic', icon: 'RT', size: '~30MB', description: 'Encrypted Backups', canRemove: true }
+]
+
 function getRuntime(type: string) {
   return props.infraStatus?.runtimes.find(r => r.type === type)
 }
@@ -1049,15 +1056,67 @@ function confirmReconfigureDatabase() {
       </div>
     </section>
 
-    <!-- Backups Section (Coming Soon) -->
-    <section class="mb-8 opacity-50">
+    <!-- Backups Section -->
+    <section class="mb-8">
       <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
         <span class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 text-sm font-bold">B</span>
         {{ t('infrastructure.backups') }}
-        <span class="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">{{ t('infrastructure.comingSoon') }}</span>
       </h2>
-      <div class="glass-card p-6 text-center text-slate-500">
-        {{ t('infrastructure.backupsDesc') }}
+      <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div
+          v-for="svc in backupServices"
+          :key="svc.type"
+          class="glass-card p-4"
+          :class="{ 'ring-2 ring-emerald-500/30': getService(svc.type)?.installed }"
+        >
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-sm font-bold text-amber-600 flex-shrink-0">
+              {{ svc.icon }}
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-slate-800 text-sm">{{ svc.name }}</h3>
+              <p class="text-xs text-slate-500">{{ svc.description }}</p>
+              <p v-if="getService(svc.type)?.installed" class="text-xs font-medium mt-0.5">
+                <span class="inline-flex items-center gap-1 text-emerald-600">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  {{ t('infrastructure.installed') }}
+                </span>
+              </p>
+              <p v-else class="text-xs text-slate-400 mt-0.5">{{ svc.size }}</p>
+              <p v-if="getService(svc.type)?.version" class="text-xs text-slate-500">
+                v{{ getService(svc.type)?.version }}
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 mt-3">
+            <template v-if="!getService(svc.type)?.installed">
+              <button
+                class="flex-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                :disabled="installingService !== null"
+                @click="emit('installService', svc.type)"
+              >
+                {{ installingService === svc.type ? t('infrastructure.installing') : t('infrastructure.install') }}
+              </button>
+            </template>
+            <template v-else>
+              <!-- Installed badge -->
+              <span class="flex-1 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium text-center">
+                {{ t('infrastructure.installed') }}
+              </span>
+              <!-- Delete button -->
+              <button
+                v-if="svc.canRemove"
+                class="w-8 h-8 flex items-center justify-center bg-red-50 hover:bg-red-100 rounded-lg text-red-500 transition-colors"
+                :disabled="removingService !== null"
+                @click="emit('removeService', svc.type)"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </template>
+          </div>
+        </div>
       </div>
     </section>
 
