@@ -212,7 +212,11 @@ export default {
         stop: 'Detener',
         starting: 'Iniciando...',
         stopping: 'Deteniendo...',
-        criticalService: 'Servicio crítico (no se puede eliminar)'
+        criticalService: 'Servicio crítico (no se puede eliminar)',
+        protectedService: 'Servicio del sistema protegido (no se puede eliminar)',
+        systemServices: 'Servicios del Sistema',
+        ftpServices: 'Servicios FTP',
+        storageServices: 'Servicios de Almacenamiento'
     },
 
     // Applications

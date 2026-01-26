@@ -924,6 +924,42 @@ pnpm clean                 # Nettoie les builds
 
 ---
 
+## Redémarrage Automatique des Serveurs de Dev (OBLIGATOIRE)
+
+**CRITIQUE** : Après avoir créé/mis à jour un bundle agent ou modifié du code backend, Claude DOIT **AUTOMATIQUEMENT** redémarrer les serveurs de dev sans demander à l'utilisateur.
+
+### Quand Redémarrer
+
+- ✅ Après création d'un nouveau bundle agent (`agent-bundle.tar.gz`)
+- ✅ Après modification du control-plane (`apps/control-plane/`)
+- ✅ Après modification du dashboard (`apps/dashboard/`)
+- ✅ Quand l'utilisateur dit que le dashboard/API ne répond pas
+- ✅ Après un `pnpm build` complet
+
+### Procédure de Redémarrage (Windows)
+
+````bash
+# 1. Trouver les processus sur les ports 3000 et 5173
+netstat -ano | findstr ":3000 :5173"
+
+# 2. Tuer les processus (remplacer PID par les vrais PIDs trouvés)
+wmic process where "ProcessId=PID_PORT_3000" call terminate
+wmic process where "ProcessId=PID_PORT_5173" call terminate
+
+# 3. Redémarrer les serveurs (en background)
+cd c:/Users/anste/.gemini/antigravity/scratch/server-node
+pnpm --filter @server-flow/control-plane dev  # En background
+pnpm --filter @server-flow/dashboard dev       # En background
+````
+
+### Rappel Important
+
+**Ne JAMAIS demander à l'utilisateur** s'il veut redémarrer les serveurs. C'est automatique.
+
+L'utilisateur ne devrait JAMAIS avoir à dire : "redémarre les serveurs".
+
+---
+
 ## Pièges à Éviter (OBLIGATOIRE)
 
 **IMPORTANT** : Avant de modifier du code côté agent/serveur, **TOUJOURS consulter** :
@@ -937,6 +973,99 @@ Ce fichier documente les problèmes rencontrés et leurs solutions, comme :
 - Pièges spécifiques à Linux/systemd
 
 **Règle d'or** : Si tu modifies du code qui exécute des commandes shell sur le serveur, consulte ce fichier AVANT d'écrire du code.
+
+---
+
+## Désinstallation de Packages Linux (CRITIQUE)
+
+**IMPORTANT** : Quand tu écris du code pour désinstaller des packages avec `apt-get remove` ou `apt-get purge`, fais attention aux **métapackages** !
+
+### Le Problème des Métapackages
+
+Sur Debian/Ubuntu, certains packages sont des **métapackages** : ils ne contiennent pas de binaires eux-mêmes, mais dépendent d'autres packages qui contiennent les vrais fichiers.
+
+**Exemple avec ProFTPD** :
+- `proftpd` = métapackage (vide, juste des dépendances)
+- `proftpd-basic` = contient le binaire `/usr/sbin/proftpd`
+- `proftpd-core` = librairies core
+
+Si tu fais `apt-get remove proftpd`, seul le métapackage est supprimé, mais **le binaire reste** car `proftpd-basic` n'est pas supprimé !
+
+### Règle d'Or
+
+**TOUJOURS supprimer TOUS les packages associés**, pas juste le package principal.
+
+### Exemples Corrects
+
+````bash
+# ❌ INCORRECT - ne supprime que le métapackage
+apt-get remove -y proftpd
+
+# ✅ CORRECT - supprime tout
+apt-get remove -y proftpd proftpd-basic proftpd-core
+````
+
+````bash
+# ❌ INCORRECT
+apt-get remove -y postgresql
+
+# ✅ CORRECT
+apt-get remove -y postgresql postgresql-contrib postgresql-common postgresql-client-common 'postgresql-*'
+````
+
+### Packages Connus avec ce Problème
+
+| Package | Métapackage | Packages à supprimer |
+|---------|-------------|----------------------|
+| ProFTPD | `proftpd` | `proftpd`, `proftpd-basic`, `proftpd-core` |
+| PostgreSQL | `postgresql` | `postgresql`, `postgresql-contrib`, `postgresql-common`, `postgresql-client-common`, `postgresql-*` |
+| MySQL/MariaDB | `default-mysql-server` | `default-mysql-server`, `default-mysql-client`, `mariadb-server`, `mariadb-client`, `mariadb-common`, `mysql-common`, `mysql-*`, `mariadb-*` |
+| PHP | `php` | `php`, `php-fpm`, `php-cli`, `php-common`, `php-*` |
+
+### Comment Vérifier
+
+Pour trouver tous les packages installés d'un logiciel :
+````bash
+dpkg -l | grep proftpd
+dpkg -l | grep postgresql
+````
+
+Pour voir quel package fournit un binaire :
+````bash
+dpkg -S /usr/sbin/proftpd
+# Résultat: proftpd-basic: /usr/sbin/proftpd
+````
+
+---
+
+## TODO Futur : Gestion des Comptes FTP
+
+**Note pour développement futur** : Quand on implémentera la création des comptes FTP depuis le dashboard :
+
+1. **Stockage local sur l'agent** : Les comptes FTP seront stockés dans un fichier JSON sur le serveur de l'agent (ex: `/opt/serverflow/ftp-accounts.json`)
+
+2. **Synchronisation automatique** : Quand on change de serveur FTP (vsftpd ↔ ProFTPD), l'agent devra automatiquement recréer les comptes FTP à partir de ce fichier JSON
+
+3. **Structure suggérée** :
+````json
+{
+  "accounts": [
+    {
+      "username": "user1",
+      "homeDir": "/home/ftp/user1",
+      "createdAt": "2025-01-26T...",
+      "permissions": "rw"
+    }
+  ]
+}
+````
+
+4. **Comportement** :
+   - À l'installation d'un nouveau serveur FTP → lire le JSON et recréer tous les comptes
+   - Les mots de passe seront regénérés (ou stockés hashés dans le JSON)
+   - Notifier le dashboard des nouveaux credentials si nécessaire
+
+**Story à créer** : Epic 7, Story "FTP Account Management"
 
 ---
 

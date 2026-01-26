@@ -13,6 +13,24 @@ export type Example = z.infer<typeof ExampleSchema>;
 export type RuntimeType = 'nodejs' | 'python' | 'go' | 'docker' | 'rust' | 'ruby';
 export type DatabaseType = 'postgresql' | 'mysql' | 'redis';
 
+// Services système (ne peuvent pas être supprimés, juste configurés/redémarrés)
+export type SystemServiceType = 'ssh' | 'cron';
+
+// Services FTP (peuvent être installés/supprimés)
+export type FtpServiceType = 'vsftpd' | 'proftpd';
+
+// Services de stockage réseau (NFS)
+export type StorageServiceType = 'nfs';
+
+// Services réseau, sécurité, monitoring, etc.
+export type InfraServiceType = 'nginx' | 'haproxy' | 'keepalived' | 'certbot' | 'fail2ban' | 'ufw' | 'wireguard' | 'pm2' | 'netdata' | 'loki' | 'bind9' | 'postfix' | 'dovecot' | 'rspamd' | 'opendkim' | 'rsync' | 'rclone' | 'restic';
+
+// Tous les types de services
+export type ServiceType = SystemServiceType | FtpServiceType | StorageServiceType | InfraServiceType;
+
+// Liste des services système non-supprimables
+export const PROTECTED_SERVICES: ServiceType[] = ['ssh', 'cron'];
+
 export interface RuntimeInfo {
     type: RuntimeType;
     installed: boolean;
@@ -29,6 +47,14 @@ export interface DatabaseInfo {
     version?: string;
 }
 
+export interface ServiceInfo {
+    type: ServiceType;
+    installed: boolean;
+    running: boolean;
+    version?: string;
+    protected?: boolean; // Services système qui ne peuvent pas être supprimés (ssh, cron)
+}
+
 export interface SystemInfo {
     os: string;
     osVersion: string;
@@ -41,6 +67,7 @@ export interface SystemInfo {
 export interface ServerStatus {
     runtimes: RuntimeInfo[];
     databases: DatabaseInfo[];
+    services: ServiceInfo[];
     system: SystemInfo;
 }
 
@@ -238,6 +265,13 @@ export const AgentMessageSchema = z.discriminatedUnion('type', [
         installed: z.boolean(),
         running: z.boolean(),
         version: z.string().optional()
+      })),
+      services: z.array(z.object({
+        type: z.string(),
+        installed: z.boolean(),
+        running: z.boolean(),
+        version: z.string().optional(),
+        protected: z.boolean().optional()
       })),
       system: z.object({
         os: z.string(),

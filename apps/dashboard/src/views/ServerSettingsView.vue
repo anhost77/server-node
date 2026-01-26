@@ -159,6 +159,23 @@ const backupServices = [
   { type: 'restic', name: 'Restic', icon: 'RT', size: '~30MB', description: 'Encrypted Backups', canRemove: true }
 ]
 
+// System services (protected - cannot be removed)
+const systemServices = [
+  { type: 'ssh', name: 'SSH', icon: 'SS', size: '~5MB', description: 'Secure Shell', canRemove: false },
+  { type: 'cron', name: 'Cron', icon: 'CR', size: '~2MB', description: 'Task Scheduler', canRemove: false }
+]
+
+// FTP services
+const ftpServices = [
+  { type: 'vsftpd', name: 'vsftpd', icon: 'VS', size: '~5MB', description: 'Very Secure FTP', canRemove: true },
+  { type: 'proftpd', name: 'ProFTPD', icon: 'PF', size: '~10MB', description: 'Modular FTP Server', canRemove: true }
+]
+
+// Storage services
+const storageServices = [
+  { type: 'nfs', name: 'NFS', icon: 'NF', size: '~10MB', description: 'Network File System', canRemove: true }
+]
+
 function getRuntime(type: string) {
   return props.infraStatus?.runtimes.find(r => r.type === type)
 }
@@ -1106,6 +1123,239 @@ function confirmReconfigureDatabase() {
               <!-- Delete button -->
               <button
                 v-if="svc.canRemove"
+                class="w-8 h-8 flex items-center justify-center bg-red-50 hover:bg-red-100 rounded-lg text-red-500 transition-colors"
+                :disabled="removingService !== null"
+                @click="emit('removeService', svc.type)"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </template>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- System Services Section (SSH, Cron - protected) -->
+    <section class="mb-8">
+      <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+        <span class="w-8 h-8 bg-slate-200 rounded-lg flex items-center justify-center text-slate-700 text-sm font-bold">SY</span>
+        {{ t('infrastructure.systemServices') }}
+      </h2>
+      <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div
+          v-for="svc in systemServices"
+          :key="svc.type"
+          class="glass-card p-4"
+          :class="{ 'ring-2 ring-emerald-500/30': getService(svc.type)?.installed }"
+        >
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-700 flex-shrink-0">
+              {{ svc.icon }}
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-slate-800 text-sm">{{ svc.name }}</h3>
+              <p class="text-xs text-slate-500">{{ svc.description }}</p>
+              <p v-if="getService(svc.type)?.installed" class="text-xs font-medium mt-0.5">
+                <span class="inline-flex items-center gap-1" :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-600'">
+                  <span class="w-1.5 h-1.5 rounded-full" :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"></span>
+                  {{ getService(svc.type)?.running ? t('infrastructure.running') : t('infrastructure.stopped') }}
+                </span>
+              </p>
+              <p v-else class="text-xs text-slate-400 mt-0.5">{{ svc.size }}</p>
+              <p v-if="getService(svc.type)?.version" class="text-xs text-slate-500">
+                v{{ getService(svc.type)?.version }}
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 mt-3">
+            <template v-if="!getService(svc.type)?.installed">
+              <button
+                class="flex-1 px-3 py-1.5 bg-slate-500 hover:bg-slate-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                :disabled="installingService !== null"
+                @click="emit('installService', svc.type)"
+              >
+                {{ installingService === svc.type ? t('infrastructure.installing') : t('infrastructure.install') }}
+              </button>
+            </template>
+            <template v-else>
+              <!-- Running status buttons -->
+              <template v-if="getService(svc.type)?.running">
+                <button
+                  class="flex-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                  :disabled="stoppingService !== null"
+                  @click="emit('stopService', svc.type)"
+                >
+                  {{ stoppingService === svc.type ? t('infrastructure.stopping') : t('infrastructure.stop') }}
+                </button>
+              </template>
+              <template v-else>
+                <button
+                  class="flex-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                  :disabled="startingService !== null"
+                  @click="emit('startService', svc.type)"
+                >
+                  {{ startingService === svc.type ? t('infrastructure.starting') : t('infrastructure.start') }}
+                </button>
+              </template>
+              <!-- Lock icon - protected service -->
+              <div
+                class="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-slate-400"
+                :title="t('infrastructure.protectedService')"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FTP Services Section -->
+    <section class="mb-8">
+      <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+        <span class="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center text-cyan-600 text-sm font-bold">FT</span>
+        {{ t('infrastructure.ftpServices') }}
+      </h2>
+      <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div
+          v-for="svc in ftpServices"
+          :key="svc.type"
+          class="glass-card p-4"
+          :class="{ 'ring-2 ring-emerald-500/30': getService(svc.type)?.installed }"
+        >
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center text-sm font-bold text-cyan-600 flex-shrink-0">
+              {{ svc.icon }}
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-slate-800 text-sm">{{ svc.name }}</h3>
+              <p class="text-xs text-slate-500">{{ svc.description }}</p>
+              <p v-if="getService(svc.type)?.installed" class="text-xs font-medium mt-0.5">
+                <span class="inline-flex items-center gap-1" :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-600'">
+                  <span class="w-1.5 h-1.5 rounded-full" :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"></span>
+                  {{ getService(svc.type)?.running ? t('infrastructure.running') : t('infrastructure.stopped') }}
+                </span>
+              </p>
+              <p v-else class="text-xs text-slate-400 mt-0.5">{{ svc.size }}</p>
+              <p v-if="getService(svc.type)?.version" class="text-xs text-slate-500">
+                v{{ getService(svc.type)?.version }}
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 mt-3">
+            <template v-if="!getService(svc.type)?.installed">
+              <button
+                class="flex-1 px-3 py-1.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                :disabled="installingService !== null"
+                @click="emit('installService', svc.type)"
+              >
+                {{ installingService === svc.type ? t('infrastructure.installing') : t('infrastructure.install') }}
+              </button>
+            </template>
+            <template v-else>
+              <!-- Running status buttons -->
+              <template v-if="getService(svc.type)?.running">
+                <button
+                  class="flex-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                  :disabled="stoppingService !== null"
+                  @click="emit('stopService', svc.type)"
+                >
+                  {{ stoppingService === svc.type ? t('infrastructure.stopping') : t('infrastructure.stop') }}
+                </button>
+              </template>
+              <template v-else>
+                <button
+                  class="flex-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                  :disabled="startingService !== null"
+                  @click="emit('startService', svc.type)"
+                >
+                  {{ startingService === svc.type ? t('infrastructure.starting') : t('infrastructure.start') }}
+                </button>
+              </template>
+              <!-- Delete button -->
+              <button
+                class="w-8 h-8 flex items-center justify-center bg-red-50 hover:bg-red-100 rounded-lg text-red-500 transition-colors"
+                :disabled="removingService !== null"
+                @click="emit('removeService', svc.type)"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </template>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Storage Services Section (NFS) -->
+    <section class="mb-8">
+      <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+        <span class="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center text-teal-600 text-sm font-bold">ST</span>
+        {{ t('infrastructure.storageServices') }}
+      </h2>
+      <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div
+          v-for="svc in storageServices"
+          :key="svc.type"
+          class="glass-card p-4"
+          :class="{ 'ring-2 ring-emerald-500/30': getService(svc.type)?.installed }"
+        >
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-sm font-bold text-teal-600 flex-shrink-0">
+              {{ svc.icon }}
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-slate-800 text-sm">{{ svc.name }}</h3>
+              <p class="text-xs text-slate-500">{{ svc.description }}</p>
+              <p v-if="getService(svc.type)?.installed" class="text-xs font-medium mt-0.5">
+                <span class="inline-flex items-center gap-1" :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-600'">
+                  <span class="w-1.5 h-1.5 rounded-full" :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"></span>
+                  {{ getService(svc.type)?.running ? t('infrastructure.running') : t('infrastructure.stopped') }}
+                </span>
+              </p>
+              <p v-else class="text-xs text-slate-400 mt-0.5">{{ svc.size }}</p>
+              <p v-if="getService(svc.type)?.version" class="text-xs text-slate-500">
+                v{{ getService(svc.type)?.version }}
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 mt-3">
+            <template v-if="!getService(svc.type)?.installed">
+              <button
+                class="flex-1 px-3 py-1.5 bg-teal-500 hover:bg-teal-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                :disabled="installingService !== null"
+                @click="emit('installService', svc.type)"
+              >
+                {{ installingService === svc.type ? t('infrastructure.installing') : t('infrastructure.install') }}
+              </button>
+            </template>
+            <template v-else>
+              <!-- Running status buttons -->
+              <template v-if="getService(svc.type)?.running">
+                <button
+                  class="flex-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                  :disabled="stoppingService !== null"
+                  @click="emit('stopService', svc.type)"
+                >
+                  {{ stoppingService === svc.type ? t('infrastructure.stopping') : t('infrastructure.stop') }}
+                </button>
+              </template>
+              <template v-else>
+                <button
+                  class="flex-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                  :disabled="startingService !== null"
+                  @click="emit('startService', svc.type)"
+                >
+                  {{ startingService === svc.type ? t('infrastructure.starting') : t('infrastructure.start') }}
+                </button>
+              </template>
+              <!-- Delete button -->
+              <button
                 class="w-8 h-8 flex items-center justify-center bg-red-50 hover:bg-red-100 rounded-lg text-red-500 transition-colors"
                 :disabled="removingService !== null"
                 @click="emit('removeService', svc.type)"

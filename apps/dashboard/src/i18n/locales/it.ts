@@ -212,7 +212,11 @@ export default {
         stop: 'Ferma',
         starting: 'Avvio in corso...',
         stopping: 'Arresto in corso...',
-        criticalService: 'Servizio critico (non può essere rimosso)'
+        criticalService: 'Servizio critico (non può essere rimosso)',
+        protectedService: 'Servizio di sistema protetto (non può essere rimosso)',
+        systemServices: 'Servizi di Sistema',
+        ftpServices: 'Servizi FTP',
+        storageServices: 'Servizi di Archiviazione'
     },
 
     // Applications

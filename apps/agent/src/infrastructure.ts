@@ -45,11 +45,15 @@ function getPrivilegedPrefix(): string[] {
 // Types
 export type RuntimeType = 'nodejs' | 'python' | 'php' | 'go' | 'docker' | 'rust' | 'ruby';
 export type DatabaseType = 'postgresql' | 'mysql' | 'redis' | 'mongodb';
-export type ServiceType = 'nginx' | 'haproxy' | 'keepalived' | 'certbot' | 'fail2ban' | 'ufw' | 'wireguard' | 'pm2' | 'netdata' | 'loki' | 'bind9' | 'postfix' | 'dovecot' | 'rspamd' | 'opendkim' | 'rsync' | 'rclone' | 'restic';
+export type ServiceType = 'nginx' | 'haproxy' | 'keepalived' | 'certbot' | 'fail2ban' | 'ufw' | 'wireguard' | 'pm2' | 'netdata' | 'loki' | 'bind9' | 'postfix' | 'dovecot' | 'rspamd' | 'opendkim' | 'rsync' | 'rclone' | 'restic' | 'ssh' | 'cron' | 'vsftpd' | 'proftpd' | 'nfs';
 
 // Protected runtimes that cannot be removed (required by the agent)
 const PROTECTED_RUNTIMES: RuntimeType[] = ['nodejs', 'python'];
 // Note: Python is protected because it may be used by monitoring scripts and system tools
+
+// Protected services that cannot be removed (system services)
+const PROTECTED_SERVICES: ServiceType[] = ['ssh', 'cron'];
+// Note: SSH and cron are system services essential for server management
 
 // Log file path
 const LOG_DIR = path.join(os.homedir(), '.server-flow', 'logs');
@@ -110,6 +114,7 @@ export interface ServiceInfo {
     installed: boolean;
     running: boolean;
     version?: string;
+    protected?: boolean; // Services système qui ne peuvent pas être supprimés (ssh, cron)
 }
 
 export interface SystemInfo {
@@ -477,6 +482,23 @@ export class InfrastructureManager {
                 case 'restic':
                     version = await this.installRestic();
                     break;
+                case 'ssh':
+                    // SSH est généralement déjà installé, on s'assure juste qu'il est bien configuré
+                    version = await this.configureSsh();
+                    break;
+                case 'cron':
+                    // Cron est généralement déjà installé, on s'assure juste qu'il est actif
+                    version = await this.configureCron();
+                    break;
+                case 'vsftpd':
+                    version = await this.installVsftpd();
+                    break;
+                case 'proftpd':
+                    version = await this.installProftpd();
+                    break;
+                case 'nfs':
+                    version = await this.installNfs();
+                    break;
                 default:
                     throw new Error(`Unknown service: ${type}`);
             }
@@ -495,6 +517,12 @@ export class InfrastructureManager {
      * Remove a service
      */
     async removeService(type: ServiceType, purge: boolean = false): Promise<{ success: boolean; error?: string }> {
+        // Check if service is protected (cannot be removed)
+        if (PROTECTED_SERVICES.includes(type)) {
+            this.onLog(`\n⛔ Cannot remove ${type} - it's a protected system service\n`, 'stderr');
+            return { success: false, error: `${type} is a protected system service and cannot be removed` };
+        }
+
         this.setCurrentService(type);
         this.onLog(`\n🗑️ Removing ${type}${purge ? ' (with purge)' : ''}...\n`, 'stdout');
 
@@ -563,10 +591,37 @@ export class InfrastructureManager {
                     await this.runCommand('apt-get', [removeCmd, '-y', 'rsync']);
                     break;
                 case 'rclone':
-                    await this.runCommand('apt-get', [removeCmd, '-y', 'rclone']);
+                    // rclone est installé via script officiel, pas via apt
+                    // On supprime manuellement le binaire et les fichiers associés
+                    await this.runCommandSilent('rm', ['-f', '/usr/bin/rclone']);
+                    await this.runCommandSilent('rm', ['-f', '/usr/local/share/man/man1/rclone.1']);
+                    await this.runCommandSilent('rm', ['-f', '/usr/share/man/man1/rclone.1.gz']);
+                    await this.runCommandSilent('rm', ['-rf', '/root/.config/rclone']);
+                    this.onLog(`🗑️ Rclone binary and config removed\n`, 'stdout');
                     break;
                 case 'restic':
                     await this.runCommand('apt-get', [removeCmd, '-y', 'restic']);
+                    break;
+                case 'ssh':
+                case 'cron':
+                    // Ces services sont protégés et ne peuvent pas être supprimés
+                    // (la vérification est faite au début de la fonction)
+                    throw new Error(`${type} is a protected system service`);
+                case 'vsftpd':
+                    await this.runCommand('systemctl', ['stop', 'vsftpd']);
+                    // Supprime le package principal + tous les packages associés
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'vsftpd', 'vsftpd-dbg']);
+                    break;
+                case 'proftpd':
+                    await this.runCommand('systemctl', ['stop', 'proftpd']);
+                    // Supprime tous les packages ProFTPD (métapackage + binaires)
+                    // proftpd-basic contient le binaire, proftpd est juste un métapackage
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'proftpd', 'proftpd-basic', 'proftpd-core']);
+                    break;
+                case 'nfs':
+                    await this.runCommand('systemctl', ['stop', 'nfs-kernel-server']);
+                    // Supprime tous les packages NFS
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'nfs-kernel-server', 'nfs-common', 'nfs-utils']);
                     break;
                 default:
                     throw new Error(`Unknown service: ${type}`);
@@ -611,7 +666,15 @@ export class InfrastructureManager {
                 // Backup tools (not services, but needed for type completeness)
                 rsync: '',
                 rclone: '',
-                restic: ''
+                restic: '',
+                // System services
+                ssh: 'ssh',
+                cron: 'cron',
+                // FTP servers
+                vsftpd: 'vsftpd',
+                proftpd: 'proftpd',
+                // Storage services
+                nfs: 'nfs-kernel-server'
             };
 
             const serviceName = serviceNames[type] || type;
@@ -655,7 +718,15 @@ export class InfrastructureManager {
                 // Backup tools (not services, but needed for type completeness)
                 rsync: '',
                 rclone: '',
-                restic: ''
+                restic: '',
+                // System services
+                ssh: 'ssh',
+                cron: 'cron',
+                // FTP servers
+                vsftpd: 'vsftpd',
+                proftpd: 'proftpd',
+                // Storage services
+                nfs: 'nfs-kernel-server'
             };
 
             const serviceName = serviceNames[type] || type;
@@ -1265,6 +1336,9 @@ export class InfrastructureManager {
 
     private async detectServices(): Promise<ServiceInfo[]> {
         const services: ServiceInfo[] = [
+            // System Services (protected - cannot be removed)
+            { type: 'ssh', installed: false, running: false, protected: true },
+            { type: 'cron', installed: false, running: false, protected: true },
             // Network & Proxy
             { type: 'nginx', installed: false, running: false },
             { type: 'haproxy', installed: false, running: false },
@@ -1288,11 +1362,20 @@ export class InfrastructureManager {
             // Backup Tools
             { type: 'rsync', installed: false, running: false },
             { type: 'rclone', installed: false, running: false },
-            { type: 'restic', installed: false, running: false }
+            { type: 'restic', installed: false, running: false },
+            // FTP Servers
+            { type: 'vsftpd', installed: false, running: false },
+            { type: 'proftpd', installed: false, running: false },
+            // Storage Services
+            { type: 'nfs', installed: false, running: false }
         ];
 
         // Run all version checks in parallel for better performance
         const [
+            // System services
+            sshdInstalled,
+            cronInstalled,
+            // Network & Proxy
             nginxVersion,
             haproxyVersion,
             keepalivedVersion,
@@ -1310,8 +1393,17 @@ export class InfrastructureManager {
             opendkimInstalled,
             rsyncVersion,
             rcloneVersion,
-            resticVersion
+            resticVersion,
+            // FTP servers (use commandExists because vsftpd -v doesn't work reliably)
+            vsftpdInstalled,
+            proftpdInstalled,
+            // Storage services
+            nfsInstalled
         ] = await Promise.all([
+            // System services
+            this.commandExists('sshd'),
+            this.commandExists('crontab'),
+            // Network & Proxy
             this.getCommandVersion('nginx', ['-v']),
             this.getCommandVersion('haproxy', ['-v']),
             this.getCommandVersion('keepalived', ['-v']),
@@ -1329,154 +1421,198 @@ export class InfrastructureManager {
             this.commandExists('opendkim'),
             this.getCommandVersion('rsync', ['--version']),
             this.getCommandVersion('rclone', ['--version']),
-            this.getCommandVersion('restic', ['version'])
+            this.getCommandVersion('restic', ['version']),
+            // FTP servers (use commandExists because vsftpd -v doesn't work reliably)
+            this.commandExists('vsftpd'),
+            this.commandExists('proftpd'),
+            // Storage services (NFS server)
+            this.commandExists('exportfs')
         ]);
 
         // Collect services that need running status checks
         const runningChecks: Promise<{ index: number; running: boolean }>[] = [];
 
-        // nginx
-        if (nginxVersion) {
+        // ssh (index 0) - system service, protected
+        if (sshdInstalled) {
             services[0].installed = true;
-            services[0].version = nginxVersion;
-            runningChecks.push(this.isServiceRunning('nginx').then(r => ({ index: 0, running: r })));
+            services[0].version = 'installed';
+            runningChecks.push(
+                Promise.any([this.isServiceRunning('ssh'), this.isServiceRunning('sshd')])
+                    .then(r => ({ index: 0, running: r }))
+                    .catch(() => ({ index: 0, running: false }))
+            );
         }
 
-        // haproxy
-        if (haproxyVersion) {
+        // cron (index 1) - system service, protected
+        if (cronInstalled) {
             services[1].installed = true;
-            services[1].version = haproxyVersion;
-            runningChecks.push(this.isServiceRunning('haproxy').then(r => ({ index: 1, running: r })));
+            services[1].version = 'installed';
+            runningChecks.push(this.isServiceRunning('cron').then(r => ({ index: 1, running: r })));
         }
 
-        // keepalived
-        if (keepalivedVersion) {
+        // nginx (index 2)
+        if (nginxVersion) {
             services[2].installed = true;
-            services[2].version = keepalivedVersion;
-            runningChecks.push(this.isServiceRunning('keepalived').then(r => ({ index: 2, running: r })));
+            services[2].version = nginxVersion;
+            runningChecks.push(this.isServiceRunning('nginx').then(r => ({ index: 2, running: r })));
         }
 
-        // certbot (no running check - it's not a daemon)
-        if (certbotVersion) {
+        // haproxy (index 3)
+        if (haproxyVersion) {
             services[3].installed = true;
-            services[3].version = certbotVersion;
-            services[3].running = false;
+            services[3].version = haproxyVersion;
+            runningChecks.push(this.isServiceRunning('haproxy').then(r => ({ index: 3, running: r })));
         }
 
-        // fail2ban
-        if (fail2banVersion) {
+        // keepalived (index 4)
+        if (keepalivedVersion) {
             services[4].installed = true;
-            services[4].version = fail2banVersion;
-            runningChecks.push(this.isServiceRunning('fail2ban').then(r => ({ index: 4, running: r })));
+            services[4].version = keepalivedVersion;
+            runningChecks.push(this.isServiceRunning('keepalived').then(r => ({ index: 4, running: r })));
         }
 
-        // ufw
-        if (ufwInstalled) {
+        // certbot (index 5) - no running check, it's not a daemon
+        if (certbotVersion) {
             services[5].installed = true;
-            services[5].version = 'installed';
+            services[5].version = certbotVersion;
+            services[5].running = false;
+        }
+
+        // fail2ban (index 6)
+        if (fail2banVersion) {
+            services[6].installed = true;
+            services[6].version = fail2banVersion;
+            runningChecks.push(this.isServiceRunning('fail2ban').then(r => ({ index: 6, running: r })));
+        }
+
+        // ufw (index 7)
+        if (ufwInstalled) {
+            services[7].installed = true;
+            services[7].version = 'installed';
             runningChecks.push(
                 this.runCommandSilent('ufw', ['status'])
-                    .then(status => ({ index: 5, running: status.includes('Status: active') }))
-                    .catch(() => ({ index: 5, running: false }))
-            );
-        }
-
-        // wireguard
-        if (wgInstalled) {
-            services[6].installed = true;
-            services[6].version = 'installed';
-            runningChecks.push(
-                this.runCommandSilent('wg', ['show'])
-                    .then(interfaces => ({ index: 6, running: interfaces.trim().length > 0 }))
-                    .catch(() => ({ index: 6, running: false }))
-            );
-        }
-
-        // pm2
-        if (pm2Version) {
-            services[7].installed = true;
-            services[7].version = pm2Version;
-            runningChecks.push(
-                this.runCommandSilent('pm2', ['jlist'])
-                    .then(list => {
-                        const processes = JSON.parse(list);
-                        return { index: 7, running: processes.length > 0 };
-                    })
+                    .then(status => ({ index: 7, running: status.includes('Status: active') }))
                     .catch(() => ({ index: 7, running: false }))
             );
         }
 
-        // netdata
-        if (netdataInstalled) {
+        // wireguard (index 8)
+        if (wgInstalled) {
             services[8].installed = true;
             services[8].version = 'installed';
-            runningChecks.push(this.isServiceRunning('netdata').then(r => ({ index: 8, running: r })));
-        }
-
-        // loki
-        if (lokiInstalled) {
-            services[9].installed = true;
-            services[9].version = 'installed';
-            runningChecks.push(this.isServiceRunning('loki').then(r => ({ index: 9, running: r })));
-        }
-
-        // bind9
-        if (bind9Version) {
-            services[10].installed = true;
-            services[10].version = bind9Version;
             runningChecks.push(
-                Promise.all([this.isServiceRunning('named'), this.isServiceRunning('bind9')])
-                    .then(([r1, r2]) => ({ index: 10, running: r1 || r2 }))
+                this.runCommandSilent('wg', ['show'])
+                    .then(interfaces => ({ index: 8, running: interfaces.trim().length > 0 }))
+                    .catch(() => ({ index: 8, running: false }))
             );
         }
 
-        // postfix
-        if (postfixVersion) {
+        // pm2 (index 9)
+        if (pm2Version) {
+            services[9].installed = true;
+            services[9].version = pm2Version;
+            runningChecks.push(
+                this.runCommandSilent('pm2', ['jlist'])
+                    .then(list => {
+                        const processes = JSON.parse(list);
+                        return { index: 9, running: processes.length > 0 };
+                    })
+                    .catch(() => ({ index: 9, running: false }))
+            );
+        }
+
+        // netdata (index 10)
+        if (netdataInstalled) {
+            services[10].installed = true;
+            services[10].version = 'installed';
+            runningChecks.push(this.isServiceRunning('netdata').then(r => ({ index: 10, running: r })));
+        }
+
+        // loki (index 11)
+        if (lokiInstalled) {
             services[11].installed = true;
-            services[11].version = postfixVersion.replace('mail_version = ', '').trim();
-            runningChecks.push(this.isServiceRunning('postfix').then(r => ({ index: 11, running: r })));
+            services[11].version = 'installed';
+            runningChecks.push(this.isServiceRunning('loki').then(r => ({ index: 11, running: r })));
         }
 
-        // dovecot
-        if (dovecotVersion) {
+        // bind9 (index 12)
+        if (bind9Version) {
             services[12].installed = true;
-            services[12].version = dovecotVersion;
-            runningChecks.push(this.isServiceRunning('dovecot').then(r => ({ index: 12, running: r })));
+            services[12].version = bind9Version;
+            runningChecks.push(
+                Promise.all([this.isServiceRunning('named'), this.isServiceRunning('bind9')])
+                    .then(([r1, r2]) => ({ index: 12, running: r1 || r2 }))
+            );
         }
 
-        // rspamd
-        if (rspamdVersion) {
+        // postfix (index 13)
+        if (postfixVersion) {
             services[13].installed = true;
-            services[13].version = rspamdVersion;
-            runningChecks.push(this.isServiceRunning('rspamd').then(r => ({ index: 13, running: r })));
+            services[13].version = postfixVersion.replace('mail_version = ', '').trim();
+            runningChecks.push(this.isServiceRunning('postfix').then(r => ({ index: 13, running: r })));
         }
 
-        // opendkim
-        if (opendkimInstalled) {
+        // dovecot (index 14)
+        if (dovecotVersion) {
             services[14].installed = true;
-            services[14].version = 'installed';
-            runningChecks.push(this.isServiceRunning('opendkim').then(r => ({ index: 14, running: r })));
+            services[14].version = dovecotVersion;
+            runningChecks.push(this.isServiceRunning('dovecot').then(r => ({ index: 14, running: r })));
         }
 
-        // rsync (not a daemon - no running check)
-        if (rsyncVersion) {
+        // rspamd (index 15)
+        if (rspamdVersion) {
             services[15].installed = true;
-            services[15].version = rsyncVersion;
-            services[15].running = false;
+            services[15].version = rspamdVersion;
+            runningChecks.push(this.isServiceRunning('rspamd').then(r => ({ index: 15, running: r })));
         }
 
-        // rclone (not a daemon - no running check)
-        if (rcloneVersion) {
+        // opendkim (index 16)
+        if (opendkimInstalled) {
             services[16].installed = true;
-            services[16].version = rcloneVersion;
-            services[16].running = false;
+            services[16].version = 'installed';
+            runningChecks.push(this.isServiceRunning('opendkim').then(r => ({ index: 16, running: r })));
         }
 
-        // restic (not a daemon - no running check)
-        if (resticVersion) {
+        // rsync (index 17) - not a daemon, no running check
+        if (rsyncVersion) {
             services[17].installed = true;
-            services[17].version = resticVersion;
+            services[17].version = rsyncVersion;
             services[17].running = false;
+        }
+
+        // rclone (index 18) - not a daemon, no running check
+        if (rcloneVersion) {
+            services[18].installed = true;
+            services[18].version = rcloneVersion;
+            services[18].running = false;
+        }
+
+        // restic (index 19) - not a daemon, no running check
+        if (resticVersion) {
+            services[19].installed = true;
+            services[19].version = resticVersion;
+            services[19].running = false;
+        }
+
+        // vsftpd (index 20)
+        if (vsftpdInstalled) {
+            services[20].installed = true;
+            services[20].version = 'installed';
+            runningChecks.push(this.isServiceRunning('vsftpd').then(r => ({ index: 20, running: r })));
+        }
+
+        // proftpd (index 21)
+        if (proftpdInstalled) {
+            services[21].installed = true;
+            services[21].version = 'installed';
+            runningChecks.push(this.isServiceRunning('proftpd').then(r => ({ index: 21, running: r })));
+        }
+
+        // nfs (index 22)
+        if (nfsInstalled) {
+            services[22].installed = true;
+            services[22].version = 'installed';
+            runningChecks.push(this.isServiceRunning('nfs-kernel-server').then(r => ({ index: 22, running: r })));
         }
 
         // Execute all running checks in parallel
@@ -1945,15 +2081,15 @@ export class InfrastructureManager {
         // Create user and database
         this.onLog(`Creating database ${dbName}...\n`, 'stdout');
         await this.runCommand('mysql', [...mysqlAuth, '-e',
-            `CREATE DATABASE IF NOT EXISTS ${dbName};`
+        `CREATE DATABASE IF NOT EXISTS ${dbName};`
         ]);
         this.onLog(`Creating user ${user}...\n`, 'stdout');
         await this.runCommand('mysql', [...mysqlAuth, '-e',
-            `CREATE USER IF NOT EXISTS '${user}'@'localhost' IDENTIFIED BY '${password}';`
+        `CREATE USER IF NOT EXISTS '${user}'@'localhost' IDENTIFIED BY '${password}';`
         ]);
         this.onLog(`Granting privileges...\n`, 'stdout');
         await this.runCommand('mysql', [...mysqlAuth, '-e',
-            `GRANT ALL PRIVILEGES ON ${dbName}.* TO '${user}'@'localhost';`
+        `GRANT ALL PRIVILEGES ON ${dbName}.* TO '${user}'@'localhost';`
         ]);
         await this.runCommand('mysql', [...mysqlAuth, '-e', 'FLUSH PRIVILEGES;']);
 
@@ -2523,6 +2659,215 @@ ${hostname}
         return await this.getCommandVersion('restic', ['version']) || 'installed';
     }
 
+    /**
+     * Configure SSH service (system service, cannot be removed)
+     * SSH est généralement préinstallé, cette méthode s'assure qu'il est actif et sécurisé
+     */
+    private async configureSsh(): Promise<string> {
+        this.onLog(`🔧 Configuring SSH...\n`, 'stdout');
+
+        // S'assurer que openssh-server est installé
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'openssh-server']);
+
+        // Activer et démarrer le service
+        await this.runCommand('systemctl', ['enable', 'ssh']);
+        await this.runCommand('systemctl', ['start', 'ssh']);
+
+        this.onLog(`✅ SSH configured and running\n`, 'stdout');
+        this.onLog(`📖 Config file: /etc/ssh/sshd_config\n`, 'stdout');
+        this.onLog(`⚠️ Recommended: disable root login, use key-based auth\n`, 'stdout');
+        return 'installed';
+    }
+
+    /**
+     * Configure Cron service (system service, cannot be removed)
+     * Cron est généralement préinstallé, cette méthode s'assure qu'il est actif
+     */
+    private async configureCron(): Promise<string> {
+        this.onLog(`🔧 Configuring Cron...\n`, 'stdout');
+
+        // S'assurer que cron est installé
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'cron']);
+
+        // Activer et démarrer le service
+        await this.runCommand('systemctl', ['enable', 'cron']);
+        await this.runCommand('systemctl', ['start', 'cron']);
+
+        this.onLog(`✅ Cron configured and running\n`, 'stdout');
+        this.onLog(`📖 User crontab: crontab -e\n`, 'stdout');
+        this.onLog(`📖 System crontab: /etc/crontab, /etc/cron.d/\n`, 'stdout');
+        return 'installed';
+    }
+
+    /**
+     * Install vsftpd FTP server
+     * Serveur FTP sécurisé, léger et facile à configurer
+     * Note: Désinstalle automatiquement ProFTPD s'il est installé (conflit port 21)
+     */
+    private async installVsftpd(): Promise<string> {
+        this.onLog(`📥 Installing vsftpd (Very Secure FTP Daemon)...\n`, 'stdout');
+
+        // Vérifier si ProFTPD est installé et le désinstaller
+        const proftpdInstalled = await this.commandExists('proftpd');
+        if (proftpdInstalled) {
+            this.onLog(`⚠️ ProFTPD detected - removing it first (FTP servers conflict on port 21)...\n`, 'stdout');
+            try {
+                await this.runCommand('systemctl', ['stop', 'proftpd']);
+            } catch {
+                // Ignore si le service n'est pas en cours
+            }
+            await this.runCommand('apt-get', ['remove', '-y', 'proftpd', 'proftpd-basic', 'proftpd-core']);
+            await this.runCommand('apt-get', ['autoremove', '-y']);
+            this.onLog(`✅ ProFTPD removed\n`, 'stdout');
+        }
+
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'vsftpd']);
+
+        // Configuration de base sécurisée
+        const vsftpdConf = `/etc/vsftpd.conf`;
+        this.onLog(`🔧 Applying secure configuration...\n`, 'stdout');
+
+        // Activer et démarrer le service
+        await this.runCommand('systemctl', ['enable', 'vsftpd']);
+        await this.runCommand('systemctl', ['restart', 'vsftpd']);
+
+        this.onLog(`✅ vsftpd installed and running\n`, 'stdout');
+        this.onLog(`📖 Config file: ${vsftpdConf}\n`, 'stdout');
+        this.onLog(`⚠️ Recommended: enable TLS, disable anonymous access\n`, 'stdout');
+        return await this.getCommandVersion('vsftpd', ['-v']) || 'installed';
+    }
+
+    /**
+     * Install ProFTPD FTP server
+     * Serveur FTP modulaire avec configuration avancée style Apache
+     * Note: Désinstalle automatiquement vsftpd s'il est installé (conflit port 21)
+     */
+    private async installProftpd(): Promise<string> {
+        this.onLog(`📥 Installing ProFTPD...\n`, 'stdout');
+
+        // Vérifier si vsftpd est installé et le désinstaller
+        const vsftpdInstalled = await this.commandExists('vsftpd');
+        if (vsftpdInstalled) {
+            this.onLog(`⚠️ vsftpd detected - removing it first (FTP servers conflict on port 21)...\n`, 'stdout');
+            try {
+                await this.runCommand('systemctl', ['stop', 'vsftpd']);
+            } catch {
+                // Ignore si le service n'est pas en cours
+            }
+            await this.runCommand('apt-get', ['remove', '-y', 'vsftpd']);
+            await this.runCommand('apt-get', ['autoremove', '-y']);
+            this.onLog(`✅ vsftpd removed\n`, 'stdout');
+        }
+
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'proftpd']);
+
+        // Activer et démarrer le service
+        await this.runCommand('systemctl', ['enable', 'proftpd']);
+        await this.runCommand('systemctl', ['restart', 'proftpd']);
+
+        this.onLog(`✅ ProFTPD installed and running\n`, 'stdout');
+        this.onLog(`📖 Config file: /etc/proftpd/proftpd.conf\n`, 'stdout');
+        this.onLog(`⚠️ Recommended: enable TLS with mod_tls\n`, 'stdout');
+        return await this.getCommandVersion('proftpd', ['-v']) || 'installed';
+    }
+
+    /**
+     * Install NFS server for network file sharing
+     * Permet de partager des répertoires sur le réseau local
+     */
+    private async installNfs(): Promise<string> {
+        this.onLog(`📥 Installing NFS Server...\n`, 'stdout');
+
+        // Détecter si on est dans un conteneur LXC (NFS ne fonctionne pas dans les conteneurs)
+        const isContainer = await this.isRunningInContainer();
+        if (isContainer) {
+            this.onLog(`\n⛔ ERREUR: Ce serveur est un conteneur LXC/Docker.\n`, 'stderr');
+            this.onLog(`\n`, 'stderr');
+            this.onLog(`NFS Server nécessite un accès direct au kernel Linux et ne peut pas\n`, 'stderr');
+            this.onLog(`fonctionner dans un conteneur non privilégié.\n`, 'stderr');
+            this.onLog(`\n`, 'stderr');
+            this.onLog(`Solutions possibles:\n`, 'stderr');
+            this.onLog(`  1. Utiliser une VM au lieu d'un conteneur pour ce serveur\n`, 'stderr');
+            this.onLog(`  2. Sur Proxmox, configurer le conteneur comme "privilégié":\n`, 'stderr');
+            this.onLog(`     - Éditer /etc/pve/lxc/<ID>.conf sur l'hôte\n`, 'stderr');
+            this.onLog(`     - Ajouter: lxc.apparmor.profile: unconfined\n`, 'stderr');
+            this.onLog(`     - Redémarrer le conteneur\n`, 'stderr');
+            this.onLog(`\n`, 'stderr');
+            throw new Error('NFS cannot be installed in a container. Please use a VM or configure the container as privileged.');
+        }
+
+        await this.runCommand('apt-get', ['update']);
+
+        // Installer d'abord rpcbind (dépendance requise pour NFS)
+        this.onLog(`📦 Installing rpcbind (NFS dependency)...\n`, 'stdout');
+        await this.runCommand('apt-get', ['install', '-y', 'rpcbind']);
+
+        // Activer et démarrer rpcbind AVANT d'installer NFS
+        await this.runCommand('systemctl', ['enable', 'rpcbind']);
+        await this.runCommand('systemctl', ['start', 'rpcbind']);
+
+        // Attendre que rpcbind soit prêt
+        await this.sleep(1000);
+
+        // Installer NFS
+        this.onLog(`📦 Installing nfs-kernel-server...\n`, 'stdout');
+        await this.runCommand('apt-get', ['install', '-y', 'nfs-kernel-server', 'nfs-common']);
+
+        // Activer et démarrer le service NFS
+        await this.runCommand('systemctl', ['enable', 'nfs-kernel-server']);
+        await this.runCommand('systemctl', ['start', 'nfs-kernel-server']);
+
+        this.onLog(`✅ NFS Server installed and running\n`, 'stdout');
+        this.onLog(`📖 Exports config: /etc/exports\n`, 'stdout');
+        this.onLog(`📖 Example: /shared 192.168.1.0/24(rw,sync,no_subtree_check)\n`, 'stdout');
+        this.onLog(`📖 Apply changes: exportfs -ra\n`, 'stdout');
+        return 'installed';
+    }
+
+    /**
+     * Détecte si on tourne dans un conteneur (LXC, Docker, etc.)
+     * NFS et certains services kernel ne fonctionnent pas dans les conteneurs
+     */
+    private async isRunningInContainer(): Promise<boolean> {
+        try {
+            // Méthode 1: systemd-detect-virt
+            const virt = await this.runCommandSilent('systemd-detect-virt', ['-c']);
+            if (virt.trim() && virt.trim() !== 'none') {
+                return true;
+            }
+        } catch {
+            // Pas de systemd-detect-virt, on continue avec d'autres méthodes
+        }
+
+        try {
+            // Méthode 2: Vérifier /run/systemd/container
+            if (fs.existsSync('/run/systemd/container')) {
+                return true;
+            }
+        } catch { }
+
+        try {
+            // Méthode 3: Vérifier /.dockerenv
+            if (fs.existsSync('/.dockerenv')) {
+                return true;
+            }
+        } catch { }
+
+        try {
+            // Méthode 4: Vérifier cgroup pour LXC
+            const cgroup = fs.readFileSync('/proc/1/cgroup', 'utf-8');
+            if (cgroup.includes('lxc') || cgroup.includes('docker')) {
+                return true;
+            }
+        } catch { }
+
+        return false;
+    }
+
     // ============================================
     // HELPERS
     // ============================================
@@ -2600,21 +2945,29 @@ ${hostname}
     }
 
     private async commandExists(cmd: string): Promise<boolean> {
-        try {
-            await this.runCommandSilent('which', [cmd]);
-            return true;
-        } catch {
-            return false;
-        }
+        return new Promise((resolve) => {
+            const proc = spawn('which', [cmd]);
+            proc.on('close', (code) => {
+                resolve(code === 0);
+            });
+            proc.on('error', () => {
+                resolve(false);
+            });
+        });
     }
 
     private async isServiceRunning(service: string): Promise<boolean> {
-        try {
-            const result = await this.runCommandSilent('systemctl', ['is-active', service]);
-            return result.trim() === 'active';
-        } catch {
-            return false;
-        }
+        return new Promise((resolve) => {
+            const proc = spawn('systemctl', ['is-active', service]);
+            let stdout = '';
+            proc.stdout.on('data', (data) => { stdout += data.toString(); });
+            proc.on('close', () => {
+                resolve(stdout.trim() === 'active');
+            });
+            proc.on('error', () => {
+                resolve(false);
+            });
+        });
     }
 
     private sleep(ms: number): Promise<void> {

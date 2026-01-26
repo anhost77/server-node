@@ -18,10 +18,11 @@ export interface Database {
 }
 
 export interface Service {
-  type: 'nginx' | 'haproxy' | 'keepalived' | 'certbot' | 'fail2ban' | 'ufw' | 'wireguard' | 'pm2' | 'netdata' | 'loki' | 'bind9' | 'postfix' | 'dovecot' | 'rspamd' | 'opendkim'
+  type: 'nginx' | 'haproxy' | 'keepalived' | 'certbot' | 'fail2ban' | 'ufw' | 'wireguard' | 'pm2' | 'netdata' | 'loki' | 'bind9' | 'postfix' | 'dovecot' | 'rspamd' | 'opendkim' | 'rsync' | 'rclone' | 'restic' | 'ssh' | 'cron' | 'vsftpd' | 'proftpd' | 'nfs'
   installed: boolean
   running: boolean
   version?: string
+  protected?: boolean // Services système qui ne peuvent pas être supprimés
 }
 
 export interface InfraStatus {

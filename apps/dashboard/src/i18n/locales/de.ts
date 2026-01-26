@@ -212,7 +212,11 @@ export default {
         stop: 'Stoppen',
         starting: 'Wird gestartet...',
         stopping: 'Wird gestoppt...',
-        criticalService: 'Kritischer Dienst (kann nicht entfernt werden)'
+        criticalService: 'Kritischer Dienst (kann nicht entfernt werden)',
+        protectedService: 'Geschützter Systemdienst (kann nicht entfernt werden)',
+        systemServices: 'Systemdienste',
+        ftpServices: 'FTP-Dienste',
+        storageServices: 'Speicherdienste'
     },
 
     // Applications

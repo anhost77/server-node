@@ -264,7 +264,11 @@ export default {
         stop: 'Arrêter',
         starting: 'Démarrage...',
         stopping: 'Arrêt...',
-        criticalService: 'Service critique (ne peut pas être supprimé)'
+        criticalService: 'Service critique (ne peut pas être supprimé)',
+        protectedService: 'Service système protégé (ne peut pas être supprimé)',
+        systemServices: 'Services Système',
+        ftpServices: 'Services FTP',
+        storageServices: 'Services de Stockage'
     },
 
     // Applications
