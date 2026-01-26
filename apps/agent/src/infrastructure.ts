@@ -45,7 +45,7 @@ function getPrivilegedPrefix(): string[] {
 // Types
 export type RuntimeType = 'nodejs' | 'python' | 'php' | 'go' | 'docker' | 'rust' | 'ruby';
 export type DatabaseType = 'postgresql' | 'mysql' | 'redis' | 'mongodb';
-export type ServiceType = 'nginx' | 'haproxy' | 'keepalived' | 'certbot' | 'fail2ban' | 'ufw' | 'wireguard' | 'pm2' | 'netdata' | 'loki' | 'bind9' | 'postfix' | 'dovecot' | 'rspamd' | 'opendkim' | 'rsync' | 'rclone' | 'restic' | 'ssh' | 'cron' | 'vsftpd' | 'proftpd' | 'nfs';
+export type ServiceType = 'nginx' | 'haproxy' | 'keepalived' | 'certbot' | 'fail2ban' | 'ufw' | 'wireguard' | 'pm2' | 'netdata' | 'loki' | 'bind9' | 'postfix' | 'dovecot' | 'rspamd' | 'opendkim' | 'clamav' | 'spf-policyd' | 'rsync' | 'rclone' | 'restic' | 'ssh' | 'cron' | 'vsftpd' | 'proftpd' | 'nfs';
 
 // Protected runtimes that cannot be removed (required by the agent)
 const PROTECTED_RUNTIMES: RuntimeType[] = ['nodejs', 'python'];
@@ -473,6 +473,12 @@ export class InfrastructureManager {
                 case 'opendkim':
                     version = await this.installOpendkim();
                     break;
+                case 'clamav':
+                    version = await this.installClamav();
+                    break;
+                case 'spf-policyd':
+                    version = await this.installSpfPolicyd();
+                    break;
                 case 'rsync':
                     version = await this.installRsync();
                     break;
@@ -587,6 +593,14 @@ export class InfrastructureManager {
                     await this.runCommand('systemctl', ['stop', 'opendkim']);
                     await this.runCommand('apt-get', [removeCmd, '-y', 'opendkim', 'opendkim-tools']);
                     break;
+                case 'clamav':
+                    await this.runCommand('systemctl', ['stop', 'clamav-daemon']);
+                    await this.runCommand('systemctl', ['stop', 'clamav-freshclam']);
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'clamav', 'clamav-daemon', 'clamav-freshclam']);
+                    break;
+                case 'spf-policyd':
+                    await this.runCommand('apt-get', [removeCmd, '-y', 'postfix-policyd-spf-python']);
+                    break;
                 case 'rsync':
                     await this.runCommand('apt-get', [removeCmd, '-y', 'rsync']);
                     break;
@@ -663,6 +677,8 @@ export class InfrastructureManager {
                 dovecot: 'dovecot',
                 rspamd: 'rspamd',
                 opendkim: 'opendkim',
+                clamav: 'clamav-daemon',
+                'spf-policyd': '', // SPF policy runs via Postfix, not standalone
                 // Backup tools (not services, but needed for type completeness)
                 rsync: '',
                 rclone: '',
@@ -715,6 +731,8 @@ export class InfrastructureManager {
                 dovecot: 'dovecot',
                 rspamd: 'rspamd',
                 opendkim: 'opendkim',
+                clamav: 'clamav-daemon',
+                'spf-policyd': '', // SPF policy runs via Postfix, not standalone
                 // Backup tools (not services, but needed for type completeness)
                 rsync: '',
                 rclone: '',
@@ -1359,6 +1377,8 @@ export class InfrastructureManager {
             { type: 'dovecot', installed: false, running: false },
             { type: 'rspamd', installed: false, running: false },
             { type: 'opendkim', installed: false, running: false },
+            { type: 'clamav', installed: false, running: false },
+            { type: 'spf-policyd', installed: false, running: false },
             // Backup Tools
             { type: 'rsync', installed: false, running: false },
             { type: 'rclone', installed: false, running: false },
@@ -1391,6 +1411,8 @@ export class InfrastructureManager {
             dovecotVersion,
             rspamdVersion,
             opendkimInstalled,
+            clamavInstalled,
+            spfPolicydInstalled,
             rsyncVersion,
             rcloneVersion,
             resticVersion,
@@ -1419,6 +1441,8 @@ export class InfrastructureManager {
             this.getCommandVersion('dovecot', ['--version']),
             this.getCommandVersion('rspamd', ['--version']),
             this.commandExists('opendkim'),
+            this.commandExists('clamscan'),
+            this.commandExists('policyd-spf'),
             this.getCommandVersion('rsync', ['--version']),
             this.getCommandVersion('rclone', ['--version']),
             this.getCommandVersion('restic', ['version']),
@@ -1573,46 +1597,60 @@ export class InfrastructureManager {
             runningChecks.push(this.isServiceRunning('opendkim').then(r => ({ index: 16, running: r })));
         }
 
-        // rsync (index 17) - not a daemon, no running check
-        if (rsyncVersion) {
+        // clamav (index 17)
+        if (clamavInstalled) {
             services[17].installed = true;
-            services[17].version = rsyncVersion;
-            services[17].running = false;
+            services[17].version = 'installed';
+            runningChecks.push(this.isServiceRunning('clamav-daemon').then(r => ({ index: 17, running: r })));
         }
 
-        // rclone (index 18) - not a daemon, no running check
-        if (rcloneVersion) {
+        // spf-policyd (index 18)
+        if (spfPolicydInstalled) {
             services[18].installed = true;
-            services[18].version = rcloneVersion;
-            services[18].running = false;
+            services[18].version = 'installed';
+            runningChecks.push(this.isServiceRunning('postfix-policyd-spf-python').then(r => ({ index: 18, running: r })));
         }
 
-        // restic (index 19) - not a daemon, no running check
-        if (resticVersion) {
+        // rsync (index 19) - not a daemon, no running check
+        if (rsyncVersion) {
             services[19].installed = true;
-            services[19].version = resticVersion;
+            services[19].version = rsyncVersion;
             services[19].running = false;
         }
 
-        // vsftpd (index 20)
-        if (vsftpdInstalled) {
+        // rclone (index 20) - not a daemon, no running check
+        if (rcloneVersion) {
             services[20].installed = true;
-            services[20].version = 'installed';
-            runningChecks.push(this.isServiceRunning('vsftpd').then(r => ({ index: 20, running: r })));
+            services[20].version = rcloneVersion;
+            services[20].running = false;
         }
 
-        // proftpd (index 21)
-        if (proftpdInstalled) {
+        // restic (index 21) - not a daemon, no running check
+        if (resticVersion) {
             services[21].installed = true;
-            services[21].version = 'installed';
-            runningChecks.push(this.isServiceRunning('proftpd').then(r => ({ index: 21, running: r })));
+            services[21].version = resticVersion;
+            services[21].running = false;
         }
 
-        // nfs (index 22)
-        if (nfsInstalled) {
+        // vsftpd (index 22)
+        if (vsftpdInstalled) {
             services[22].installed = true;
             services[22].version = 'installed';
-            runningChecks.push(this.isServiceRunning('nfs-kernel-server').then(r => ({ index: 22, running: r })));
+            runningChecks.push(this.isServiceRunning('vsftpd').then(r => ({ index: 22, running: r })));
+        }
+
+        // proftpd (index 23)
+        if (proftpdInstalled) {
+            services[23].installed = true;
+            services[23].version = 'installed';
+            runningChecks.push(this.isServiceRunning('proftpd').then(r => ({ index: 23, running: r })));
+        }
+
+        // nfs (index 24)
+        if (nfsInstalled) {
+            services[24].installed = true;
+            services[24].version = 'installed';
+            runningChecks.push(this.isServiceRunning('nfs-kernel-server').then(r => ({ index: 24, running: r })));
         }
 
         // Execute all running checks in parallel
@@ -2474,12 +2512,10 @@ info_log_path = /var/log/dovecot-info.log
         await this.runCommand('apt-get', ['update']);
         await this.runCommand('apt-get', ['install', '-y', 'rspamd', 'redis-server']);
 
-        // Basic configuration for Postfix integration
-        const milterConfig = `
-# Rspamd milter for Postfix
-milter = {
-  bind_socket = "/var/spool/postfix/rspamd/rspamd.sock mode=0666 owner=_rspamd";
-}
+        // Basic configuration for Postfix integration (rspamd 3.x syntax)
+        const milterConfig = `# Rspamd milter for Postfix
+milter = yes;
+bind_socket = "/var/spool/postfix/rspamd/rspamd.sock mode=0666 owner=_rspamd";
 `;
         if (!fs.existsSync('/etc/rspamd/local.d')) {
             fs.mkdirSync('/etc/rspamd/local.d', { recursive: true });
@@ -2581,6 +2617,144 @@ ${hostname}
         // Show the DNS record
         const dkimPublicKey = fs.readFileSync(`${keysDir}/default.txt`, 'utf-8');
         this.onLog(`\n📋 Add this DNS TXT record for DKIM:\n${dkimPublicKey}\n`, 'stdout');
+
+        return 'installed';
+    }
+
+    /**
+     * **installClamav()** - Installe ClamAV pour l'antivirus mail
+     *
+     * ClamAV est un antivirus open source qui scanne les emails entrants
+     * et sortants pour détecter les virus et malwares.
+     * Il s'intègre avec Rspamd pour filtrer automatiquement les emails infectés.
+     */
+    private async installClamav(): Promise<string> {
+        this.onLog(`📥 Installing ClamAV antivirus...\n`, 'stdout');
+
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'clamav', 'clamav-daemon', 'clamav-freshclam']);
+
+        // Stop freshclam to update signatures manually first
+        await this.runCommand('systemctl', ['stop', 'clamav-freshclam']).catch(() => {});
+
+        // Update virus definitions
+        this.onLog(`🦠 Updating virus definitions...\n`, 'stdout');
+        await this.runCommand('freshclam', []).catch(() => {
+            this.onLog(`⚠️ First freshclam run may fail, this is normal\n`, 'stderr');
+        });
+
+        // Configure ClamAV daemon
+        const clamdConf = `
+# ClamAV Configuration for Mail Server
+LocalSocket /var/run/clamav/clamd.sock
+LocalSocketGroup clamav
+LocalSocketMode 666
+FixStaleSocket true
+User clamav
+ScanMail true
+ScanArchive true
+MaxFileSize 25M
+MaxScanSize 100M
+StreamMaxLength 25M
+LogFile /var/log/clamav/clamav.log
+LogTime true
+LogVerbose false
+PidFile /var/run/clamav/clamd.pid
+DatabaseDirectory /var/lib/clamav
+`;
+        fs.writeFileSync('/etc/clamav/clamd.conf', clamdConf);
+
+        // Enable and start services
+        await this.runCommand('systemctl', ['enable', 'clamav-freshclam']);
+        await this.runCommand('systemctl', ['start', 'clamav-freshclam']);
+        await this.runCommand('systemctl', ['enable', 'clamav-daemon']);
+        await this.runCommand('systemctl', ['start', 'clamav-daemon']);
+
+        // Configure Rspamd to use ClamAV (if rspamd is installed)
+        const rspamdClamavConf = `
+# ClamAV integration for Rspamd
+clamav {
+    scan_mime_parts = true;
+    servers = "/var/run/clamav/clamd.sock";
+    symbol = "CLAM_VIRUS";
+    patterns {
+        JUST_EICAR = "^Eicar-Test-Signature$";
+    }
+}
+`;
+        const rspamdClamavDir = '/etc/rspamd/local.d';
+        if (fs.existsSync(rspamdClamavDir)) {
+            fs.writeFileSync(`${rspamdClamavDir}/antivirus.conf`, rspamdClamavConf);
+            await this.runCommand('systemctl', ['reload', 'rspamd']).catch(() => {});
+        }
+
+        this.onLog(`✅ ClamAV installed and configured!\n`, 'stdout');
+        this.onLog(`📋 Virus definitions will be updated automatically via freshclam\n`, 'stdout');
+
+        return 'installed';
+    }
+
+    /**
+     * **installSpfPolicyd()** - Installe SPF Policy Daemon pour Postfix
+     *
+     * SPF (Sender Policy Framework) permet de vérifier que l'expéditeur d'un email
+     * est bien autorisé à envoyer des emails pour le domaine en question.
+     * Cela aide à prévenir le spoofing d'emails.
+     */
+    private async installSpfPolicyd(): Promise<string> {
+        this.onLog(`📥 Installing SPF Policy Daemon...\n`, 'stdout');
+
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'postfix-policyd-spf-python']);
+
+        // Configure Postfix to use SPF policy daemon
+        // Add to master.cf
+        const masterCfPath = '/etc/postfix/master.cf';
+        if (fs.existsSync(masterCfPath)) {
+            const masterCf = fs.readFileSync(masterCfPath, 'utf-8');
+
+            // Check if SPF policy is already configured
+            if (!masterCf.includes('policyd-spf')) {
+                const spfService = `
+# SPF Policy Daemon
+policyd-spf  unix  -       n       n       -       0       spawn
+    user=policyd-spf argv=/usr/bin/policyd-spf
+`;
+                fs.appendFileSync(masterCfPath, spfService);
+                this.onLog(`✅ Added SPF policy daemon to master.cf\n`, 'stdout');
+            }
+        }
+
+        // Configure main.cf to use SPF check
+        await this.runCommand('postconf', ['-e', 'policyd-spf_time_limit = 3600']);
+
+        // Get current smtpd_recipient_restrictions and add SPF check
+        try {
+            const currentRestrictions = await this.runCommandSilent('postconf', ['smtpd_recipient_restrictions']);
+            const restrictionsValue = currentRestrictions.split('=')[1]?.trim() || '';
+
+            if (!restrictionsValue.includes('check_policy_service unix:private/policyd-spf')) {
+                // Add SPF check before final permit
+                let newRestrictions = restrictionsValue;
+                if (restrictionsValue) {
+                    newRestrictions = `${restrictionsValue}, check_policy_service unix:private/policyd-spf`;
+                } else {
+                    newRestrictions = 'permit_sasl_authenticated, permit_mynetworks, reject_unauth_destination, check_policy_service unix:private/policyd-spf';
+                }
+                await this.runCommand('postconf', ['-e', `smtpd_recipient_restrictions = ${newRestrictions}`]);
+            }
+        } catch (e) {
+            // If postconf fails, set a default
+            await this.runCommand('postconf', ['-e', 'smtpd_recipient_restrictions = permit_sasl_authenticated, permit_mynetworks, reject_unauth_destination, check_policy_service unix:private/policyd-spf']);
+        }
+
+        // Reload Postfix
+        await this.runCommand('systemctl', ['reload', 'postfix']);
+
+        this.onLog(`✅ SPF Policy Daemon installed and configured!\n`, 'stdout');
+        this.onLog(`📋 SPF checks are now enabled for incoming emails\n`, 'stdout');
+        this.onLog(`💡 Make sure you have a valid SPF record in your DNS:\n`, 'stdout');
+        this.onLog(`   TXT record: v=spf1 mx a ~all\n`, 'stdout');
 
         return 'installed';
     }

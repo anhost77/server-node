@@ -18,7 +18,7 @@ export interface Database {
 }
 
 export interface Service {
-  type: 'nginx' | 'haproxy' | 'keepalived' | 'certbot' | 'fail2ban' | 'ufw' | 'wireguard' | 'pm2' | 'netdata' | 'loki' | 'bind9' | 'postfix' | 'dovecot' | 'rspamd' | 'opendkim' | 'rsync' | 'rclone' | 'restic' | 'ssh' | 'cron' | 'vsftpd' | 'proftpd' | 'nfs'
+  type: 'nginx' | 'haproxy' | 'keepalived' | 'certbot' | 'fail2ban' | 'ufw' | 'wireguard' | 'pm2' | 'netdata' | 'loki' | 'bind9' | 'postfix' | 'dovecot' | 'rspamd' | 'opendkim' | 'clamav' | 'spf-policyd' | 'rsync' | 'rclone' | 'restic' | 'ssh' | 'cron' | 'vsftpd' | 'proftpd' | 'nfs'
   installed: boolean
   running: boolean
   version?: string

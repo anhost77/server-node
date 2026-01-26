@@ -144,12 +144,14 @@ const dnsServices = [
   { type: 'bind9', name: 'BIND9', icon: 'DN', size: '~50MB', description: 'DNS Server', canRemove: true }
 ]
 
-// Mail services - postfix et opendkim sont critiques
+// Mail services - postfix est critique, les autres peuvent être supprimés
 const mailServices = [
   { type: 'postfix', name: 'Postfix', icon: 'PF', size: '~30MB', description: 'Mail Transfer Agent', canRemove: false },
   { type: 'dovecot', name: 'Dovecot', icon: 'DC', size: '~40MB', description: 'IMAP/POP3 Server', canRemove: true },
   { type: 'rspamd', name: 'Rspamd', icon: 'RS', size: '~100MB', description: 'Antispam Filter', canRemove: true },
-  { type: 'opendkim', name: 'OpenDKIM', icon: 'DK', size: '~10MB', description: 'DKIM Signing', canRemove: false }
+  { type: 'opendkim', name: 'OpenDKIM', icon: 'DK', size: '~10MB', description: 'DKIM Signing', canRemove: true },
+  { type: 'clamav', name: 'ClamAV', icon: 'AV', size: '~200MB', description: 'Antivirus Scanner', canRemove: true },
+  { type: 'spf-policyd', name: 'SPF Policy', icon: 'SP', size: '~5MB', description: 'SPF Verification', canRemove: true }
 ]
 
 // Backup services
