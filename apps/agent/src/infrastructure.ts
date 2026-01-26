@@ -2467,6 +2467,10 @@ ${hostname}
     private async installRclone(): Promise<string> {
         this.onLog(`📥 Installing Rclone...\n`, 'stdout');
 
+        // Install dependencies (unzip is required by rclone install script)
+        await this.runCommand('apt-get', ['update']);
+        await this.runCommand('apt-get', ['install', '-y', 'unzip', 'curl']);
+
         // Use official install script for latest version
         await this.runCommand('curl', ['-sSLo', '/tmp/rclone-install.sh', 'https://rclone.org/install.sh']);
         await this.runCommand('bash', ['/tmp/rclone-install.sh']);
