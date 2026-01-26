@@ -252,6 +252,10 @@ export default {
         mail: 'Serveur Mail',
         installingService: 'Installation de {service}',
         removingService: 'Suppression de {service}',
+        startingService: 'Démarrage de {service}',
+        stoppingService: 'Arrêt de {service}',
+        startingDb: 'Démarrage de {db}',
+        stoppingDb: 'Arrêt de {db}',
 
         // Status and controls
         running: 'En cours',

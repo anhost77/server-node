@@ -214,6 +214,14 @@ watch(isOperationInProgress, (inProgress, wasInProgress) => {
       consoleModalTitle.value = t('infrastructure.installingService', { service: props.installingService })
     } else if (props.removingService) {
       consoleModalTitle.value = t('infrastructure.removingService', { service: props.removingService })
+    } else if (props.startingService) {
+      consoleModalTitle.value = t('infrastructure.startingService', { service: props.startingService })
+    } else if (props.stoppingService) {
+      consoleModalTitle.value = t('infrastructure.stoppingService', { service: props.stoppingService })
+    } else if (props.startingDatabase) {
+      consoleModalTitle.value = t('infrastructure.startingDb', { db: props.startingDatabase })
+    } else if (props.stoppingDatabase) {
+      consoleModalTitle.value = t('infrastructure.stoppingDb', { db: props.stoppingDatabase })
     }
     showConsoleModal.value = true
   } else if (wasInProgress) {

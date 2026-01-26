@@ -200,6 +200,10 @@ export default {
         mail: 'Server Mail',
         installingService: 'Installazione di {service}',
         removingService: 'Rimozione di {service}',
+        startingService: 'Avvio di {service}',
+        stoppingService: 'Arresto di {service}',
+        startingDb: 'Avvio di {db}',
+        stoppingDb: 'Arresto di {db}',
 
         // Status and controls
         running: 'In esecuzione',
