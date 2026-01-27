@@ -580,6 +580,36 @@ WantedBy=multi-user.target
                 return;
             }
 
+            // Handle CONFIGURE_MAIL_STACK - Installation et configuration complète de la stack mail
+            if (raw.type === 'CONFIGURE_MAIL_STACK') {
+                const config = raw.config as {
+                    domain: string;
+                    hostname: string;
+                    services: string[];
+                    security: { tls: string; dkimKeySize: number; spf: boolean; dmarc: boolean };
+                };
+                const infraManager = new InfrastructureManager((message, stream) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'INFRASTRUCTURE_LOG',
+                            serverId: currentServerId,
+                            message,
+                            stream
+                        }));
+                    }
+                });
+                infraManager.configureMailStack(config).then(result => {
+                    ws.send(JSON.stringify({
+                        type: 'MAIL_STACK_CONFIGURED',
+                        serverId: currentServerId,
+                        success: result.success,
+                        dkimPublicKey: result.dkimPublicKey,
+                        error: result.error
+                    }));
+                });
+                return;
+            }
+
             // Handle REMOVE_SERVICE
             if (raw.type === 'REMOVE_SERVICE') {
                 const service = raw.service as ServiceType;

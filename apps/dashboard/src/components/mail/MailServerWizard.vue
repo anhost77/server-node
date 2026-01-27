@@ -739,6 +739,7 @@ const { t } = useI18n();
 const emit = defineEmits<{
   (e: 'close'): void;
   (e: 'complete', config: any): void;
+  (e: 'configureMailStack', serverId: string, config: any): void;
 }>();
 
 const props = defineProps<{
@@ -749,6 +750,10 @@ const props = defineProps<{
     alias?: string;
     online: boolean;
   }>;
+  // Logs reçus depuis l'agent pendant l'installation
+  installationLogs?: Array<{ message: string; stream: 'stdout' | 'stderr' }>;
+  // Résultat de l'installation
+  installationResult?: { success: boolean; dkimPublicKey?: string; error?: string } | null;
 }>();
 
 // Current step
@@ -958,34 +963,75 @@ function copyAllDnsRecords() {
 async function startInstallation() {
   installing.value = true;
 
-  // Build installation steps
+  // Build installation steps (visual feedback)
   installationSteps.value = [
-    { id: 'postfix', name: 'Installation de Postfix', status: 'pending' },
-    { id: 'dovecot', name: 'Installation de Dovecot', status: 'pending' },
-    { id: 'opendkim', name: 'Installation d\'OpenDKIM', status: 'pending' },
-    { id: 'spf', name: 'Configuration SPF Policy', status: 'pending' }
+    { id: 'install', name: 'Installation des services', status: 'running' },
+    { id: 'dkim', name: 'Génération des clés DKIM', status: 'pending' },
+    { id: 'config', name: 'Configuration des services', status: 'pending' },
+    { id: 'restart', name: 'Redémarrage des services', status: 'pending' }
   ];
 
+  // Construire la liste des services à installer
+  const servicesToInstall = ['postfix', 'dovecot', 'opendkim', 'spf-policyd'];
   if (config.value.services.antispam === 'rspamd') {
-    installationSteps.value.push({ id: 'rspamd', name: 'Installation de Rspamd', status: 'pending' });
+    servicesToInstall.push('rspamd');
   }
   if (config.value.services.antivirus) {
-    installationSteps.value.push({ id: 'clamav', name: 'Installation de ClamAV', status: 'pending' });
-  }
-  installationSteps.value.push({ id: 'config', name: 'Configuration finale', status: 'pending' });
-  installationSteps.value.push({ id: 'verify', name: 'Vérification', status: 'pending' });
-
-  // TODO: Implement actual installation via WebSocket
-  // For now, simulate installation
-  for (let i = 0; i < installationSteps.value.length; i++) {
-    installationSteps.value[i].status = 'running';
-    await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
-    installationSteps.value[i].status = 'complete';
+    servicesToInstall.push('clamav');
   }
 
-  installComplete.value = true;
-  emit('complete', config.value);
+  // Récupérer l'ID du serveur cible
+  const serverId = config.value.architecture === 'single'
+    ? config.value.servers[0]?.serverId
+    : distributedConfig.value.mxInbound; // Pour l'instant on utilise le serveur MX inbound
+
+  if (!serverId) {
+    installationSteps.value[0].status = 'error';
+    installationSteps.value[0].message = 'Aucun serveur sélectionné';
+    installing.value = false;
+    return;
+  }
+
+  // Émettre l'événement pour déclencher l'installation via WebSocket
+  emit('configureMailStack', serverId, {
+    domain: config.value.domain.primaryDomain,
+    hostname: config.value.domain.hostname,
+    services: servicesToInstall,
+    security: {
+      tls: config.value.security.tls.provider,
+      dkimKeySize: config.value.security.dkim.keySize,
+      spf: config.value.security.spf.policy !== 'neutral',
+      dmarc: config.value.security.dmarc.policy !== 'none'
+    }
+  });
 }
+
+// Watcher pour les résultats de l'installation
+watch(() => props.installationResult, (result) => {
+  if (result) {
+    if (result.success) {
+      // Marquer toutes les étapes comme complètes
+      installationSteps.value.forEach(step => step.status = 'complete');
+      installComplete.value = true;
+      // Stocker la clé DKIM publique pour l'affichage DNS
+      if (result.dkimPublicKey) {
+        dkimPublicKey.value = result.dkimPublicKey;
+      }
+      emit('complete', config.value);
+    } else {
+      // Marquer la dernière étape en cours comme erreur
+      const runningStep = installationSteps.value.find(s => s.status === 'running');
+      if (runningStep) {
+        runningStep.status = 'error';
+        runningStep.message = result.error;
+      }
+      installing.value = false;
+    }
+  }
+});
+
+// Variable pour stocker la clé DKIM publique reçue
+const dkimPublicKey = ref<string>('');
 
 // Watch for hostname auto-generation
 watch(() => config.value.domain.primaryDomain, (newDomain) => {

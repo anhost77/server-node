@@ -918,4 +918,221 @@ export class InfrastructureManager {
             return { success: false, error: err.message };
         }
     }
+
+    /**
+     * **configureMailStack()** - Configure une stack mail complète
+     *
+     * Cette fonction installe et configure tous les services mail nécessaires
+     * pour un serveur de messagerie fonctionnel : Postfix, Dovecot, Rspamd,
+     * OpenDKIM, ClamAV et SPF-policyd.
+     *
+     * @param config - Configuration de la stack mail
+     * @param config.domain - Domaine principal (ex: example.com)
+     * @param config.hostname - Hostname du serveur mail (ex: mail.example.com)
+     * @param config.services - Services à installer
+     * @param config.security - Options de sécurité (TLS, DKIM, SPF, DMARC)
+     */
+    async configureMailStack(config: {
+        domain: string;
+        hostname: string;
+        services: string[];
+        security: {
+            tls: string;
+            dkimKeySize: number;
+            spf: boolean;
+            dmarc: boolean;
+        };
+    }): Promise<{ success: boolean; dkimPublicKey?: string; error?: string }> {
+        this.onLog(`\n📧 Configuring Mail Stack for ${config.domain}...\n`, 'stdout');
+
+        const mailServices: ServiceType[] = ['postfix', 'dovecot', 'rspamd', 'opendkim', 'clamav', 'spf-policyd'];
+        const servicesToInstall = config.services.filter(s => mailServices.includes(s as ServiceType));
+
+        try {
+            // Étape 1: Installer les services
+            this.onLog(`\n📦 Step 1/4: Installing mail services...\n`, 'stdout');
+            for (const service of servicesToInstall) {
+                this.onLog(`\n  → Installing ${service}...\n`, 'stdout');
+                const result = await this.installService(service as ServiceType);
+                if (!result.success) {
+                    throw new Error(`Failed to install ${service}: ${result.error}`);
+                }
+            }
+
+            // Étape 2: Générer les clés DKIM si OpenDKIM est installé
+            let dkimPublicKey: string | undefined;
+            if (servicesToInstall.includes('opendkim')) {
+                this.onLog(`\n🔑 Step 2/4: Generating DKIM keys...\n`, 'stdout');
+                dkimPublicKey = await this.generateDkimKeys(config.domain, config.security.dkimKeySize);
+            } else {
+                this.onLog(`\n⏭️ Step 2/4: Skipping DKIM (not selected)\n`, 'stdout');
+            }
+
+            // Étape 3: Appliquer les configurations
+            this.onLog(`\n⚙️ Step 3/4: Applying configurations...\n`, 'stdout');
+            await this.applyMailTemplates(config);
+
+            // Étape 4: Redémarrer les services
+            this.onLog(`\n🔄 Step 4/4: Restarting services...\n`, 'stdout');
+            for (const service of servicesToInstall) {
+                if (SERVICE_NAMES[service as ServiceType]) {
+                    this.onLog(`  → Restarting ${service}...\n`, 'stdout');
+                    await runCommandSilent('systemctl', ['restart', SERVICE_NAMES[service as ServiceType]]);
+                }
+            }
+
+            // Sauvegarder la configuration
+            await this.saveMailConfig(config, dkimPublicKey);
+
+            this.onLog(`\n✅ Mail stack configured successfully!\n`, 'stdout');
+            this.invalidateStatusCache();
+
+            return { success: true, dkimPublicKey };
+        } catch (err: any) {
+            this.onLog(`\n❌ Mail stack configuration failed: ${err.message}\n`, 'stderr');
+            return { success: false, error: err.message };
+        }
+    }
+
+    /**
+     * **generateDkimKeys()** - Génère les clés DKIM pour un domaine
+     */
+    private async generateDkimKeys(domain: string, keySize: number = 2048): Promise<string> {
+        const keysDir = `/etc/opendkim/keys/${domain}`;
+
+        // Créer le répertoire des clés
+        await runCommandSilent('mkdir', ['-p', keysDir]);
+
+        // Générer la clé privée (RSA pour compatibilité DKIM)
+        await runCommand('opendkim-genkey', [
+            '-b', keySize.toString(),
+            '-d', domain,
+            '-D', keysDir,
+            '-s', 'default',
+            '-v'
+        ], this.onLog);
+
+        // Lire la clé publique
+        const publicKeyPath = path.join(keysDir, 'default.txt');
+        const publicKeyContent = fs.readFileSync(publicKeyPath, 'utf-8');
+
+        // Changer les permissions
+        await runCommandSilent('chown', ['-R', 'opendkim:opendkim', keysDir]);
+        await runCommandSilent('chmod', ['600', path.join(keysDir, 'default.private')]);
+
+        this.onLog(`  ✅ DKIM keys generated for ${domain}\n`, 'stdout');
+
+        // Extraire juste la clé publique du fichier
+        const keyMatch = publicKeyContent.match(/p=([^"]+)/);
+        return keyMatch ? keyMatch[1].replace(/\s+/g, '') : publicKeyContent;
+    }
+
+    /**
+     * **applyMailTemplates()** - Applique les templates de configuration mail
+     */
+    private async applyMailTemplates(config: {
+        domain: string;
+        hostname: string;
+        services: string[];
+        security: { tls: string; dkimKeySize: number; spf: boolean; dmarc: boolean };
+    }): Promise<void> {
+        const templatesDir = path.join(__dirname, 'templates');
+        const variables = {
+            domain: config.domain,
+            hostname: config.hostname,
+            keys_dir: `/etc/opendkim/keys/${config.domain}`
+        };
+
+        // Postfix main.cf
+        if (config.services.includes('postfix')) {
+            const postfixTemplate = fs.readFileSync(path.join(templatesDir, 'postfix', 'main.cf.conf'), 'utf-8');
+            const postfixConfig = this.applyTemplateVariables(postfixTemplate, variables);
+            fs.writeFileSync('/etc/postfix/main.cf', postfixConfig);
+            this.onLog(`  ✅ Postfix main.cf configured\n`, 'stdout');
+        }
+
+        // Dovecot local.conf
+        if (config.services.includes('dovecot')) {
+            const dovecotTemplate = fs.readFileSync(path.join(templatesDir, 'dovecot', 'local.conf'), 'utf-8');
+            const dovecotConfig = this.applyTemplateVariables(dovecotTemplate, variables);
+            fs.writeFileSync('/etc/dovecot/local.conf', dovecotConfig);
+            this.onLog(`  ✅ Dovecot local.conf configured\n`, 'stdout');
+        }
+
+        // OpenDKIM configs
+        if (config.services.includes('opendkim')) {
+            const opendkimDir = path.join(templatesDir, 'opendkim');
+
+            // opendkim.conf
+            const mainConf = fs.readFileSync(path.join(opendkimDir, 'opendkim.conf'), 'utf-8');
+            fs.writeFileSync('/etc/opendkim.conf', this.applyTemplateVariables(mainConf, variables));
+
+            // KeyTable
+            const keyTable = fs.readFileSync(path.join(opendkimDir, 'KeyTable.conf'), 'utf-8');
+            fs.writeFileSync('/etc/opendkim/KeyTable', this.applyTemplateVariables(keyTable, variables));
+
+            // SigningTable
+            const signingTable = fs.readFileSync(path.join(opendkimDir, 'SigningTable.conf'), 'utf-8');
+            fs.writeFileSync('/etc/opendkim/SigningTable', this.applyTemplateVariables(signingTable, variables));
+
+            // TrustedHosts
+            const trustedHosts = fs.readFileSync(path.join(opendkimDir, 'TrustedHosts.conf'), 'utf-8');
+            fs.writeFileSync('/etc/opendkim/TrustedHosts', this.applyTemplateVariables(trustedHosts, variables));
+
+            this.onLog(`  ✅ OpenDKIM configured\n`, 'stdout');
+        }
+
+        // Rspamd antivirus config (pour ClamAV)
+        if (config.services.includes('rspamd') && config.services.includes('clamav')) {
+            const rspamdTemplate = fs.readFileSync(path.join(templatesDir, 'rspamd', 'antivirus.conf'), 'utf-8');
+            const rspamdConfig = this.applyTemplateVariables(rspamdTemplate, variables);
+            await runCommandSilent('mkdir', ['-p', '/etc/rspamd/local.d']);
+            fs.writeFileSync('/etc/rspamd/local.d/antivirus.conf', rspamdConfig);
+            this.onLog(`  ✅ Rspamd antivirus integration configured\n`, 'stdout');
+        }
+
+        // ClamAV config
+        if (config.services.includes('clamav')) {
+            const clamavTemplate = fs.readFileSync(path.join(templatesDir, 'clamav', 'clamd.conf'), 'utf-8');
+            const clamavConfig = this.applyTemplateVariables(clamavTemplate, variables);
+            fs.writeFileSync('/etc/clamav/clamd.conf', clamavConfig);
+            this.onLog(`  ✅ ClamAV configured\n`, 'stdout');
+        }
+    }
+
+    /**
+     * **applyTemplateVariables()** - Remplace les variables {{ var }} dans un template
+     */
+    private applyTemplateVariables(template: string, variables: Record<string, string>): string {
+        let result = template;
+        for (const [key, value] of Object.entries(variables)) {
+            // Remplace {{ key }} et {{ key | default:value }}
+            const regex = new RegExp(`\\{\\{\\s*${key}\\s*(\\|\\s*default:\\s*[^}]+)?\\s*\\}\\}`, 'g');
+            result = result.replace(regex, value);
+        }
+        // Remplace les variables non définies par leur valeur par défaut
+        result = result.replace(/\{\{\s*\w+\s*\|\s*default:\s*([^}]+)\s*\}\}/g, '$1');
+        return result;
+    }
+
+    /**
+     * **saveMailConfig()** - Sauvegarde la configuration mail pour référence future
+     */
+    private async saveMailConfig(config: any, dkimPublicKey?: string): Promise<void> {
+        const configDir = '/opt/serverflow/config';
+        await runCommandSilent('mkdir', ['-p', configDir]);
+
+        const mailConfig = {
+            ...config,
+            dkimPublicKey,
+            configuredAt: new Date().toISOString()
+        };
+
+        fs.writeFileSync(
+            path.join(configDir, 'mail.json'),
+            JSON.stringify(mailConfig, null, 2)
+        );
+
+        this.onLog(`  ✅ Mail configuration saved to ${configDir}/mail.json\n`, 'stdout');
+    }
 }

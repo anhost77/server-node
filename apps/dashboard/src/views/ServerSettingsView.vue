@@ -72,6 +72,8 @@ interface Props {
   infrastructureLogs: InfraLog[]
   fetchingRemoteLogs: boolean
   remoteLogFilePath: string | null
+  // Mail stack configuration result
+  mailStackResult?: { success: boolean; dkimPublicKey?: string; error?: string } | null
 }
 
 const props = defineProps<Props>()
@@ -97,6 +99,7 @@ const emit = defineEmits<{
   clearRemoteLogs: []
   clearInfraLogs: []
   copyInfraLogs: []
+  configureMailStack: [serverId: string, config: any]
 }>()
 
 const serverName = computed(() => props.server.alias || props.server.hostname || props.server.id.slice(0, 8))
@@ -1775,8 +1778,11 @@ function confirmReconfigureDatabase() {
         alias: server.alias,
         online: server.status === 'online'
       }]"
+      :installation-logs="infrastructureLogs"
+      :installation-result="mailStackResult"
       @close="showMailWizard = false"
       @complete="handleMailWizardComplete"
+      @configure-mail-stack="(serverId, config) => emit('configureMailStack', serverId, config)"
     />
   </div>
 </template>

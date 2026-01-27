@@ -854,6 +854,20 @@ function connectWS() {
           }
         }
       }
+      // Mail Stack Configuration Response
+      else if (msg.type === 'MAIL_STACK_CONFIGURED') {
+        if (msg.serverId === selectedServerId.value) {
+          configuringMailStack.value = false
+          mailStackResult.value = {
+            success: msg.success,
+            dkimPublicKey: msg.dkimPublicKey,
+            error: msg.error
+          }
+          if (msg.success) {
+            requestServerStatus()
+          }
+        }
+      }
       else if (msg.type === 'DATABASE_STARTED') {
         if (msg.serverId === selectedServerId.value) {
           startingDatabase.value = null
@@ -1768,6 +1782,23 @@ function stopService(serviceType: string) {
     type: 'STOP_SERVICE',
     serverId: targetId,
     service: serviceType
+  }))
+}
+
+// Mail Stack Configuration
+const configuringMailStack = ref(false)
+const mailStackResult = ref<{ success: boolean; dkimPublicKey?: string; error?: string } | null>(null)
+
+function configureMailStack(serverId: string, config: any) {
+  if (configuringMailStack.value) return
+
+  configuringMailStack.value = true
+  mailStackResult.value = null
+  infrastructureLogs.value = []
+  ws?.send(JSON.stringify({
+    type: 'CONFIGURE_MAIL_STACK',
+    serverId,
+    config
   }))
 }
 
@@ -4338,6 +4369,7 @@ function openNewCannedResponse() {
              :infrastructure-logs="infrastructureLogs"
              :fetching-remote-logs="fetchingRemoteLogs"
              :remote-log-file-path="remoteLogFilePath"
+             :mail-stack-result="mailStackResult"
              @back="closeServerSettings"
              @refresh="requestServerStatus"
              @install-runtime="installRuntime"
@@ -4356,6 +4388,7 @@ function openNewCannedResponse() {
              @fetch-remote-logs="fetchRemoteLogs"
              @clear-remote-logs="clearRemoteLogs"
              @clear-infra-logs="() => infrastructureLogs = []"
+             @configure-mail-stack="configureMailStack"
            />
 
         </div>
