@@ -384,7 +384,7 @@ export async function nuclearCleanup(
         return;
     }
 
-    onLog(`☢️ Nettoyage NUCLÉAIRE de ${servicePrefix}...\n`, 'stdout');
+    onLog(`🧹 Nettoyage complet de ${servicePrefix}...\n`, 'stdout');
 
     // 1. Arrêter TOUS les services associés
     if (config.services) {
@@ -516,7 +516,7 @@ export async function nuclearCleanup(
         await runCommandSilent('apt-get', ['update']);
     } catch { }
 
-    onLog(`   ✅ Nettoyage NUCLÉAIRE terminé\n`, 'stdout');
+    onLog(`   ✅ Nettoyage complet terminé\n`, 'stdout');
 }
 
 /**

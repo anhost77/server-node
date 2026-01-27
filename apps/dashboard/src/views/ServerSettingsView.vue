@@ -209,14 +209,14 @@ const showMailWizard = ref(false)
  * **handleMailWizardComplete()** - Gère la fin du wizard mail
  *
  * Cette fonction est appelée quand l'utilisateur termine le wizard de
- * configuration mail. Elle ferme le modal et pourrait lancer des actions
- * comme l'installation des services ou l'envoi de la config au serveur.
+ * configuration mail. Elle ferme le modal et rafraîchit le statut du serveur
+ * pour afficher les nouveaux services installés.
  */
 function handleMailWizardComplete(config: any) {
   console.log('Mail wizard completed with config:', config)
   showMailWizard.value = false
-  // TODO: Émettre un événement pour lancer l'installation via WebSocket
-  // emit('installMailStack', config)
+  // Rafraîchir le statut du serveur pour voir les nouveaux services
+  emit('refresh')
 }
 
 // Track if an operation is in progress
