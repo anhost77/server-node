@@ -13,9 +13,14 @@ function Stop-ProcessOnPort {
     $connections = netstat -ano | Select-String ":$Port\s+.*LISTENING"
     foreach ($conn in $connections) {
         if ($conn -match '\s+(\d+)\s*$') {
-            $pid = $matches[1]
-            Write-Host "Arret du processus $pid sur le port $Port..." -ForegroundColor Yellow
-            taskkill /PID $pid /F 2>$null | Out-Null
+            $processId = [int]$matches[1]
+            Write-Host "Arret du processus $processId sur le port $Port..." -ForegroundColor Yellow
+            try {
+                Stop-Process -Id $processId -Force -ErrorAction Stop
+                Write-Host "  OK" -ForegroundColor Green
+            } catch {
+                Write-Host "  Echec: $_" -ForegroundColor Red
+            }
         }
     }
 }
@@ -24,7 +29,7 @@ function Stop-ProcessOnPort {
 Write-Host "[1/3] Liberation des ports..." -ForegroundColor White
 Stop-ProcessOnPort -Port 3000
 Stop-ProcessOnPort -Port 5173
-Start-Sleep -Seconds 1
+Start-Sleep -Seconds 2
 
 # Aller dans le dossier du projet
 Set-Location $PSScriptRoot

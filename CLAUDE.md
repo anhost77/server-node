@@ -5,15 +5,18 @@
 **IMPORTANT**: Before starting any implementation task, Claude MUST read the relevant BMAD documentation in `_bmad-output/`:
 
 ### Planning Artifacts (Read First)
+
 - `_bmad-output/planning-artifacts/prd.md` - Product Requirements Document
 - `_bmad-output/planning-artifacts/architecture.md` - System Architecture
 - `_bmad-output/planning-artifacts/epics.md` - Epic breakdown and stories
 
 ### Implementation Artifacts (Per Feature)
+
 - `_bmad-output/implementation-artifacts/` - Contains detailed specs for each story
 - Story format: `{epic}-{story}-{title}.md` (e.g., `2-3-nginx-ssl-automation.md`)
 
 ### Current Sprint Status
+
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` - Current sprint progress
 
 When implementing a feature, **always check if there's a corresponding implementation artifact** before writing code.
@@ -25,6 +28,7 @@ When implementing a feature, **always check if there's a corresponding implement
 **CRITICAL**: At EACH step of implementation, Claude MUST update ALL tracking files:
 
 ### Files to Update
+
 1. **`_bmad-output/implementation-artifacts/sprint-status.yaml`**
    - Update story status: `backlog` → `in-progress` → `done`
    - Add new stories if implementing new features
@@ -41,24 +45,28 @@ When implementing a feature, **always check if there's a corresponding implement
    - Document the implementation approach
 
 ### Status Workflow
-````
+
+```
 backlog → in-progress → review → done
-````
+```
 
 ### Example Update
+
 When starting work on a story:
-````yaml
+
+```yaml
 # Before
 7-1-multi-runtime-support: backlog
 
 # After
 7-1-multi-runtime-support: in-progress
-````
+```
 
 When completing:
-````yaml
+
+```yaml
 7-1-multi-runtime-support: done
-````
+```
 
 **Update tracking files BEFORE running `pnpm commit:all`**
 
@@ -67,11 +75,13 @@ When completing:
 ## Automatic Git Workflow
 
 **IMPORTANT**: After completing any code changes, Claude MUST automatically commit and push using:
-````bash
+
+```bash
 pnpm commit:all
-````
+```
 
 This command:
+
 - Stages all modified files (excluding sensitive files like .env, .pem, credentials)
 - Generates a commit message based on changed files
 - Commits with `--no-verify` (security checks are in CI)
@@ -83,6 +93,7 @@ This command:
 ### Pre-Commit Checklist
 
 Before running `pnpm commit:all`, verify:
+
 - [ ] `pnpm test` passes (unit tests)
 - [ ] `pnpm security:check` passes
 - [ ] Manual testing of the feature completed
@@ -90,6 +101,7 @@ Before running `pnpm commit:all`, verify:
 - [ ] Implementation artifact updated (if exists)
 
 For new features, ensure:
+
 - [ ] Unit tests added (coverage > 80%)
 - [ ] Integration tests added if necessary
 - [ ] Edge cases documented in tests
@@ -99,10 +111,12 @@ For new features, ensure:
 ## Security Requirements
 
 Before making any changes, review:
+
 - `CONTRIBUTING.md` - GDPR and security guidelines
 - `SECURITY.md` - Security policy
 
 Key rules:
+
 - Use **Ed25519** for signatures (RSA is FORBIDDEN)
 - Use **Argon2id** for passwords (bcrypt is deprecated, bcryptjs is OK)
 - Use **SHA-256+** for hashing (MD5/SHA1 are FORBIDDEN)
@@ -112,7 +126,8 @@ Key rules:
 ---
 
 ## Project Structure
-````
+
+```
 apps/
   agent/          # Node agent (runs on user servers)
   control-plane/  # API server (Fastify + SQLite)
@@ -120,18 +135,19 @@ apps/
 packages/
   shared/         # Shared types and utilities
   config/         # Configuration package
-````
+```
 
 ---
 
 ## Development Commands
-````bash
+
+```bash
 pnpm dev          # Start all apps in dev mode
 pnpm build        # Build all apps
 pnpm test         # Run tests
 pnpm security:check  # Run security validation
 pnpm commit:all   # Commit and push (USE THIS!)
-````
+```
 
 ---
 
@@ -156,6 +172,7 @@ Pour maintenir la lisibilité et la maintenabilité :
 - **Fichiers utilitaires** : 200-300 lignes max
 
 **Si un fichier dépasse ces limites** :
+
 1. Consulte le Product Manager Agent pour créer un plan de refactoring
 2. Demande à un Dev Agent de procéder à la restructuration
 3. Documente le refactoring dans un fichier `refactoring/{date}-{file}.md`
@@ -167,19 +184,20 @@ Tous les commentaires de code doivent être en **français** et accessibles à u
 **Règle d'or** : Explique comme si tu parlais à quelqu'un qui ne connaît rien au code.
 
 Exemple :
-````typescript
+
+```typescript
 /**
  * **authenticateAgent()** - Vérifie l'identité de l'agent
- * 
+ *
  * Cette fonction s'assure que l'agent qui se connecte est bien celui
  * qu'il prétend être. C'est comme montrer sa carte d'identité à l'entrée
  * d'un bâtiment sécurisé.
- * 
+ *
  * Elle vérifie :
  * - Le token secret de l'agent (comme un mot de passe)
  * - La signature numérique (comme un sceau officiel)
  * - Que l'agent n'est pas dans la liste noire
- * 
+ *
  * @param token - Le mot de passe secret de l'agent
  * @param signature - La signature numérique pour prouver l'identité
  * @returns true si l'agent est authentifié, false sinon
@@ -187,13 +205,14 @@ Exemple :
 async function authenticateAgent(token: string, signature: string): Promise<boolean> {
   // Implementation code here
 }
-````
+```
 
 ---
 
 ## En-têtes de Fichiers (OBLIGATOIRE)
 
 **CHAQUE fichier** doit commencer par un bloc de commentaires décrivant :
+
 1. **Nom du fichier** - Le chemin relatif depuis la racine du projet
 2. **Description** - Ce que fait le fichier en 2-3 phrases simples (pour un non-développeur)
 3. **Dépendances** - Les principales librairies utilisées
@@ -201,32 +220,34 @@ async function authenticateAgent(token: string, signature: string): Promise<bool
 5. **Fonctions principales** - Liste des fonctions importantes et leur but
 
 ### Template TypeScript/JavaScript
-````typescript
+
+```typescript
 /**
  * @file apps/agent/src/websocket/client.ts
  * @description Client WebSocket pour communiquer avec le Control Plane.
  * Ce fichier gère la connexion temps-réel entre l'agent sur le serveur
  * et le serveur central qui envoie les commandes de déploiement.
- * 
+ *
  * @dependencies
  * - ws: Librairie WebSocket pour la communication temps-réel
  * - pino: Système de logs pour tracer les événements
- * 
+ *
  * @security
  * - Utilise Ed25519 pour l'authentification (cryptographie moderne)
  * - Vérifie les certificats SSL pour éviter les man-in-the-middle
  * - Ne log jamais les tokens ou secrets
- * 
+ *
  * @fonctions_principales
  * - connect() : Établit la connexion WebSocket sécurisée
  * - sendCommand() : Envoie une commande au serveur
  * - handleMessage() : Traite les messages reçus du serveur
  * - reconnect() : Reconnecte automatiquement en cas de coupure
  */
-````
+```
 
 ### Template Vue.js
-````vue
+
+```vue
 <!--
   @file apps/dashboard/src/components/ServerCard.vue
   @description Carte affichant les informations d'un serveur connecté.
@@ -243,7 +264,7 @@ async function authenticateAgent(token: string, signature: string): Promise<bool
   - deleteServer() : Ouvre le modal de confirmation de suppression
   - refreshStatus() : Rafraîchit le statut du serveur en temps réel
 -->
-````
+```
 
 ---
 
@@ -288,7 +309,8 @@ Lorsqu'une nouvelle fonctionnalité est proposée, suivre ce processus :
 **Output final** : Epic + Stories documentés et ajoutés au sprint
 
 ### Template Feature Proposal
-````markdown
+
+```markdown
 # Feature Proposal: {Feature Name}
 
 **Date** : {YYYY-MM-DD}
@@ -296,71 +318,90 @@ Lorsqu'une nouvelle fonctionnalité est proposée, suivre ce processus :
 **Status** : draft | validated | rejected | in-progress
 
 ## 📋 Résumé
+
 Courte description de la fonctionnalité (2-3 phrases)
 
 ## 🎯 Objectifs
+
 - Objectif 1
 - Objectif 2
 
 ## 🔍 Recherches Web
+
 ### Meilleures Pratiques
+
 - Lien 1 : Résumé
 - Lien 2 : Résumé
 
 ### Technologies Similaires
+
 - Outil 1 : Comment ils font
 - Outil 2 : Ce qu'on peut en apprendre
 
 ## 👥 Analyse UX (si UI)
+
 ### Wireframes
+
 [Liens ou descriptions]
 
 ### Responsive Design
+
 - Mobile : ...
 - Tablet : ...
 - Desktop : ...
 
 ## 🏗️ Architecture Technique
+
 ### Composants Impactés
+
 - Component 1 : Modifications nécessaires
 - Component 2 : Nouveaux fichiers
 
 ### Dépendances
+
 - Librairie 1 : Version, pourquoi
 - Librairie 2 : Version, pourquoi
 
 ## 🔒 Sécurité
+
 ### Risques Identifiés
+
 - Risque 1 : Mitigation
 - Risque 2 : Mitigation
 
 ### Validation Crypto
+
 - [ ] Ed25519 utilisé pour signatures
 - [ ] Argon2id utilisé pour passwords
 - [ ] Pas de secrets en clair
 
 ## 📊 Estimation
+
 - Complexité : Low | Medium | High
 - Charge : {X} story points
 - Durée estimée : {X} jours
 
 ## 📝 Epic & Stories
+
 ### Epic {X}: {Title}
+
 - **Story {X}-1** : {Title} - {X} points
 - **Story {X}-2** : {Title} - {X} points
 
 ## ✅ Validation
+
 - [ ] Product Manager : Approuvé
 - [ ] UX (si UI) : Approuvé
 - [ ] Dev : Architecture validée
 - [ ] Security : Risques maîtrisés
-````
+```
 
 ---
 
 ## Template Implementation Artifact
 
 Lors de la création d'un fichier `{epic}-{story}-{title}.md` :
+
 ````markdown
 # Story {epic}-{story}: {Title}
 
@@ -374,9 +415,11 @@ Lors de la création d'un fichier `{epic}-{story}-{title}.md` :
 ## 📋 Description
 
 ### Contexte
+
 Pourquoi cette story existe et comment elle s'intègre dans l'epic global.
 
 ### Objectif
+
 Ce que cette story doit accomplir concrètement.
 
 ---
@@ -395,20 +438,25 @@ Ce que cette story doit accomplir concrètement.
 ## 🏗️ Spécifications Techniques
 
 ### Architecture
+
 Description de l'approche technique choisie.
 
 ### Fichiers à Modifier
+
 - `apps/agent/src/file1.ts` : Modifications prévues
 - `apps/control-plane/src/file2.ts` : Modifications prévues
 
 ### Fichiers à Créer
+
 - `apps/agent/src/new-file.ts` : Description du contenu
 
 ### Dépendances
+
 - Librairie 1 : Version, raison
 - Librairie 2 : Version, raison
 
 ### Schéma de Données (si applicable)
+
 ```sql
 -- Migrations nécessaires
 ```
@@ -426,14 +474,17 @@ Description de l'approche technique choisie.
 ## 🧪 Plan de Tests
 
 ### Tests Unitaires
+
 - Test 1 : Description du cas testé
 - Test 2 : Description du cas testé
 
 ### Tests d'Intégration
+
 - Test 1 : Scénario end-to-end
 - Test 2 : Scénario edge-case
 
 ### Tests Manuels
+
 - [ ] Scénario 1
 - [ ] Scénario 2
 
@@ -442,20 +493,25 @@ Description de l'approche technique choisie.
 ## 📝 Implémentation
 
 ### Fichiers Créés
+
 - `path/to/file1.ts` : Description
 - `path/to/file2.ts` : Description
 
 ### Fichiers Modifiés
+
 - `path/to/existing.ts` : Nature des modifications
 
 ### Déviations du Plan Initial
+
 Description des changements par rapport au plan original et pourquoi.
 
 ### Challenges Rencontrés
+
 - Challenge 1 : Comment résolu
 - Challenge 2 : Comment résolu
 
 ### Tests Ajoutés
+
 - `tests/unit/test1.spec.ts` : Coverage {X}%
 - `tests/integration/test2.spec.ts` : Scénarios couverts
 
@@ -518,80 +574,88 @@ Claude agit comme un **développeur senior autonome** avec ces responsabilités 
 ## Communication avec les Agents
 
 ### Quand Consulter le Product Manager Agent
-````bash
+
+```bash
 # Trigger automatique pour :
 - Nouvelle fonctionnalité proposée par l'utilisateur
 - Changement de scope d'une feature existante
 - Ajout de dépendances majeures
 - Modification de l'architecture globale
 - Priorisation de bugs vs features
-````
+```
 
 **Comment consulter** :
-````markdown
+
+```markdown
 @product-manager Je propose d'ajouter la fonctionnalité X.
 Peux-tu analyser la faisabilité et créer un plan ?
 
 Contexte : [description du besoin]
 Recherches web effectuées : [liens/résumé]
-````
+```
 
 ### Quand Consulter l'UX Agent
-````bash
+
+```bash
 # Trigger automatique pour :
 - Modification de composants UI existants
 - Création de nouveaux composants UI
 - Refonte d'une page ou d'un workflow
 - Questions sur le design system
 - Problèmes d'accessibilité
-````
+```
 
 **Comment consulter** :
-````markdown
+
+```markdown
 @ux-agent J'ai besoin de valider le design pour [composant/page].
 
 Contexte : [description]
 Wireframe actuel : [lien ou description]
 Questions : [liste des points à valider]
-````
+```
 
 ### Quand Consulter le Dev Agent
-````bash
+
+```bash
 # Trigger automatique pour :
 - Refactoring de code complexe (>400 lignes)
 - Architecture technique difficile
 - Choix entre plusieurs approches techniques
 - Estimation de charge technique
 - Review de code complexe
-````
+```
 
 **Comment consulter** :
-````markdown
+
+```markdown
 @dev-agent J'ai besoin d'aide pour architecturer [feature].
 
 Contexte : [description]
 Options considérées : [liste]
 Recommendation demandée : [question précise]
-````
+```
 
 ### Quand Consulter le Security Agent
-````bash
+
+```bash
 # Trigger automatique pour :
 - Implémentation d'authentification/autorisation
 - Manipulation de données sensibles
 - Cryptographie (signatures, encryption)
 - Exposition d'API publiques
 - Gestion de secrets/credentials
-````
+```
 
 **Comment consulter** :
-````markdown
+
+```markdown
 @security-agent J'implémente [feature] qui manipule [données sensibles].
 
 Contexte : [description]
 Approche cryptographique : [détails]
 Validation requise : [points de sécurité]
-````
+```
 
 ---
 
@@ -609,34 +673,36 @@ Quand un bug ou un problème survient :
 6. **Documenter** : Ajouter un commentaire expliquant le bug et le fix
 
 **Template de documentation de bug fix** :
-````typescript
+
+```typescript
 /**
  * **FIX BUG #{issue-number}** - {Titre du bug}
- * 
+ *
  * Problème : Description du bug observé
  * Cause racine : Explication de ce qui causait le bug
  * Solution : Comment le fix résout le problème
- * 
+ *
  * Avant : [comportement buggé]
  * Après : [comportement correct]
- * 
+ *
  * @see https://github.com/org/repo/issues/{issue-number}
  */
-````
+```
 
 ### Gestion des Erreurs
 
 Toujours implémenter une gestion d'erreurs robuste :
-````typescript
+
+```typescript
 /**
  * **handleDeployment()** - Gère le processus complet de déploiement
- * 
+ *
  * Cette fonction orchestre toutes les étapes du déploiement :
  * 1. Vérification des prérequis
  * 2. Préparation de l'environnement
  * 3. Exécution du déploiement
  * 4. Vérification post-déploiement
- * 
+ *
  * En cas d'erreur à n'importe quelle étape, un rollback automatique
  * est déclenché pour remettre le système dans son état précédent.
  */
@@ -644,18 +710,17 @@ async function handleDeployment(config: DeploymentConfig): Promise<DeploymentRes
   try {
     // Étape 1 : Vérifications
     await validatePrerequisites(config);
-    
+
     // Étape 2 : Préparation
     const environment = await prepareEnvironment(config);
-    
+
     // Étape 3 : Déploiement
     const result = await executeDeployment(environment);
-    
+
     // Étape 4 : Vérification
     await verifyDeployment(result);
-    
+
     return result;
-    
   } catch (error) {
     // Log l'erreur de manière sécurisée (sans secrets)
     logger.error({
@@ -664,7 +729,7 @@ async function handleDeployment(config: DeploymentConfig): Promise<DeploymentRes
       message: error.message,
       // JAMAIS de tokens, passwords, ou secrets dans les logs
     });
-    
+
     // Tentative de rollback automatique
     try {
       await rollbackDeployment(config);
@@ -672,15 +737,14 @@ async function handleDeployment(config: DeploymentConfig): Promise<DeploymentRes
     } catch (rollbackError) {
       logger.error('Rollback failed', { error: rollbackError.message });
     }
-    
+
     // Remonte l'erreur avec un message clair pour l'utilisateur
-    throw new DeploymentError(
-      'Le déploiement a échoué. Un rollback automatique a été effectué.',
-      { originalError: error }
-    );
+    throw new DeploymentError('Le déploiement a échoué. Un rollback automatique a été effectué.', {
+      originalError: error,
+    });
   }
 }
-````
+```
 
 ---
 
@@ -691,6 +755,7 @@ async function handleDeployment(config: DeploymentConfig): Promise<DeploymentRes
 Avant de commiter, Claude doit s'auto-reviewer :
 
 #### ✅ Sécurité
+
 - [ ] Aucun secret en dur dans le code
 - [ ] Ed25519 pour signatures (pas RSA)
 - [ ] Argon2id pour passwords (pas bcrypt)
@@ -700,12 +765,14 @@ Avant de commiter, Claude doit s'auto-reviewer :
 - [ ] Pas de logs de données sensibles
 
 #### ✅ Performance
+
 - [ ] Pas de boucles imbriquées inefficaces
 - [ ] Requêtes DB optimisées (indexes, limits)
 - [ ] Pas de memory leaks évidents
 - [ ] Utilisation appropriée de cache si applicable
 
 #### ✅ Maintenabilité
+
 - [ ] En-tête de fichier présent et complet
 - [ ] Commentaires en français pour les non-devs
 - [ ] Fonctions < 50 lignes (sauf exceptions justifiées)
@@ -714,12 +781,14 @@ Avant de commiter, Claude doit s'auto-reviewer :
 - [ ] Pas de code dupliqué (DRY principle)
 
 #### ✅ Tests
+
 - [ ] Tests unitaires pour la nouvelle logique
 - [ ] Coverage > 80% pour les nouveaux fichiers
 - [ ] Tests d'intégration si feature end-to-end
 - [ ] Edge cases testés
 
 #### ✅ Documentation
+
 - [ ] README mis à jour si changement d'API publique
 - [ ] `sprint-status.yaml` mis à jour
 - [ ] Implementation artifact mis à jour
@@ -730,15 +799,17 @@ Avant de commiter, Claude doit s'auto-reviewer :
 ## Standards de Nommage
 
 ### Fichiers et Dossiers
-````
+
+```
 kebab-case.ts          # Fichiers TypeScript/JavaScript
 PascalCase.vue         # Composants Vue
 kebab-case.spec.ts     # Fichiers de tests
 SCREAMING_SNAKE.md     # Fichiers de config (README, CHANGELOG)
-````
+```
 
 ### Code
-````typescript
+
+```typescript
 // Classes et Types : PascalCase
 class DeploymentService {}
 interface ServerConfig {}
@@ -754,8 +825,8 @@ const DEFAULT_TIMEOUT_MS = 5000;
 
 // Noms en français pour la clarté
 const nombreDeServeurs = servers.length; // ✅ OK
-const nbSrv = servers.length;           // ❌ Éviter les abréviations obscures
-````
+const nbSrv = servers.length; // ❌ Éviter les abréviations obscures
+```
 
 ---
 
@@ -772,43 +843,52 @@ Le projet suit SemVer : `MAJOR.MINOR.PATCH`
 ### CHANGELOG.md
 
 Toujours mettre à jour lors d'une release :
-````markdown
+
+```markdown
 # Changelog
 
 ## [Unreleased]
+
 ### Added
+
 - Feature X implémentée (#123)
 
 ### Changed
+
 - Amélioration de Y (#124)
 
 ### Fixed
+
 - Bug Z corrigé (#125)
 
 ### Security
+
 - Upgrade de dépendance vulnérable (#126)
 
 ## [1.2.0] - 2025-01-25
+
 ### Added
+
 - Multi-runtime support (Node, Bun, Deno)
-...
-````
+  ...
+```
 
 ---
 
 ## Bonnes Pratiques Spécifiques
 
 ### WebSocket Communication
-````typescript
+
+```typescript
 /**
  * **sendCommand()** - Envoie une commande au Control Plane
- * 
+ *
  * Cette fonction envoie une commande de manière sécurisée via WebSocket.
  * Elle gère automatiquement :
  * - La sérialisation JSON sécurisée
  * - Le timeout de 30 secondes
  * - La reconnexion automatique si la connexion est perdue
- * 
+ *
  * Important : Ne jamais envoyer de secrets dans les commandes,
  * utiliser plutôt des références (IDs) qui seront résolues côté serveur.
  */
@@ -817,25 +897,26 @@ async function sendCommand(command: Command): Promise<CommandResult> {
   if (containsSensitiveData(command)) {
     throw new SecurityError('Command contains sensitive data');
   }
-  
+
   // Envoi avec timeout
-  const timeoutPromise = new Promise((_, reject) => 
-    setTimeout(() => reject(new TimeoutError()), 30000)
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new TimeoutError()), 30000),
   );
-  
+
   const sendPromise = this.ws.send(JSON.stringify(command));
-  
+
   return Promise.race([sendPromise, timeoutPromise]);
 }
-````
+```
 
 ### Database Migrations
-````typescript
+
+```typescript
 /**
  * **Migration YYYY-MM-DD-description** - Description de la migration
- * 
+ *
  * Cette migration ajoute/modifie/supprime [tables/colonnes].
- * 
+ *
  * Raison : Pourquoi cette migration est nécessaire
  * Impact : Quelles données/tables sont affectées
  * Rollback : Comment revenir en arrière si nécessaire
@@ -855,17 +936,18 @@ export async function down(db: Database): Promise<void> {
     DROP COLUMN last_heartbeat
   `);
 }
-````
+```
 
 ### Environment Variables
-````typescript
+
+```typescript
 /**
  * **loadConfig()** - Charge la configuration depuis les variables d'environnement
- * 
+ *
  * Cette fonction lit les variables d'environnement et les valide.
  * Si une variable obligatoire manque, l'application refuse de démarrer
  * plutôt que de fonctionner avec une config incomplète.
- * 
+ *
  * Variables obligatoires :
  * - CONTROL_PLANE_URL : URL du serveur central
  * - AGENT_TOKEN : Token secret de l'agent
@@ -873,13 +955,13 @@ export async function down(db: Database): Promise<void> {
  */
 function loadConfig(): Config {
   const requiredVars = ['CONTROL_PLANE_URL', 'AGENT_TOKEN', 'DATABASE_PATH'];
-  
+
   for (const varName of requiredVars) {
     if (!process.env[varName]) {
       throw new ConfigError(`Missing required env var: ${varName}`);
     }
   }
-  
+
   return {
     controlPlaneUrl: process.env.CONTROL_PLANE_URL,
     agentToken: process.env.AGENT_TOKEN,
@@ -889,12 +971,13 @@ function loadConfig(): Config {
     maxRetries: parseInt(process.env.MAX_RETRIES || '3'),
   };
 }
-````
+```
 
 ---
 
 ## Résumé des Commandes Essentielles
-````bash
+
+```bash
 # Développement
 pnpm dev                    # Démarre tous les services en mode dev
 pnpm dev:agent             # Démarre uniquement l'agent
@@ -920,15 +1003,44 @@ pnpm commit:all            # Commit + push automatique (À UTILISER)
 pnpm lint                  # Linting du code
 pnpm format                # Formatage avec Prettier
 pnpm clean                 # Nettoie les builds
-````
+```
 
 ---
 
-## Redémarrage Automatique des Serveurs de Dev (OBLIGATOIRE)
+## Lancement des Serveurs de Dev
+
+### Scripts de Démarrage (Recommandé)
+
+Des scripts sont disponibles à la racine du projet pour lancer/arrêter les serveurs facilement :
+
+| Fichier         | Usage                                     |
+| --------------- | ----------------------------------------- |
+| `start-dev.bat` | **Double-clic** pour lancer les serveurs  |
+| `start-dev.ps1` | Version PowerShell (via terminal)         |
+| `stop-dev.bat`  | **Double-clic** pour arrêter les serveurs |
+| `stop-dev.ps1`  | Version PowerShell (via terminal)         |
+
+**Pour lancer les serveurs** :
+
+- Double-clic sur `start-dev.bat`
+- Ou dans PowerShell : `.\start-dev.ps1`
+
+Les scripts font automatiquement :
+
+1. Libération des ports 3000 et 5173 s'ils sont occupés
+2. Lancement du Control Plane dans une fenêtre (port 3000)
+3. Lancement du Dashboard dans une autre fenêtre (port 5173)
+
+**URLs des serveurs** :
+
+- Control Plane : http://localhost:3000
+- Dashboard : http://localhost:5173
+
+### Redémarrage Automatique par Claude (OBLIGATOIRE)
 
 **CRITIQUE** : Après avoir créé/mis à jour un bundle agent ou modifié du code backend, Claude DOIT **AUTOMATIQUEMENT** redémarrer les serveurs de dev sans demander à l'utilisateur.
 
-### Quand Redémarrer
+#### Quand Redémarrer
 
 - ✅ Après création d'un nouveau bundle agent (`agent-bundle.tar.gz`)
 - ✅ Après modification du control-plane (`apps/control-plane/`)
@@ -936,23 +1048,22 @@ pnpm clean                 # Nettoie les builds
 - ✅ Quand l'utilisateur dit que le dashboard/API ne répond pas
 - ✅ Après un `pnpm build` complet
 
-### Procédure de Redémarrage (Windows)
+#### Procédure de Redémarrage (Windows - pour Claude)
 
-````bash
+```bash
 # 1. Trouver les processus sur les ports 3000 et 5173
 netstat -ano | findstr ":3000 :5173"
 
-# 2. Tuer les processus (remplacer PID par les vrais PIDs trouvés)
-wmic process where "ProcessId=PID_PORT_3000" call terminate
-wmic process where "ProcessId=PID_PORT_5173" call terminate
+# 2. Tuer les processus via cmd (pour éviter les problèmes Git Bash)
+cmd //c "taskkill /PID <PID_PORT_3000> /F"
+cmd //c "taskkill /PID <PID_PORT_5173> /F"
 
 # 3. Redémarrer les serveurs (en background)
-cd c:/Users/anste/.gemini/antigravity/scratch/server-node
 pnpm --filter @server-flow/control-plane dev  # En background
 pnpm --filter @server-flow/dashboard dev       # En background
-````
+```
 
-### Rappel Important
+#### Rappel Important
 
 **Ne JAMAIS demander à l'utilisateur** s'il veut redémarrer les serveurs. C'est automatique.
 
@@ -967,6 +1078,7 @@ L'utilisateur ne devrait JAMAIS avoir à dire : "redémarre les serveurs".
 📄 **`docs/AGENT-GOTCHAS.md`** - Liste des erreurs courantes et pièges à éviter
 
 Ce fichier documente les problèmes rencontrés et leurs solutions, comme :
+
 - Erreur `getcwd() failed` lors de l'utilisation de `cd` dans `execAsync`
 - Problèmes de chemins relatifs vs absolus
 - Gestion des processus enfants et du répertoire courant
@@ -985,6 +1097,7 @@ Ce fichier documente les problèmes rencontrés et leurs solutions, comme :
 Sur Debian/Ubuntu, certains packages sont des **métapackages** : ils ne contiennent pas de binaires eux-mêmes, mais dépendent d'autres packages qui contiennent les vrais fichiers.
 
 **Exemple avec ProFTPD** :
+
 - `proftpd` = métapackage (vide, juste des dépendances)
 - `proftpd-basic` = contient le binaire `/usr/sbin/proftpd`
 - `proftpd-core` = librairies core
@@ -997,44 +1110,46 @@ Si tu fais `apt-get remove proftpd`, seul le métapackage est supprimé, mais **
 
 ### Exemples Corrects
 
-````bash
+```bash
 # ❌ INCORRECT - ne supprime que le métapackage
 apt-get remove -y proftpd
 
 # ✅ CORRECT - supprime tout
 apt-get remove -y proftpd proftpd-basic proftpd-core
-````
+```
 
-````bash
+```bash
 # ❌ INCORRECT
 apt-get remove -y postgresql
 
 # ✅ CORRECT
 apt-get remove -y postgresql postgresql-contrib postgresql-common postgresql-client-common 'postgresql-*'
-````
+```
 
 ### Packages Connus avec ce Problème
 
-| Package | Métapackage | Packages à supprimer |
-|---------|-------------|----------------------|
-| ProFTPD | `proftpd` | `proftpd`, `proftpd-basic`, `proftpd-core` |
-| PostgreSQL | `postgresql` | `postgresql`, `postgresql-contrib`, `postgresql-common`, `postgresql-client-common`, `postgresql-*` |
+| Package       | Métapackage            | Packages à supprimer                                                                                                                         |
+| ------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| ProFTPD       | `proftpd`              | `proftpd`, `proftpd-basic`, `proftpd-core`                                                                                                   |
+| PostgreSQL    | `postgresql`           | `postgresql`, `postgresql-contrib`, `postgresql-common`, `postgresql-client-common`, `postgresql-*`                                          |
 | MySQL/MariaDB | `default-mysql-server` | `default-mysql-server`, `default-mysql-client`, `mariadb-server`, `mariadb-client`, `mariadb-common`, `mysql-common`, `mysql-*`, `mariadb-*` |
-| PHP | `php` | `php`, `php-fpm`, `php-cli`, `php-common`, `php-*` |
+| PHP           | `php`                  | `php`, `php-fpm`, `php-cli`, `php-common`, `php-*`                                                                                           |
 
 ### Comment Vérifier
 
 Pour trouver tous les packages installés d'un logiciel :
-````bash
+
+```bash
 dpkg -l | grep proftpd
 dpkg -l | grep postgresql
-````
+```
 
 Pour voir quel package fournit un binaire :
-````bash
+
+```bash
 dpkg -S /usr/sbin/proftpd
 # Résultat: proftpd-basic: /usr/sbin/proftpd
-````
+```
 
 ---
 
@@ -1047,7 +1162,8 @@ dpkg -S /usr/sbin/proftpd
 2. **Synchronisation automatique** : Quand on change de serveur FTP (vsftpd ↔ ProFTPD), l'agent devra automatiquement recréer les comptes FTP à partir de ce fichier JSON
 
 3. **Structure suggérée** :
-````json
+
+```json
 {
   "accounts": [
     {
@@ -1058,7 +1174,7 @@ dpkg -S /usr/sbin/proftpd
     }
   ]
 }
-````
+```
 
 4. **Comportement** :
    - À l'installation d'un nouveau serveur FTP → lire le JSON et recréer tous les comptes
@@ -1072,6 +1188,7 @@ dpkg -S /usr/sbin/proftpd
 ## Mécanisme de Mise à Jour de l'Agent (CRITIQUE)
 
 **OBLIGATOIRE** : Avant de modifier QUOI QUE CE SOIT lié à :
+
 - La structure du bundle agent (`apps/agent/bundle/`)
 - Le fichier `agent-bundle.tar.gz`
 - Le processus `UPDATE_AGENT` dans `apps/agent/src/index.ts`
@@ -1083,6 +1200,7 @@ dpkg -S /usr/sbin/proftpd
 📄 **`docs/AGENT-UPDATE-MECHANISM.md`** - Documentation COMPLÈTE du système de mise à jour
 
 Ce document explique :
+
 - La structure exacte du bundle (plate vs imbriquée)
 - Le flux complet de mise à jour automatique
 - Comment le fichier systemd est géré
@@ -1117,6 +1235,7 @@ Ce document explique :
 ### Emplacement des Templates
 
 Les fichiers de templates sont dans :
+
 ```
 apps/agent/src/infrastructure/templates/
 ├── bind9/          # DNS BIND9
@@ -1153,15 +1272,20 @@ import { writeConfig } from '../../template-manager.js';
 
 // Écrire un fichier de configuration depuis un template
 writeConfig('postfix/main.cf', '/etc/postfix/main.cf', {
-    hostname: 'mail.example.com',
-    domain: 'example.com'
+  hostname: 'mail.example.com',
+  domain: 'example.com',
 });
 
 // Avec options
-writeConfig('fail2ban/jail.local', '/etc/fail2ban/jail.local', {
+writeConfig(
+  'fail2ban/jail.local',
+  '/etc/fail2ban/jail.local',
+  {
     bantime: '1h',
-    maxretry: 5
-}, { append: true, mode: 0o644 });
+    maxretry: 5,
+  },
+  { append: true, mode: 0o644 },
+);
 ```
 
 ### Règles OBLIGATOIRES
@@ -1177,8 +1301,8 @@ writeConfig('fail2ban/jail.local', '/etc/fail2ban/jail.local', {
 
    // ✅ CORRECT
    writeConfig('fail2ban/jail.local', '/etc/fail2ban/jail.local', {
-       bantime: '1h',
-       maxretry: 5
+     bantime: '1h',
+     maxretry: 5,
    });
    ```
 
@@ -1224,6 +1348,7 @@ Si Claude n'est pas sûr de quelque chose :
 5. **Demander clarification à l'utilisateur** si vraiment bloqué
 
 **Ne jamais deviner ou improviser sur** :
+
 - La sécurité (crypto, auth)
 - L'architecture globale
 - Les schémas de base de données
