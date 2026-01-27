@@ -1110,6 +1110,109 @@ Ce document explique :
 
 ---
 
+## Gestionnaire de Templates de Configuration (OBLIGATOIRE)
+
+**IMPORTANT** : Toutes les configurations de services doivent utiliser le **gestionnaire de templates** au lieu d'être hardcodées dans le code TypeScript.
+
+### Emplacement des Templates
+
+Les fichiers de templates sont dans :
+```
+apps/agent/src/infrastructure/templates/
+├── bind9/          # DNS BIND9
+├── clamav/         # Antivirus ClamAV
+├── dovecot/        # IMAP/POP3
+├── fail2ban/       # Protection brute-force
+├── haproxy/        # Load balancer
+├── nginx/          # Web server / Reverse proxy
+├── opendkim/       # DKIM email signing
+├── postfix/        # Mail server SMTP
+├── redis/          # Cache / DB Redis
+├── rspamd/         # Antispam
+└── ufw/            # Firewall
+```
+
+### Syntaxe des Templates
+
+Les templates utilisent une syntaxe simple de type Mustache/Handlebars :
+
+```
+{{ variable }}                    # Variable simple
+{{ variable | default:valeur }}   # Variable avec valeur par défaut
+{{#if variable}}...{{/if}}        # Condition
+{{#unless variable}}...{{/unless}}# Condition négative
+{{#each items}}...{{/each}}       # Boucle
+```
+
+### Comment Utiliser
+
+**Dans le code TypeScript** (`apps/agent/src/infrastructure/installers/services/*.ts`) :
+
+```typescript
+import { writeConfig } from '../../template-manager.js';
+
+// Écrire un fichier de configuration depuis un template
+writeConfig('postfix/main.cf', '/etc/postfix/main.cf', {
+    hostname: 'mail.example.com',
+    domain: 'example.com'
+});
+
+// Avec options
+writeConfig('fail2ban/jail.local', '/etc/fail2ban/jail.local', {
+    bantime: '1h',
+    maxretry: 5
+}, { append: true, mode: 0o644 });
+```
+
+### Règles OBLIGATOIRES
+
+1. **JAMAIS de configuration hardcodée** : Ne pas écrire de strings de configuration directement dans le code TypeScript
+
+   ```typescript
+   // ❌ INTERDIT
+   const config = `[DEFAULT]
+   bantime = 1h
+   maxretry = 5`;
+   fs.writeFileSync('/etc/fail2ban/jail.local', config);
+
+   // ✅ CORRECT
+   writeConfig('fail2ban/jail.local', '/etc/fail2ban/jail.local', {
+       bantime: '1h',
+       maxretry: 5
+   });
+   ```
+
+2. **Créer un template pour chaque nouveau service** : Si tu installes un nouveau service qui nécessite une configuration, crée d'abord le template
+
+3. **Nommage des fichiers templates** :
+   - Utiliser `.conf` comme extension
+   - Nom du fichier = nom de la config cible (ex: `main.cf.conf` pour `/etc/postfix/main.cf`)
+
+4. **Documenter les variables** : Ajouter un commentaire en haut du template listant les variables utilisées
+
+### Créer un Nouveau Template
+
+1. Créer le fichier dans `apps/agent/src/infrastructure/templates/{service}/`
+2. Ajouter le mapping dans `TEMPLATE_FILE_MAP` de `template-manager.ts` si nécessaire
+3. Utiliser `writeConfig()` dans l'installateur du service
+4. Tester le rendu avec différentes valeurs de variables
+
+### Après Modification des Templates
+
+**OBLIGATOIRE** : Après avoir modifié ou ajouté des templates, il faut recréer le bundle :
+
+```bash
+cd apps/agent
+pnpm build                    # Compile + copie les templates dans dist/
+cd bundle
+rm -rf dist && cp -r ../dist .  # Met à jour le bundle
+cd ../../..
+# Recréer le tar.gz
+cd apps/agent/bundle && tar -czf ../../control-plane/public/agent-bundle.tar.gz .
+```
+
+---
+
 ## En Cas de Doute
 
 Si Claude n'est pas sûr de quelque chose :
