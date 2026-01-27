@@ -71,7 +71,7 @@ import type {
 import { PROTECTED_RUNTIMES, PROTECTED_SERVICES } from './types.js';
 
 // Import helpers
-import { runCommand, runCommandSilent, getCommandVersion } from './helpers.js';
+import { runCommand, runCommandSilent, getCommandVersion, nuclearCleanup, NUCLEAR_CLEANUP_CONFIG } from './helpers.js';
 
 // Import detection functions
 import { detectRuntimes, detectDatabases, detectServices, getSystemInfo } from './detection/index.js';
@@ -131,192 +131,10 @@ const DATABASE_SERVICE_NAMES: Record<DatabaseType, string> = {
 };
 
 // ============================================
-// SERVICE CLEANUP CONFIGURATION
+// SERVICE CLEANUP - Utilise NUCLEAR_CLEANUP_CONFIG de helpers.ts
 // ============================================
-
-/**
- * Configuration de nettoyage pour chaque service
- * - packages : Liste des packages à purger
- * - user : Utilisateur système à supprimer (optionnel)
- * - group : Groupe système à supprimer (optionnel)
- * - dataDirs : Répertoires de données à supprimer en mode purge
- * - configDirs : Répertoires de configuration à supprimer
- */
-const SERVICE_CLEANUP_CONFIG: Partial<Record<ServiceType, {
-    packages: string[];
-    user?: string;
-    group?: string;
-    dataDirs?: string[];
-    configDirs?: string[];
-}>> = {
-    clamav: {
-        packages: ['clamav', 'clamav-daemon', 'clamav-freshclam', 'clamav-base', 'clamdscan', 'libclamav11'],
-        user: 'clamav',
-        group: 'clamav',
-        dataDirs: ['/var/lib/clamav', '/var/log/clamav', '/var/run/clamav'],
-        configDirs: ['/etc/clamav']
-    },
-    postfix: {
-        packages: ['postfix', 'postfix-policyd-spf-python', 'libsasl2-modules'],
-        user: 'postfix',
-        group: 'postfix',
-        dataDirs: ['/var/spool/postfix', '/var/lib/postfix'],
-        configDirs: ['/etc/postfix']
-    },
-    dovecot: {
-        packages: ['dovecot-core', 'dovecot-imapd', 'dovecot-pop3d', 'dovecot-lmtpd', 'dovecot-sieve'],
-        user: 'dovecot',
-        group: 'dovecot',
-        dataDirs: ['/var/lib/dovecot', '/var/run/dovecot'],
-        configDirs: ['/etc/dovecot']
-    },
-    rspamd: {
-        packages: ['rspamd'],
-        user: '_rspamd',
-        group: '_rspamd',
-        dataDirs: ['/var/lib/rspamd', '/var/log/rspamd'],
-        configDirs: ['/etc/rspamd']
-    },
-    opendkim: {
-        packages: ['opendkim', 'opendkim-tools'],
-        user: 'opendkim',
-        group: 'opendkim',
-        dataDirs: [],
-        configDirs: ['/etc/opendkim', '/etc/opendkim.conf']
-    },
-    bind9: {
-        packages: ['bind9', 'bind9utils', 'bind9-doc', 'bind9-host'],
-        user: 'bind',
-        group: 'bind',
-        dataDirs: ['/var/cache/bind', '/var/lib/bind'],
-        configDirs: ['/etc/bind']
-    },
-    netdata: {
-        packages: ['netdata'],
-        user: 'netdata',
-        group: 'netdata',
-        dataDirs: ['/var/lib/netdata', '/var/cache/netdata', '/var/log/netdata'],
-        configDirs: ['/etc/netdata']
-    },
-    nginx: {
-        packages: ['nginx', 'nginx-common', 'nginx-full', 'nginx-light', 'nginx-extras'],
-        // www-data est un utilisateur système partagé, on ne le supprime pas
-        dataDirs: ['/var/log/nginx', '/var/cache/nginx'],
-        configDirs: ['/etc/nginx']
-    },
-    vsftpd: {
-        packages: ['vsftpd', 'vsftpd-dbg'],
-        user: 'ftp',
-        group: 'ftp',
-        dataDirs: [],
-        configDirs: ['/etc/vsftpd.conf', '/etc/vsftpd']
-    },
-    proftpd: {
-        packages: ['proftpd', 'proftpd-basic', 'proftpd-core'],
-        user: 'proftpd',
-        group: 'proftpd',
-        dataDirs: ['/var/run/proftpd'],
-        configDirs: ['/etc/proftpd']
-    }
-};
-
-/**
- * **cleanupServiceArtifacts()** - Nettoie complètement les artefacts d'un service
- *
- * Cette fonction effectue un nettoyage profond après la désinstallation :
- * 1. Supprime les fichiers dpkg info résiduels
- * 2. Nettoie les entrées dans statoverride
- * 3. Supprime l'utilisateur/groupe système
- * 4. Supprime les répertoires de données et config
- *
- * @param packagePrefix - Préfixe des packages (ex: "clamav", "postfix")
- * @param user - Nom de l'utilisateur système à supprimer
- * @param group - Nom du groupe système à supprimer
- * @param dataDirs - Répertoires de données à supprimer
- * @param configDirs - Répertoires de config à supprimer
- * @param onLog - Fonction de logging
- */
-async function cleanupServiceArtifacts(
-    packagePrefix: string,
-    user: string | undefined,
-    group: string | undefined,
-    dataDirs: string[],
-    configDirs: string[],
-    onLog: LogFn
-): Promise<void> {
-    // 1. Supprimer les fichiers dpkg info résiduels
-    const dpkgInfoDir = '/var/lib/dpkg/info';
-    if (fs.existsSync(dpkgInfoDir)) {
-        try {
-            const files = fs.readdirSync(dpkgInfoDir);
-            let deletedCount = 0;
-            for (const file of files) {
-                if (file.startsWith(packagePrefix)) {
-                    try {
-                        fs.unlinkSync(`${dpkgInfoDir}/${file}`);
-                        deletedCount++;
-                    } catch { }
-                }
-            }
-            if (deletedCount > 0) {
-                onLog(`   🗑️ ${deletedCount} fichiers dpkg info supprimés\n`, 'stdout');
-            }
-        } catch { }
-    }
-
-    // 2. Nettoyer les entrées dans statoverride
-    const statoverrideFile = '/var/lib/dpkg/statoverride';
-    if (fs.existsSync(statoverrideFile)) {
-        try {
-            const content = fs.readFileSync(statoverrideFile, 'utf-8');
-            const lines = content.split('\n');
-            const cleanedLines = lines.filter(line => !line.includes(packagePrefix));
-            if (lines.length !== cleanedLines.length) {
-                fs.writeFileSync(statoverrideFile, cleanedLines.join('\n'));
-                onLog(`   🧹 Entrées statoverride nettoyées\n`, 'stdout');
-            }
-        } catch { }
-    }
-
-    // 3. Supprimer l'utilisateur et le groupe système
-    // On utilise sed car userdel/groupdel peuvent échouer si le nom contient des caractères corrompus
-    if (user) {
-        try {
-            // Supprimer de passwd, shadow, group, gshadow
-            await runCommandSilent('bash', ['-c', `sed -i '/^${user}/d' /etc/passwd /etc/shadow 2>/dev/null || true`]);
-            onLog(`   👤 Utilisateur ${user} supprimé\n`, 'stdout');
-        } catch { }
-    }
-    if (group) {
-        try {
-            await runCommandSilent('bash', ['-c', `sed -i '/^${group}/d' /etc/group /etc/gshadow 2>/dev/null || true`]);
-            onLog(`   👥 Groupe ${group} supprimé\n`, 'stdout');
-        } catch { }
-    }
-
-    // 4. Supprimer les répertoires de données
-    for (const dir of dataDirs) {
-        if (fs.existsSync(dir)) {
-            try {
-                await runCommandSilent('rm', ['-rf', dir]);
-            } catch { }
-        }
-    }
-
-    // 5. Supprimer les répertoires de configuration
-    for (const dir of configDirs) {
-        if (fs.existsSync(dir)) {
-            try {
-                await runCommandSilent('rm', ['-rf', dir]);
-            } catch { }
-        }
-    }
-
-    // 6. Nettoyer le cache debconf pour ce service
-    try {
-        await runCommandSilent('bash', ['-c', `echo PURGE | debconf-communicate ${packagePrefix} 2>/dev/null || true`]);
-    } catch { }
-}
+// La configuration de nettoyage est centralisée dans helpers.ts
+// avec la fonction nuclearCleanup() qui effectue un nettoyage complet
 
 // ============================================
 // INFRASTRUCTURE MANAGER CLASS
@@ -787,23 +605,11 @@ export class InfrastructureManager {
     }
 
     private async doRemoveService(type: ServiceType, removeCmd: string): Promise<void> {
-        // Vérifier si on a une configuration de nettoyage pour ce service
-        const cleanupConfig = SERVICE_CLEANUP_CONFIG[type];
+        // Vérifier si on a une configuration de nettoyage NUCLÉAIRE pour ce service
+        const cleanupConfig = NUCLEAR_CLEANUP_CONFIG[type];
 
-        // Arrêter le service si possible
-        const serviceName = SERVICE_NAMES[type];
-        if (serviceName) {
-            try {
-                await runCommand('systemctl', ['stop', serviceName], this.onLog);
-            } catch { /* Service peut ne pas exister */ }
-        }
-
-        // Cas spéciaux pour certains services
+        // Cas spéciaux pour certains services (avant le cleanup général)
         switch (type) {
-            case 'clamav':
-                // ClamAV a deux services
-                try { await runCommandSilent('systemctl', ['stop', 'clamav-freshclam']); } catch { }
-                break;
             case 'ufw':
                 try { await runCommand('ufw', ['disable'], this.onLog); } catch { }
                 break;
@@ -822,21 +628,10 @@ export class InfrastructureManager {
                 throw new Error(`${type} is a protected system service`);
         }
 
-        // Désinstallation via apt-get
+        // Désinstallation via le système de cleanup centralisé
         if (cleanupConfig) {
-            // Utiliser la configuration centralisée
-            await runCommand('apt-get', [removeCmd, '-y', ...cleanupConfig.packages], this.onLog);
-
-            // Nettoyage complet des artefacts
-            this.onLog(`🧹 Nettoyage complet de ${type}...\n`, 'stdout');
-            await cleanupServiceArtifacts(
-                type, // Préfixe pour dpkg info
-                cleanupConfig.user,
-                cleanupConfig.group,
-                cleanupConfig.dataDirs || [],
-                cleanupConfig.configDirs || [],
-                this.onLog
-            );
+            // Utiliser le nettoyage NUCLÉAIRE centralisé
+            await nuclearCleanup(type, this.onLog);
         } else {
             // Services sans configuration spéciale - désinstallation simple
             switch (type) {

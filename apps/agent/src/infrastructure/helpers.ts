@@ -242,81 +242,188 @@ export function compareVersions(v1: string, v2: string): number {
 }
 
 /**
- * **prepareServiceReinstall()** - Prépare un service pour une réinstallation propre
- *
- * Cette fonction nettoie COMPLÈTEMENT une installation précédente pour permettre
- * à apt de reconfigurer correctement le package. C'est nécessaire car :
- * - Si le package est déjà installé, apt ne recrée pas les fichiers de config
- * - Après un `apt-get purge`, apt garde en mémoire que le package a été configuré
- *
- * Actions effectuées :
- * 1. Arrêt du service (si actif)
- * 2. Purge complète des packages via apt-get purge
- * 3. Purge des entrées debconf
- * 4. Suppression des fichiers dpkg info résiduels
- * 5. Nettoyage des entrées statoverride
- *
- * @param packagePrefix - Préfixe des packages (ex: "dovecot", "clamav")
- * @param packages - Liste des packages à nettoyer (ex: ["dovecot-core", "dovecot-imapd"])
- * @param serviceName - Nom du service systemd à arrêter (optionnel)
- * @param onLog - Fonction de callback pour les logs
+ * Configuration de nettoyage NUCLÉAIRE pour chaque service
+ * Ce mapping définit TOUT ce qui doit être supprimé pour une réinstallation propre
  */
-export async function prepareServiceReinstall(
-    packagePrefix: string,
-    packages: string[],
-    serviceName: string | undefined,
+export const NUCLEAR_CLEANUP_CONFIG: Record<string, {
+    packages: string[];
+    services?: string[];
+    configDirs: string[];
+    dataDirs: string[];
+    user?: string;
+    group?: string;
+    extraCleanup?: string[]; // Commandes shell supplémentaires à exécuter
+}> = {
+    postfix: {
+        packages: ['postfix', 'postfix-policyd-spf-python', 'libsasl2-modules', 'postfix-*'],
+        services: ['postfix'],
+        configDirs: ['/etc/postfix', '/etc/mailname'],
+        dataDirs: ['/var/spool/postfix', '/var/lib/postfix'],
+        user: 'postfix',
+        group: 'postfix',
+        extraCleanup: ['rm -f /etc/aliases.db']
+    },
+    dovecot: {
+        packages: ['dovecot-core', 'dovecot-imapd', 'dovecot-pop3d', 'dovecot-lmtpd', 'dovecot-sieve', 'dovecot-*'],
+        services: ['dovecot'],
+        configDirs: ['/etc/dovecot'],
+        dataDirs: ['/var/lib/dovecot', '/var/run/dovecot', '/var/spool/mail'],
+        user: 'dovecot',
+        group: 'dovecot'
+    },
+    clamav: {
+        packages: ['clamav', 'clamav-daemon', 'clamav-freshclam', 'clamav-base', 'clamdscan', 'libclamav*'],
+        services: ['clamav-daemon', 'clamav-freshclam'],
+        configDirs: ['/etc/clamav'],
+        dataDirs: ['/var/lib/clamav', '/var/log/clamav', '/var/run/clamav'],
+        user: 'clamav',
+        group: 'clamav'
+    },
+    rspamd: {
+        packages: ['rspamd'],
+        services: ['rspamd'],
+        configDirs: ['/etc/rspamd'],
+        dataDirs: ['/var/lib/rspamd', '/var/log/rspamd'],
+        user: '_rspamd',
+        group: '_rspamd'
+    },
+    opendkim: {
+        packages: ['opendkim', 'opendkim-tools'],
+        services: ['opendkim'],
+        configDirs: ['/etc/opendkim', '/etc/opendkim.conf'],
+        dataDirs: ['/var/run/opendkim', '/var/spool/postfix/opendkim'],
+        user: 'opendkim',
+        group: 'opendkim'
+    },
+    nginx: {
+        packages: ['nginx', 'nginx-common', 'nginx-full', 'nginx-light', 'nginx-extras', 'nginx-*'],
+        services: ['nginx'],
+        configDirs: ['/etc/nginx'],
+        dataDirs: ['/var/log/nginx', '/var/cache/nginx', '/var/www']
+        // www-data est un utilisateur système partagé, on ne le supprime PAS
+    },
+    bind9: {
+        packages: ['bind9', 'bind9utils', 'bind9-doc', 'bind9-host', 'bind9-*'],
+        services: ['named', 'bind9'],
+        configDirs: ['/etc/bind'],
+        dataDirs: ['/var/cache/bind', '/var/lib/bind', '/var/run/named'],
+        user: 'bind',
+        group: 'bind'
+    },
+    vsftpd: {
+        packages: ['vsftpd', 'vsftpd-*'],
+        services: ['vsftpd'],
+        configDirs: ['/etc/vsftpd.conf', '/etc/vsftpd'],
+        dataDirs: ['/var/run/vsftpd', '/var/ftp']
+    },
+    proftpd: {
+        packages: ['proftpd', 'proftpd-basic', 'proftpd-core', 'proftpd-*'],
+        services: ['proftpd'],
+        configDirs: ['/etc/proftpd'],
+        dataDirs: ['/var/run/proftpd'],
+        user: 'proftpd',
+        group: 'proftpd'
+    },
+    netdata: {
+        packages: ['netdata', 'netdata-*'],
+        services: ['netdata'],
+        configDirs: ['/etc/netdata'],
+        dataDirs: ['/var/lib/netdata', '/var/cache/netdata', '/var/log/netdata'],
+        user: 'netdata',
+        group: 'netdata'
+    },
+    haproxy: {
+        packages: ['haproxy', 'haproxy-*'],
+        services: ['haproxy'],
+        configDirs: ['/etc/haproxy'],
+        dataDirs: ['/var/lib/haproxy', '/run/haproxy']
+    },
+    fail2ban: {
+        packages: ['fail2ban', 'fail2ban-*'],
+        services: ['fail2ban'],
+        configDirs: ['/etc/fail2ban'],
+        dataDirs: ['/var/lib/fail2ban', '/var/run/fail2ban']
+    },
+    redis: {
+        packages: ['redis-server', 'redis-tools', 'redis-*'],
+        services: ['redis-server', 'redis'],
+        configDirs: ['/etc/redis'],
+        dataDirs: ['/var/lib/redis', '/var/log/redis', '/var/run/redis'],
+        user: 'redis',
+        group: 'redis'
+    }
+};
+
+/**
+ * **nuclearCleanup()** - Nettoyage NUCLÉAIRE complet d'un service
+ *
+ * Cette fonction effectue un nettoyage TOTAL et IRRÉVERSIBLE :
+ * 1. Arrêt de TOUS les services associés
+ * 2. Purge apt-get (apt-get purge --auto-remove)
+ * 3. Double purge dpkg (dpkg --purge --force-all)
+ * 4. Suppression des fichiers dpkg info résiduels
+ * 5. Nettoyage du cache debconf
+ * 6. Suppression des répertoires de config
+ * 7. Suppression des répertoires de données
+ * 8. Suppression de l'utilisateur/groupe système
+ * 9. Nettoyage de statoverride
+ * 10. Mise à jour du cache apt
+ *
+ * @param servicePrefix - Préfixe du service (ex: "dovecot", "postfix")
+ * @param onLog - Fonction de logging
+ */
+export async function nuclearCleanup(
+    servicePrefix: string,
     onLog: LogFn
 ): Promise<void> {
     const fs = await import('node:fs');
+    const config = NUCLEAR_CLEANUP_CONFIG[servicePrefix];
 
-    onLog(`🧹 Nettoyage complet de ${packagePrefix}...\n`, 'stdout');
-
-    // 1. Arrêter le service s'il existe
-    if (serviceName) {
-        try {
-            await runCommandSilent('systemctl', ['stop', serviceName]);
-            onLog(`   ⏹️ Service ${serviceName} arrêté\n`, 'stdout');
-        } catch { }
+    if (!config) {
+        onLog(`⚠️ Pas de config de nettoyage pour ${servicePrefix}, nettoyage basique...\n`, 'stdout');
+        return;
     }
 
-    // 2. Vérifier si les packages sont installés et les purger
-    let packagesInstalled = false;
-    for (const pkg of packages) {
-        try {
-            const status = await runCommandSilent('dpkg', ['-s', pkg]);
-            if (status.includes('Status: install ok')) {
-                packagesInstalled = true;
-                break;
-            }
-        } catch { }
-    }
+    onLog(`☢️ Nettoyage NUCLÉAIRE de ${servicePrefix}...\n`, 'stdout');
 
-    if (packagesInstalled) {
-        onLog(`   🗑️ Purge des packages existants...\n`, 'stdout');
-        try {
-            // Purger tous les packages d'un coup
-            await runCommandSilent('apt-get', ['purge', '-y', ...packages]);
-            onLog(`   ✅ Packages purgés\n`, 'stdout');
-        } catch {
-            // Certains packages peuvent ne pas être installés, on continue
+    // 1. Arrêter TOUS les services associés
+    if (config.services) {
+        for (const svc of config.services) {
+            try {
+                await runCommandSilent('systemctl', ['stop', svc]);
+                await runCommandSilent('systemctl', ['disable', svc]);
+                onLog(`   ⏹️ Service ${svc} arrêté et désactivé\n`, 'stdout');
+            } catch { }
         }
     }
 
-    // 3. Purger les entrées debconf pour forcer la reconfiguration
-    for (const pkg of packages) {
+    // 2. Purge apt-get avec auto-remove
+    onLog(`   🗑️ Purge des packages...\n`, 'stdout');
+    for (const pkg of config.packages) {
         try {
-            await runCommandSilent('bash', ['-c', `echo PURGE | debconf-communicate ${pkg} 2>/dev/null || true`]);
+            // Utiliser --purge pour supprimer aussi les fichiers de config
+            await runCommandSilent('apt-get', ['purge', '-y', '--auto-remove', pkg]);
         } catch { }
     }
 
-    // 4. Supprimer les fichiers dpkg info résiduels qui pourraient causer des conflits
+    // 3. Double purge avec dpkg --force-all pour être SÛR
+    onLog(`   💣 Double purge dpkg...\n`, 'stdout');
+    for (const pkg of config.packages) {
+        // Ignorer les patterns avec wildcard pour dpkg
+        if (pkg.includes('*')) continue;
+        try {
+            await runCommandSilent('dpkg', ['--purge', '--force-all', pkg]);
+        } catch { }
+    }
+
+    // 4. Supprimer TOUS les fichiers dpkg info
     const dpkgInfoDir = '/var/lib/dpkg/info';
     if (fs.existsSync(dpkgInfoDir)) {
         try {
             const files = fs.readdirSync(dpkgInfoDir);
             let deletedCount = 0;
             for (const file of files) {
-                if (file.startsWith(packagePrefix)) {
+                if (file.startsWith(servicePrefix)) {
                     try {
                         fs.unlinkSync(`${dpkgInfoDir}/${file}`);
                         deletedCount++;
@@ -329,13 +436,65 @@ export async function prepareServiceReinstall(
         } catch { }
     }
 
-    // 5. Supprimer les entrées dans statoverride si corrompues
+    // 5. Purger le cache debconf pour TOUS les packages
+    onLog(`   🧹 Purge du cache debconf...\n`, 'stdout');
+    for (const pkg of config.packages) {
+        if (pkg.includes('*')) continue;
+        try {
+            await runCommandSilent('bash', ['-c', `echo PURGE | debconf-communicate ${pkg} 2>/dev/null || true`]);
+        } catch { }
+    }
+
+    // 6. Supprimer TOUS les répertoires de configuration
+    onLog(`   📁 Suppression des configs...\n`, 'stdout');
+    for (const dir of config.configDirs) {
+        try {
+            if (fs.existsSync(dir)) {
+                await runCommandSilent('rm', ['-rf', dir]);
+                onLog(`      ✓ ${dir}\n`, 'stdout');
+            }
+        } catch { }
+    }
+
+    // 7. Supprimer TOUS les répertoires de données
+    onLog(`   📁 Suppression des données...\n`, 'stdout');
+    for (const dir of config.dataDirs) {
+        try {
+            if (fs.existsSync(dir)) {
+                await runCommandSilent('rm', ['-rf', dir]);
+                onLog(`      ✓ ${dir}\n`, 'stdout');
+            }
+        } catch { }
+    }
+
+    // 8. Supprimer l'utilisateur et le groupe système
+    if (config.user) {
+        try {
+            await runCommandSilent('userdel', ['-rf', config.user]);
+            onLog(`   👤 Utilisateur ${config.user} supprimé\n`, 'stdout');
+        } catch { }
+        // Aussi nettoyer via sed au cas où userdel échoue
+        try {
+            await runCommandSilent('bash', ['-c', `sed -i '/^${config.user}:/d' /etc/passwd /etc/shadow 2>/dev/null || true`]);
+        } catch { }
+    }
+    if (config.group) {
+        try {
+            await runCommandSilent('groupdel', [config.group]);
+            onLog(`   👥 Groupe ${config.group} supprimé\n`, 'stdout');
+        } catch { }
+        try {
+            await runCommandSilent('bash', ['-c', `sed -i '/^${config.group}:/d' /etc/group /etc/gshadow 2>/dev/null || true`]);
+        } catch { }
+    }
+
+    // 9. Nettoyer statoverride
     const statoverrideFile = '/var/lib/dpkg/statoverride';
     if (fs.existsSync(statoverrideFile)) {
         try {
             const content = fs.readFileSync(statoverrideFile, 'utf-8');
             const lines = content.split('\n');
-            const cleanedLines = lines.filter(line => !line.includes(packagePrefix));
+            const cleanedLines = lines.filter(line => !line.includes(servicePrefix));
             if (lines.length !== cleanedLines.length) {
                 fs.writeFileSync(statoverrideFile, cleanedLines.join('\n'));
                 onLog(`   🔧 Entrées statoverride nettoyées\n`, 'stdout');
@@ -343,7 +502,59 @@ export async function prepareServiceReinstall(
         } catch { }
     }
 
-    onLog(`   ✅ Nettoyage terminé\n`, 'stdout');
+    // 10. Exécuter les commandes de nettoyage supplémentaires
+    if (config.extraCleanup) {
+        for (const cmd of config.extraCleanup) {
+            try {
+                await runCommandSilent('bash', ['-c', cmd]);
+            } catch { }
+        }
+    }
+
+    // 11. Mettre à jour dpkg pour qu'il oublie les packages
+    try {
+        await runCommandSilent('apt-get', ['update']);
+    } catch { }
+
+    onLog(`   ✅ Nettoyage NUCLÉAIRE terminé\n`, 'stdout');
+}
+
+/**
+ * **prepareServiceReinstall()** - Alias pour nuclearCleanup (compatibilité)
+ *
+ * @deprecated Utiliser nuclearCleanup() directement
+ */
+export async function prepareServiceReinstall(
+    packagePrefix: string,
+    _packages: string[], // Ignoré, on utilise la config centralisée
+    _serviceName: string | undefined, // Ignoré, on utilise la config centralisée
+    onLog: LogFn
+): Promise<void> {
+    await nuclearCleanup(packagePrefix, onLog);
+}
+
+/**
+ * **installWithFreshConfig()** - Installe un package en forçant les nouvelles configs
+ *
+ * Cette fonction installe un package en utilisant --force-confnew pour s'assurer
+ * que TOUS les fichiers de configuration sont recréés, même si dpkg pense
+ * qu'ils ont été "supprimés volontairement".
+ *
+ * @param packages - Liste des packages à installer
+ * @param onLog - Fonction de logging
+ */
+export async function installWithFreshConfig(
+    packages: string[],
+    onLog: LogFn
+): Promise<void> {
+    // Utiliser -o Dpkg::Options pour forcer la recréation des configs
+    const args = [
+        'install', '-y',
+        '-o', 'Dpkg::Options::=--force-confnew',
+        '-o', 'Dpkg::Options::=--force-confmiss',
+        ...packages
+    ];
+    await runCommand('apt-get', args, onLog);
 }
 
 /**

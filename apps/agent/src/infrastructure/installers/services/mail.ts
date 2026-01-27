@@ -16,7 +16,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import type { LogFn } from '../../types.js';
-import { runCommand, runCommandSilent, getCommandVersion, prepareServiceReinstall, regenerateConfigIfMissing } from '../../helpers.js';
+import { runCommand, runCommandSilent, getCommandVersion, nuclearCleanup, installWithFreshConfig, regenerateConfigIfMissing } from '../../helpers.js';
 import { writeConfig } from '../../template-manager.js';
 
 /**
@@ -52,7 +52,7 @@ export async function installPostfix(onLog: LogFn, mailConfig?: { domain: string
     const postfixPackages = ['postfix', 'postfix-policyd-spf-python', 'libsasl2-modules'];
 
     // Étape 0 : Nettoyage des installations précédentes
-    await prepareServiceReinstall('postfix', postfixPackages, 'postfix', onLog);
+    await nuclearCleanup('postfix', onLog);
 
     // Étape 1 : Pré-créer /etc/mailname AVANT l'installation
     // Ceci permet au post-install de Postfix d'utiliser le bon nom
@@ -163,11 +163,11 @@ export async function installDovecot(onLog: LogFn): Promise<string> {
     const dovecotPackages = ['dovecot-core', 'dovecot-imapd', 'dovecot-pop3d', 'dovecot-lmtpd', 'dovecot-sieve'];
 
     // Étape 0 : Nettoyage des installations précédentes
-    await prepareServiceReinstall('dovecot', dovecotPackages, 'dovecot', onLog);
+    await nuclearCleanup('dovecot', onLog);
 
-    // Étape 1 : Installation des packages
+    // Étape 1 : Installation des packages avec --force-confnew pour recréer TOUTES les configs
     await runCommand('apt-get', ['update'], onLog);
-    await runCommand('apt-get', ['install', '-y', ...dovecotPackages], onLog);
+    await installWithFreshConfig(dovecotPackages, onLog);
 
     // Étape 2 : Vérification et régénération des configs
     const mainConfigPath = '/etc/dovecot/dovecot.conf';
@@ -226,7 +226,7 @@ export async function installRspamd(onLog: LogFn): Promise<string> {
     onLog(`📥 Installing Rspamd Antispam...\n`, 'stdout');
 
     // Étape 0 : Nettoyage des installations précédentes
-    await prepareServiceReinstall('rspamd', ['rspamd'], 'rspamd', onLog);
+    await nuclearCleanup('rspamd', onLog);
 
     await runCommand('apt-get', ['install', '-y', 'lsb-release', 'wget', 'gpg'], onLog);
 
@@ -285,7 +285,7 @@ export async function installOpendkim(onLog: LogFn, mailConfig?: { domain: strin
     const opendkimPackages = ['opendkim', 'opendkim-tools'];
 
     // Étape 0 : Nettoyage des installations précédentes
-    await prepareServiceReinstall('opendkim', opendkimPackages, 'opendkim', onLog);
+    await nuclearCleanup('opendkim', onLog);
 
     await runCommand('apt-get', ['update'], onLog);
     await runCommand('apt-get', ['install', '-y', ...opendkimPackages], onLog);
