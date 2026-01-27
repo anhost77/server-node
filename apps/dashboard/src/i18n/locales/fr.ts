@@ -921,5 +921,77 @@ export default {
         tip1: 'Effectuez régulièrement une rotation de vos clés serveur pour maintenir la sécurité (surtout après des changements d\'équipe)',
         tip2: 'Vérifiez que les empreintes correspondent lors de la connexion pour éviter les attaques man-in-the-middle',
         tip3: 'Gardez vos serveurs à jour pour bénéficier des derniers correctifs de sécurité'
+    },
+
+    // Mail Server Wizard
+    mail: {
+        wizard: {
+            title: 'Configuration Serveur Mail',
+            subtitle: 'Assistant de configuration de votre stack mail',
+            recommended: 'Recommandé',
+            comingSoon: 'Bientôt',
+            architecture: {
+                title: 'Choisissez votre architecture',
+                description: 'Sélectionnez l\'architecture qui correspond le mieux à vos besoins.',
+                single: {
+                    title: 'Serveur Unique',
+                    description: 'Tous les services mail sur un seul serveur. Idéal pour les PME et petites structures.'
+                },
+                distributed: {
+                    title: 'Architecture Distribuée',
+                    description: 'Services répartis sur plusieurs serveurs. Scalable et adapté aux entreprises.'
+                },
+                ha: {
+                    title: 'Haute Disponibilité',
+                    description: 'Cluster avec réplication et failover automatique. Pour les environnements critiques.'
+                }
+            },
+            servers: {
+                title: 'Attribution des serveurs',
+                description: 'Sélectionnez les serveurs qui hébergeront votre infrastructure mail.',
+                selectServer: 'Serveur mail',
+                choose: 'Choisir un serveur...',
+                servicesInstalled: 'Services qui seront installés :'
+            },
+            domain: {
+                title: 'Configuration du domaine',
+                description: 'Configurez le domaine principal et le hostname de votre serveur mail.',
+                primary: 'Domaine principal',
+                primaryHint: 'Le domaine pour lequel vous recevrez les emails (ex: example.com)',
+                hostname: 'Hostname du serveur mail',
+                hostnameHint: 'Le nom complet de votre serveur mail (ex: mail.example.com)',
+                additional: 'Domaines supplémentaires',
+                addDomain: 'Ajouter un domaine'
+            },
+            security: {
+                title: 'Configuration de sécurité',
+                description: 'Configurez les paramètres de sécurité pour votre serveur mail.',
+                tls: {
+                    title: 'Certificat TLS'
+                }
+            },
+            services: {
+                title: 'Services supplémentaires',
+                description: 'Choisissez les services additionnels à installer.'
+            },
+            dns: {
+                title: 'Enregistrements DNS',
+                description: 'Ajoutez ces enregistrements DNS chez votre registrar.',
+                important: 'Important',
+                importantDesc: 'Ces enregistrements DNS doivent être configurés AVANT que votre serveur mail puisse fonctionner correctement.',
+                copyAll: 'Copier tous les enregistrements'
+            },
+            install: {
+                title: 'Installation',
+                description: 'Vérifiez la configuration et lancez l\'installation.',
+                summary: 'Résumé de la configuration',
+                services: 'Services à installer',
+                start: 'Lancer l\'installation',
+                complete: 'Installation terminée !',
+                completeDesc: 'Votre serveur mail est configuré et prêt à l\'emploi.',
+                reminder: 'N\'oubliez pas :',
+                reminderDesc: 'Configurez les enregistrements DNS chez votre registrar avant d\'envoyer des emails.'
+            }
+        }
     }
 };

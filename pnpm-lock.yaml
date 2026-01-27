@@ -142,6 +142,9 @@ importers:
 
   apps/dashboard:
     dependencies:
+      lucide-vue-next:
+        specifier: ^0.563.0
+        version: 0.563.0(vue@3.5.27(typescript@5.3.3))
       vue:
         specifier: ^3.4.19
         version: 3.5.27(typescript@5.3.3)
@@ -2551,6 +2554,11 @@ packages:
 
   lru-queue@0.1.0:
     resolution: {integrity: sha512-BpdYkt9EvGl8OfWHDQPISVpcl5xZthb+XPsbELj5AQXxIC8IriDZIQYjBJPEm5rS420sjZ0TLEzRcq5KdBhYrQ==}
+
+  lucide-vue-next@0.563.0:
+    resolution: {integrity: sha512-zsE/lCKtmaa7bGfhSpN84br1K9YoQ5pCN+2oKWjQQG3Lo6ufUUKBuHSjNFI6RvUevxaajNXb8XwFUKeTXG3sIA==}
+    peerDependencies:
+      vue: '>=3.0.1'
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
@@ -5605,6 +5613,10 @@ snapshots:
   lru-queue@0.1.0:
     dependencies:
       es5-ext: 0.10.64
+
+  lucide-vue-next@0.563.0(vue@3.5.27(typescript@5.3.3)):
+    dependencies:
+      vue: 3.5.27(typescript@5.3.3)
 
   magic-string@0.30.21:
     dependencies:
