@@ -244,16 +244,17 @@ export function compareVersions(v1: string, v2: string): number {
 /**
  * **prepareServiceReinstall()** - Prépare un service pour une réinstallation propre
  *
- * Cette fonction nettoie les artefacts d'une installation précédente pour permettre
- * à apt de reconfigurer correctement le package. C'est nécessaire car après un
- * `apt-get purge`, apt garde en mémoire que le package a été configuré et ne
- * recrée pas les fichiers de config lors d'une réinstallation.
+ * Cette fonction nettoie COMPLÈTEMENT une installation précédente pour permettre
+ * à apt de reconfigurer correctement le package. C'est nécessaire car :
+ * - Si le package est déjà installé, apt ne recrée pas les fichiers de config
+ * - Après un `apt-get purge`, apt garde en mémoire que le package a été configuré
  *
  * Actions effectuées :
  * 1. Arrêt du service (si actif)
- * 2. Purge des entrées debconf
- * 3. Suppression des fichiers dpkg info résiduels
- * 4. Nettoyage des entrées statoverride
+ * 2. Purge complète des packages via apt-get purge
+ * 3. Purge des entrées debconf
+ * 4. Suppression des fichiers dpkg info résiduels
+ * 5. Nettoyage des entrées statoverride
  *
  * @param packagePrefix - Préfixe des packages (ex: "dovecot", "clamav")
  * @param packages - Liste des packages à nettoyer (ex: ["dovecot-core", "dovecot-imapd"])
@@ -268,23 +269,47 @@ export async function prepareServiceReinstall(
 ): Promise<void> {
     const fs = await import('node:fs');
 
-    onLog(`🧹 Nettoyage des configurations précédentes (${packagePrefix})...\n`, 'stdout');
+    onLog(`🧹 Nettoyage complet de ${packagePrefix}...\n`, 'stdout');
 
     // 1. Arrêter le service s'il existe
     if (serviceName) {
         try {
             await runCommandSilent('systemctl', ['stop', serviceName]);
+            onLog(`   ⏹️ Service ${serviceName} arrêté\n`, 'stdout');
         } catch { }
     }
 
-    // 2. Purger les entrées debconf pour forcer la reconfiguration
+    // 2. Vérifier si les packages sont installés et les purger
+    let packagesInstalled = false;
+    for (const pkg of packages) {
+        try {
+            const status = await runCommandSilent('dpkg', ['-s', pkg]);
+            if (status.includes('Status: install ok')) {
+                packagesInstalled = true;
+                break;
+            }
+        } catch { }
+    }
+
+    if (packagesInstalled) {
+        onLog(`   🗑️ Purge des packages existants...\n`, 'stdout');
+        try {
+            // Purger tous les packages d'un coup
+            await runCommandSilent('apt-get', ['purge', '-y', ...packages]);
+            onLog(`   ✅ Packages purgés\n`, 'stdout');
+        } catch {
+            // Certains packages peuvent ne pas être installés, on continue
+        }
+    }
+
+    // 3. Purger les entrées debconf pour forcer la reconfiguration
     for (const pkg of packages) {
         try {
             await runCommandSilent('bash', ['-c', `echo PURGE | debconf-communicate ${pkg} 2>/dev/null || true`]);
         } catch { }
     }
 
-    // 3. Supprimer les fichiers dpkg info résiduels qui pourraient causer des conflits
+    // 4. Supprimer les fichiers dpkg info résiduels qui pourraient causer des conflits
     const dpkgInfoDir = '/var/lib/dpkg/info';
     if (fs.existsSync(dpkgInfoDir)) {
         try {
@@ -299,12 +324,12 @@ export async function prepareServiceReinstall(
                 }
             }
             if (deletedCount > 0) {
-                onLog(`   🗑️ ${deletedCount} fichiers dpkg info ${packagePrefix} supprimés\n`, 'stdout');
+                onLog(`   🗑️ ${deletedCount} fichiers dpkg info supprimés\n`, 'stdout');
             }
         } catch { }
     }
 
-    // 4. Supprimer les entrées dans statoverride si corrompues
+    // 5. Supprimer les entrées dans statoverride si corrompues
     const statoverrideFile = '/var/lib/dpkg/statoverride';
     if (fs.existsSync(statoverrideFile)) {
         try {
@@ -313,7 +338,7 @@ export async function prepareServiceReinstall(
             const cleanedLines = lines.filter(line => !line.includes(packagePrefix));
             if (lines.length !== cleanedLines.length) {
                 fs.writeFileSync(statoverrideFile, cleanedLines.join('\n'));
-                onLog(`   🔧 Entrées statoverride ${packagePrefix} nettoyées\n`, 'stdout');
+                onLog(`   🔧 Entrées statoverride nettoyées\n`, 'stdout');
             }
         } catch { }
     }
