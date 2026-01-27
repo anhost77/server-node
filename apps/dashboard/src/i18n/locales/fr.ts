@@ -930,6 +930,18 @@ export default {
             subtitle: 'Assistant de configuration de votre stack mail',
             recommended: 'Recommandé',
             comingSoon: 'Bientôt',
+            reconfigure: 'Reconfigurer',
+            cta: {
+                title: 'Configurer votre serveur mail',
+                description: 'L\'assistant guidé configure automatiquement Postfix, Dovecot, DKIM, SPF et l\'antispam en quelques clics.',
+                button: 'Lancer l\'assistant',
+                recommended: 'Recommandé'
+            },
+        },
+        manual: {
+            title: 'Configuration manuelle',
+            subtitle: 'services individuels'
+        },
             architecture: {
                 title: 'Choisissez votre architecture',
                 description: 'Sélectionnez l\'architecture qui correspond le mieux à vos besoins.',

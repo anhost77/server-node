@@ -930,6 +930,18 @@ export default {
             subtitle: 'Setup wizard for your mail stack',
             recommended: 'Recommended',
             comingSoon: 'Coming Soon',
+            reconfigure: 'Reconfigure',
+            cta: {
+                title: 'Configure your mail server',
+                description: 'The guided wizard automatically configures Postfix, Dovecot, DKIM, SPF and antispam in a few clicks.',
+                button: 'Launch wizard',
+                recommended: 'Recommended'
+            },
+        },
+        manual: {
+            title: 'Manual configuration',
+            subtitle: 'individual services'
+        },
             architecture: {
                 title: 'Choose your architecture',
                 description: 'Select the architecture that best fits your needs.',

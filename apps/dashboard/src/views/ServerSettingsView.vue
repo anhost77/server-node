@@ -204,6 +204,21 @@ const operationCompleted = ref(false) // Track if operation finished successfull
 
 // Mail Wizard
 const showMailWizard = ref(false)
+const showManualMailConfig = ref(false)
+
+// Computed pour vérifier si des services mail sont installés
+const hasAnyMailServiceInstalled = computed(() => {
+  if (!props.infraStatus?.services) return false
+  return mailServices.some(svc => getService(svc.type)?.installed)
+})
+
+const hasAllMailServicesInstalled = computed(() => {
+  if (!props.infraStatus?.services) return false
+  // Vérifier si au moins postfix et dovecot sont installés (les essentiels)
+  const postfix = getService('postfix')
+  const dovecot = getService('dovecot')
+  return postfix?.installed && dovecot?.installed
+})
 
 /**
  * **handleMailWizardComplete()** - Gère la fin du wizard mail
@@ -1007,111 +1022,176 @@ function confirmReconfigureDatabase() {
           <span class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600 text-sm font-bold">M</span>
           {{ t('infrastructure.mail') }}
         </h2>
+      </div>
+
+      <!-- Wizard CTA Card (si aucun service mail installé ou pas tous installés) -->
+      <div
+        v-if="!hasAllMailServicesInstalled"
+        class="glass-card p-6 mb-4 bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200/50"
+      >
+        <div class="flex flex-col md:flex-row items-start md:items-center gap-4">
+          <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-orange-500/20">
+            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <h3 class="text-lg font-bold text-slate-900 mb-1">{{ t('mail.wizard.cta.title') || 'Configurer votre serveur mail' }}</h3>
+            <p class="text-sm text-slate-600 mb-3">
+              {{ t('mail.wizard.cta.description') || 'L\'assistant guidé configure automatiquement Postfix, Dovecot, DKIM, SPF et l\'antispam en quelques clics.' }}
+            </p>
+            <div class="flex flex-wrap items-center gap-3">
+              <button
+                @click="showMailWizard = true"
+                class="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-all shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/30"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                {{ t('mail.wizard.cta.button') || 'Lancer l\'assistant' }}
+              </button>
+              <span class="text-xs text-slate-500 flex items-center gap-1">
+                <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {{ t('mail.wizard.cta.recommended') || 'Recommandé' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toggle pour afficher la configuration manuelle -->
+      <div class="flex items-center justify-between mb-3">
         <button
+          @click="showManualMailConfig = !showManualMailConfig"
+          class="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+        >
+          <svg
+            class="w-4 h-4 transition-transform duration-200"
+            :class="{ 'rotate-90': showManualMailConfig }"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+          <span class="font-medium">{{ t('mail.manual.title') || 'Configuration manuelle' }}</span>
+          <span class="text-xs text-slate-400">({{ t('mail.manual.subtitle') || 'services individuels' }})</span>
+        </button>
+        <!-- Bouton wizard si tous les services sont installés -->
+        <button
+          v-if="hasAllMailServicesInstalled"
           @click="showMailWizard = true"
           class="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-            <polyline points="3.29 7 12 12 20.71 7"/>
-            <line x1="12" y1="22" x2="12" y2="12"/>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          {{ t('mail.wizard.title') || 'Configurer Stack Mail' }}
+          {{ t('mail.wizard.reconfigure') || 'Reconfigurer' }}
         </button>
       </div>
-      <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div
-          v-for="svc in mailServices"
-          :key="svc.type"
-          class="glass-card p-4"
-          :class="{ 'ring-2 ring-emerald-500/30': getService(svc.type)?.installed }"
-        >
-          <div class="flex items-start gap-3">
-            <div class="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-sm font-bold text-orange-600 flex-shrink-0">
-              {{ svc.icon }}
+
+      <!-- Configuration manuelle (accordéon) -->
+      <div
+        v-show="showManualMailConfig || hasAnyMailServiceInstalled"
+        class="transition-all duration-300"
+      >
+        <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div
+            v-for="svc in mailServices"
+            :key="svc.type"
+            class="glass-card p-4"
+            :class="{ 'ring-2 ring-emerald-500/30': getService(svc.type)?.installed }"
+          >
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-sm font-bold text-orange-600 flex-shrink-0">
+                {{ svc.icon }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-semibold text-slate-800 text-sm">{{ svc.name }}</h3>
+                <p class="text-xs text-slate-500">{{ svc.description }}</p>
+                <p v-if="svc.warning && !getService(svc.type)?.installed" class="text-xs text-amber-600 mt-0.5 font-medium">{{ svc.warning }}</p>
+                <p v-if="getService(svc.type)?.installed" class="text-xs font-medium mt-0.5">
+                  <span class="inline-flex items-center gap-1" :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-500'">
+                    <span class="w-1.5 h-1.5 rounded-full" :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"></span>
+                    {{ getService(svc.type)?.running ? t('infrastructure.running') : t('infrastructure.stopped') }}
+                  </span>
+                </p>
+                <p v-else-if="!svc.warning" class="text-xs text-slate-400 mt-0.5">{{ svc.size }}</p>
+                <p v-if="getService(svc.type)?.version" class="text-xs text-slate-500">
+                  v{{ getService(svc.type)?.version }}
+                </p>
+              </div>
             </div>
-            <div class="flex-1 min-w-0">
-              <h3 class="font-semibold text-slate-800 text-sm">{{ svc.name }}</h3>
-              <p class="text-xs text-slate-500">{{ svc.description }}</p>
-              <p v-if="svc.warning && !getService(svc.type)?.installed" class="text-xs text-amber-600 mt-0.5 font-medium">{{ svc.warning }}</p>
-              <p v-if="getService(svc.type)?.installed" class="text-xs font-medium mt-0.5">
-                <span class="inline-flex items-center gap-1" :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-500'">
-                  <span class="w-1.5 h-1.5 rounded-full" :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"></span>
-                  {{ getService(svc.type)?.running ? t('infrastructure.running') : t('infrastructure.stopped') }}
-                </span>
-              </p>
-              <p v-else-if="!svc.warning" class="text-xs text-slate-400 mt-0.5">{{ svc.size }}</p>
-              <p v-if="getService(svc.type)?.version" class="text-xs text-slate-500">
-                v{{ getService(svc.type)?.version }}
-              </p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 mt-3">
-            <template v-if="!getService(svc.type)?.installed">
-              <button
-                class="flex-1 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-                :disabled="installingService !== null"
-                @click="emit('installService', svc.type)"
-              >
-                {{ installingService === svc.type ? t('infrastructure.installing') : t('infrastructure.install') }}
-              </button>
-            </template>
-            <template v-else>
-              <!-- Start/Stop button (only for services that can be started/stopped) -->
-              <template v-if="svc.canStartStop !== false">
+            <div class="flex items-center gap-2 mt-3">
+              <template v-if="!getService(svc.type)?.installed">
                 <button
-                  v-if="getService(svc.type)?.running"
-                  class="flex-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-                  :disabled="stoppingService !== null"
-                  @click="emit('stopService', svc.type)"
+                  class="flex-1 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                  :disabled="installingService !== null"
+                  @click="emit('installService', svc.type)"
                 >
-                  {{ stoppingService === svc.type ? t('infrastructure.stopping') : t('infrastructure.stop') }}
-                </button>
-                <button
-                  v-else
-                  class="flex-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-                  :disabled="startingService !== null"
-                  @click="emit('startService', svc.type)"
-                >
-                  {{ startingService === svc.type ? t('infrastructure.starting') : t('infrastructure.start') }}
+                  {{ installingService === svc.type ? t('infrastructure.installing') : t('infrastructure.install') }}
                 </button>
               </template>
-              <!-- Tool indicator (for services without start/stop) -->
-              <div v-else class="flex-1 px-3 py-1.5 bg-slate-100 text-slate-500 rounded-lg text-xs font-medium text-center">
-                {{ t('infrastructure.tool') || 'Outil' }}
-              </div>
-              <!-- Logs button -->
-              <button
-                class="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors"
-                :title="t('infrastructure.viewLogs')"
-                @click="openConsoleForLogs(svc.type)"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </button>
-              <!-- Delete button (only if canRemove) -->
-              <button
-                v-if="svc.canRemove"
-                class="w-8 h-8 flex items-center justify-center bg-red-50 hover:bg-red-100 rounded-lg text-red-500 transition-colors"
-                :disabled="removingService !== null"
-                @click="emit('removeService', svc.type)"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-              <!-- Lock icon if cannot remove (critical service) -->
-              <div
-                v-else
-                class="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-slate-400"
-                :title="t('infrastructure.criticalService')"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              </div>
-            </template>
+              <template v-else>
+                <!-- Start/Stop button (only for services that can be started/stopped) -->
+                <template v-if="svc.canStartStop !== false">
+                  <button
+                    v-if="getService(svc.type)?.running"
+                    class="flex-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                    :disabled="stoppingService !== null"
+                    @click="emit('stopService', svc.type)"
+                  >
+                    {{ stoppingService === svc.type ? t('infrastructure.stopping') : t('infrastructure.stop') }}
+                  </button>
+                  <button
+                    v-else
+                    class="flex-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                    :disabled="startingService !== null"
+                    @click="emit('startService', svc.type)"
+                  >
+                    {{ startingService === svc.type ? t('infrastructure.starting') : t('infrastructure.start') }}
+                  </button>
+                </template>
+                <!-- Tool indicator (for services without start/stop) -->
+                <div v-else class="flex-1 px-3 py-1.5 bg-slate-100 text-slate-500 rounded-lg text-xs font-medium text-center">
+                  {{ t('infrastructure.tool') || 'Outil' }}
+                </div>
+                <!-- Logs button -->
+                <button
+                  class="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors"
+                  :title="t('infrastructure.viewLogs')"
+                  @click="openConsoleForLogs(svc.type)"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </button>
+                <!-- Delete button (only if canRemove) -->
+                <button
+                  v-if="svc.canRemove"
+                  class="w-8 h-8 flex items-center justify-center bg-red-50 hover:bg-red-100 rounded-lg text-red-500 transition-colors"
+                  :disabled="removingService !== null"
+                  @click="emit('removeService', svc.type)"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+                <!-- Lock icon if cannot remove (critical service) -->
+                <div
+                  v-else
+                  class="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-slate-400"
+                  :title="t('infrastructure.criticalService')"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+              </template>
+            </div>
           </div>
         </div>
       </div>
