@@ -283,7 +283,42 @@ export async function installClamav(onLog: LogFn): Promise<string> {
     }
 
     // ============================================
-    // ÉTAPE 2 : Création de l'utilisateur clamav
+    // ÉTAPE 2 : Purge du cache debconf corrompu
+    // ============================================
+    // Le cache debconf peut contenir des références à "clamav\r" corrompues
+    // qui causent des erreurs pendant "Preconfiguring packages"
+    onLog(`🧹 Purge du cache debconf ClamAV...\n`, 'stdout');
+
+    // Purger les configurations debconf de clamav
+    const clamavPackages = ['clamav', 'clamav-daemon', 'clamav-freshclam', 'clamav-base', 'clamdscan'];
+    for (const pkg of clamavPackages) {
+        try {
+            await runCommandSilent('bash', ['-c', `echo PURGE | debconf-communicate ${pkg}`]);
+        } catch { }
+    }
+
+    // Supprimer aussi les fichiers de cache debconf corrompus
+    const debconfDir = '/var/cache/debconf';
+    if (fs.existsSync(debconfDir)) {
+        for (const filename of ['config.dat', 'passwords.dat', 'templates.dat']) {
+            const filePath = `${debconfDir}/${filename}`;
+            if (fs.existsSync(filePath)) {
+                try {
+                    const content = fs.readFileSync(filePath, 'utf-8');
+                    if (content.includes('clamav') && content.includes('\r')) {
+                        onLog(`   🔧 Nettoyage CRLF dans ${filename}\n`, 'stdout');
+                        const fixed = content.replace(/\r/g, '');
+                        fs.writeFileSync(filePath, fixed);
+                    }
+                } catch { }
+            }
+        }
+    }
+
+    onLog(`   ✅ Cache debconf purgé\n`, 'stdout');
+
+    // ============================================
+    // ÉTAPE 3 : Création de l'utilisateur clamav
     // ============================================
     // On crée l'utilisateur NOUS-MÊMES avant l'installation pour éviter
     // les problèmes avec les scripts post-installation corrompus
@@ -320,7 +355,7 @@ export async function installClamav(onLog: LogFn): Promise<string> {
     onLog(`   ✅ Utilisateur clamav créé\n`, 'stdout');
 
     // ============================================
-    // ÉTAPE 3 : Installation des packages
+    // ÉTAPE 4 : Installation des packages
     // ============================================
     await runCommand('apt-get', ['update'], onLog);
 
@@ -351,7 +386,7 @@ export async function installClamav(onLog: LogFn): Promise<string> {
     }
 
     // ============================================
-    // ÉTAPE 4 : Mise à jour des définitions de virus
+    // ÉTAPE 5 : Mise à jour des définitions de virus
     // ============================================
     // Stop freshclam (le service) pour pouvoir lancer freshclam manuellement
     try {
@@ -381,7 +416,7 @@ export async function installClamav(onLog: LogFn): Promise<string> {
     }
 
     // ============================================
-    // ÉTAPE 5 : Vérification des définitions
+    // ÉTAPE 6 : Vérification des définitions
     // ============================================
     // ClamAV daemon ne peut pas démarrer sans au moins main.cvd ou daily.cvd
     const mainCvd = `${clamavDataDir}/main.cvd`;
@@ -397,7 +432,7 @@ export async function installClamav(onLog: LogFn): Promise<string> {
     }
 
     // ============================================
-    // ÉTAPE 6 : Configuration du daemon
+    // ÉTAPE 7 : Configuration du daemon
     // ============================================
     writeConfig('clamav/clamd.conf', '/etc/clamav/clamd.conf', {});
 
@@ -409,7 +444,7 @@ export async function installClamav(onLog: LogFn): Promise<string> {
     }
 
     // ============================================
-    // ÉTAPE 7 : Activation des services
+    // ÉTAPE 8 : Activation des services
     // ============================================
     await runCommand('systemctl', ['enable', 'clamav-freshclam'], onLog);
     await runCommand('systemctl', ['start', 'clamav-freshclam'], onLog);
@@ -434,7 +469,7 @@ export async function installClamav(onLog: LogFn): Promise<string> {
     }
 
     // ============================================
-    // ÉTAPE 8 : Intégration Rspamd (si disponible)
+    // ÉTAPE 9 : Intégration Rspamd (si disponible)
     // ============================================
     const rspamdClamavDir = '/etc/rspamd/local.d';
     if (fs.existsSync(rspamdClamavDir)) {
@@ -452,7 +487,7 @@ export async function installClamav(onLog: LogFn): Promise<string> {
     }
 
     // ============================================
-    // ÉTAPE 9 : Résumé de l'installation
+    // ÉTAPE 10 : Résumé de l'installation
     // ============================================
     onLog(`\n`, 'stdout');
     if (daemonStarted) {
