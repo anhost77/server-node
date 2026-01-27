@@ -220,6 +220,13 @@ const hasAllMailServicesInstalled = computed(() => {
   return postfix?.installed && dovecot?.installed
 })
 
+// Ouvrir automatiquement la config manuelle si des services mail sont installés
+watch(hasAnyMailServiceInstalled, (hasServices) => {
+  if (hasServices && !showManualMailConfig.value) {
+    showManualMailConfig.value = true
+  }
+}, { immediate: true })
+
 /**
  * **handleMailWizardComplete()** - Gère la fin du wizard mail
  *
@@ -1095,7 +1102,7 @@ function confirmReconfigureDatabase() {
 
       <!-- Configuration manuelle (accordéon) -->
       <div
-        v-show="showManualMailConfig || hasAnyMailServiceInstalled"
+        v-show="showManualMailConfig"
         class="transition-all duration-300"
       >
         <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
