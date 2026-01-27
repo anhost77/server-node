@@ -176,9 +176,31 @@ export async function installOpendkim(onLog: LogFn): Promise<string> {
  * - Rate-limiting du CDN ClamAV (erreur 429)
  * - Absence de définitions de virus (main.cvd, daily.cvd)
  * - Service rspamd masqué ou absent
+ * - Fichiers système corrompus avec CRLF (Windows line endings)
  */
 export async function installClamav(onLog: LogFn): Promise<string> {
     onLog(`📥 Installing ClamAV antivirus...\n`, 'stdout');
+
+    // ============================================
+    // ÉTAPE 0 : Nettoyage des fichiers système corrompus (CRLF)
+    // ============================================
+    // Parfois les fichiers /etc/passwd ou /etc/group contiennent des \r
+    // (caractères Windows) qui cassent les scripts post-installation de packages
+    const systemFiles = ['/etc/passwd', '/etc/group', '/etc/shadow', '/etc/gshadow'];
+    for (const filePath of systemFiles) {
+        if (fs.existsSync(filePath)) {
+            try {
+                const content = fs.readFileSync(filePath, 'utf-8');
+                if (content.includes('\r')) {
+                    onLog(`🔧 Correction des fins de ligne dans ${filePath}...\n`, 'stdout');
+                    const fixedContent = content.replace(/\r\n/g, '\n').replace(/\r/g, '');
+                    fs.writeFileSync(filePath, fixedContent, { mode: 0o644 });
+                }
+            } catch {
+                // Ignorer si on ne peut pas lire/écrire le fichier
+            }
+        }
+    }
 
     // ============================================
     // ÉTAPE 1 : Nettoyage pré-installation
@@ -202,7 +224,31 @@ export async function installClamav(onLog: LogFn): Promise<string> {
     // ÉTAPE 2 : Installation des packages
     // ============================================
     await runCommand('apt-get', ['update'], onLog);
-    await runCommand('apt-get', ['install', '-y', 'clamav', 'clamav-daemon', 'clamav-freshclam'], onLog);
+
+    try {
+        await runCommand('apt-get', ['install', '-y', 'clamav', 'clamav-daemon', 'clamav-freshclam'], onLog);
+    } catch (installErr: any) {
+        // Si l'installation échoue, tenter de reconfigurer les packages cassés
+        onLog(`⚠️ Installation initiale échouée, tentative de récupération...\n`, 'stderr');
+
+        // Reconfigurer les packages en attente
+        try {
+            await runCommand('dpkg', ['--configure', '-a'], onLog);
+        } catch { }
+
+        // Réparer les dépendances cassées
+        try {
+            await runCommand('apt-get', ['install', '-f', '-y'], onLog);
+        } catch { }
+
+        // Réessayer l'installation
+        try {
+            await runCommand('apt-get', ['install', '-y', 'clamav', 'clamav-daemon', 'clamav-freshclam'], onLog);
+        } catch (retryErr: any) {
+            // Si ça échoue encore, propager l'erreur
+            throw new Error(`Installation ClamAV échouée après récupération: ${retryErr.message}`);
+        }
+    }
 
     // ============================================
     // ÉTAPE 3 : Mise à jour des définitions de virus
