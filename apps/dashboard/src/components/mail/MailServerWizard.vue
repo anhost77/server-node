@@ -124,13 +124,13 @@
               </div>
             </label>
 
-            <!-- Distributed -->
+            <!-- Distributed (désactivé - Epic 8 à implémenter) -->
             <label
               :class="[
-                'relative flex items-start gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all',
+                'relative flex items-start gap-4 p-4 border-2 rounded-xl cursor-not-allowed transition-all opacity-60',
                 config.architecture === 'distributed'
                   ? 'border-orange-500 bg-orange-50'
-                  : 'border-slate-200 hover:border-slate-300',
+                  : 'border-slate-200',
               ]"
             >
               <input
@@ -138,6 +138,7 @@
                 v-model="config.architecture"
                 value="distributed"
                 class="sr-only"
+                disabled
               />
               <div
                 class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -145,9 +146,14 @@
                 <Network class="w-6 h-6 text-purple-600" />
               </div>
               <div class="flex-1">
-                <h4 class="font-semibold text-slate-900">
-                  {{ t('mail.wizard.architecture.distributed.title') }}
-                </h4>
+                <div class="flex items-center gap-2">
+                  <h4 class="font-semibold text-slate-900">
+                    {{ t('mail.wizard.architecture.distributed.title') }}
+                  </h4>
+                  <span class="px-2 py-0.5 bg-slate-200 text-slate-600 text-xs rounded-full">{{
+                    t('mail.wizard.comingSoon')
+                  }}</span>
+                </div>
                 <p class="text-sm text-slate-600 mt-1">
                   {{ t('mail.wizard.architecture.distributed.description') }}
                 </p>
@@ -162,9 +168,6 @@
                     >Entreprise</span
                   >
                 </div>
-              </div>
-              <div v-if="config.architecture === 'distributed'" class="absolute top-4 right-4">
-                <CheckCircle2 class="w-5 h-5 text-orange-500" />
               </div>
             </label>
 
