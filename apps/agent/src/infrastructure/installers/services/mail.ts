@@ -191,20 +191,59 @@ export async function installClamav(onLog: LogFn): Promise<string> {
     // 1. Fichiers système (/etc/passwd, /etc/group, etc.)
     const systemFiles = ['/etc/passwd', '/etc/group', '/etc/shadow', '/etc/gshadow'];
 
-    // 2. Scripts dpkg de clamav (c'est souvent LÀ que le problème se trouve !)
-    const dpkgInfoDir = '/var/lib/dpkg/info';
-    if (fs.existsSync(dpkgInfoDir)) {
+    // 2. Fichier statoverride de dpkg (CRITIQUE - peut contenir "clamav\r")
+    const statoverrideFile = '/var/lib/dpkg/statoverride';
+    if (fs.existsSync(statoverrideFile)) {
         try {
-            const files = fs.readdirSync(dpkgInfoDir);
-            for (const file of files) {
-                if (file.startsWith('clamav')) {
-                    systemFiles.push(`${dpkgInfoDir}/${file}`);
-                }
+            const content = fs.readFileSync(statoverrideFile, 'utf-8');
+            // Supprimer les lignes contenant "clamav" (corrompues ou non)
+            // car on va recréer l'utilisateur proprement
+            const lines = content.split('\n');
+            const cleanedLines = lines.filter(line => !line.includes('clamav'));
+            if (lines.length !== cleanedLines.length) {
+                onLog(`   🔧 Nettoyage de ${statoverrideFile} (suppression entrées clamav)\n`, 'stdout');
+                fs.writeFileSync(statoverrideFile, cleanedLines.join('\n'));
             }
         } catch { }
     }
 
-    // 3. Fichiers de configuration debconf
+    // 3. Scripts dpkg de clamav - SUPPRIMER COMPLÈTEMENT (pas juste nettoyer)
+    // Ces scripts peuvent contenir des références corrompues
+    const dpkgInfoDir = '/var/lib/dpkg/info';
+    if (fs.existsSync(dpkgInfoDir)) {
+        try {
+            const files = fs.readdirSync(dpkgInfoDir);
+            let deletedCount = 0;
+            for (const file of files) {
+                if (file.startsWith('clamav')) {
+                    const filePath = `${dpkgInfoDir}/${file}`;
+                    try {
+                        fs.unlinkSync(filePath);
+                        deletedCount++;
+                    } catch { }
+                }
+            }
+            if (deletedCount > 0) {
+                onLog(`   🗑️ Suppression de ${deletedCount} fichiers dpkg info clamav\n`, 'stdout');
+            }
+        } catch { }
+    }
+
+    // 4. Nettoyer le fichier dpkg status (supprimer les entrées clamav corrompues)
+    const dpkgStatusFile = '/var/lib/dpkg/status';
+    if (fs.existsSync(dpkgStatusFile)) {
+        try {
+            const content = fs.readFileSync(dpkgStatusFile, 'utf-8');
+            if (content.includes('\r')) {
+                onLog(`   🔧 Correction CRLF dans dpkg status\n`, 'stdout');
+                const fixed = content.replace(/\r\n/g, '\n').replace(/\r/g, '');
+                fs.writeFileSync(dpkgStatusFile, fixed);
+                systemFiles.push(dpkgStatusFile);
+            }
+        } catch { }
+    }
+
+    // 5. Fichiers de configuration debconf
     const debconfFiles = [
         '/var/cache/debconf/config.dat',
         '/var/cache/debconf/passwords.dat',
@@ -237,39 +276,40 @@ export async function installClamav(onLog: LogFn): Promise<string> {
     }
 
     // ============================================
-    // ÉTAPE 0b : Purge complète si installation cassée
+    // ÉTAPE 0b : Purge TOTALE de toute trace de ClamAV
     // ============================================
-    // Si clamav-daemon est dans un état cassé, on purge tout et on recommence
+    // On purge TOUJOURS, même si le package semble OK, pour éviter les problèmes
+    onLog(`🧹 Purge complète de ClamAV (si présent)...\n`, 'stdout');
+
+    // Arrêter les services
+    try { await runCommandSilent('systemctl', ['stop', 'clamav-daemon']); } catch { }
+    try { await runCommandSilent('systemctl', ['stop', 'clamav-freshclam']); } catch { }
+
+    // Supprimer l'utilisateur/groupe clamav s'ils existent (y compris corrompus)
+    // On utilise sed pour supprimer directement des fichiers passwd/group
+    // car userdel/groupdel peuvent échouer si le nom contient \r
     try {
-        const dpkgStatus = await runCommandSilent('dpkg', ['-s', 'clamav-daemon']);
-        if (dpkgStatus.includes('half-installed') || dpkgStatus.includes('half-configured')) {
-            onLog(`🧹 Purge de l'installation cassée de ClamAV...\n`, 'stdout');
+        await runCommandSilent('bash', ['-c', "sed -i '/^clamav/d' /etc/passwd /etc/shadow /etc/group /etc/gshadow 2>/dev/null || true"]);
+    } catch { }
 
-            // Arrêter les services
-            try { await runCommandSilent('systemctl', ['stop', 'clamav-daemon']); } catch { }
-            try { await runCommandSilent('systemctl', ['stop', 'clamav-freshclam']); } catch { }
-
-            // Supprimer l'utilisateur/groupe clamav s'ils existent
-            try { await runCommandSilent('userdel', ['clamav']); } catch { }
-            try { await runCommandSilent('groupdel', ['clamav']); } catch { }
-
-            // Forcer la suppression des packages cassés
-            await runCommand('dpkg', ['--remove', '--force-remove-reinstreq', 'clamav-daemon'], onLog);
-            await runCommand('dpkg', ['--remove', '--force-remove-reinstreq', 'clamav-freshclam'], onLog);
-            await runCommand('dpkg', ['--remove', '--force-remove-reinstreq', 'clamav'], onLog);
-            await runCommand('dpkg', ['--remove', '--force-remove-reinstreq', 'clamav-base'], onLog);
-
-            // Nettoyer les fichiers résiduels
-            try { await runCommandSilent('rm', ['-rf', '/var/lib/clamav']); } catch { }
-            try { await runCommandSilent('rm', ['-rf', '/var/run/clamav']); } catch { }
-            try { await runCommandSilent('rm', ['-rf', '/var/log/clamav']); } catch { }
-            try { await runCommandSilent('rm', ['-rf', '/etc/clamav']); } catch { }
-
-            onLog(`   ✅ Purge terminée\n`, 'stdout');
-        }
-    } catch {
-        // Package pas installé, c'est OK
+    // Forcer la suppression des packages (ignorer les erreurs)
+    const clamavPkgs = ['clamav-daemon', 'clamav-freshclam', 'clamav', 'clamav-base', 'clamdscan', 'libclamav11'];
+    for (const pkg of clamavPkgs) {
+        try {
+            await runCommandSilent('dpkg', ['--purge', '--force-all', pkg]);
+        } catch { }
     }
+
+    // Nettoyer les fichiers résiduels
+    try { await runCommandSilent('rm', ['-rf', '/var/lib/clamav']); } catch { }
+    try { await runCommandSilent('rm', ['-rf', '/var/run/clamav']); } catch { }
+    try { await runCommandSilent('rm', ['-rf', '/var/log/clamav']); } catch { }
+    try { await runCommandSilent('rm', ['-rf', '/etc/clamav']); } catch { }
+
+    // Nettoyer le cache apt
+    try { await runCommandSilent('apt-get', ['clean']); } catch { }
+
+    onLog(`   ✅ Purge terminée\n`, 'stdout');
 
     // ============================================
     // ÉTAPE 1 : Nettoyage pré-installation
