@@ -1061,14 +1061,54 @@ const dkimPublicKey = ref<string>('');
 // Ref pour la console des logs (autoscroll)
 const logsContainer = ref<HTMLElement | null>(null);
 
-// Watcher pour l'autoscroll des logs
+// Watcher pour l'autoscroll des logs et la mise à jour des étapes
 watch(() => props.installationLogs?.length, () => {
   nextTick(() => {
     if (logsContainer.value) {
       logsContainer.value.scrollTop = logsContainer.value.scrollHeight;
     }
   });
+
+  // Parser les logs pour mettre à jour les étapes en temps réel
+  if (props.installationLogs && props.installationLogs.length > 0) {
+    const lastLogs = props.installationLogs.slice(-5); // Derniers 5 logs
+
+    for (const log of lastLogs) {
+      const msg = log.message;
+
+      // Détecter les étapes "Step X/4" dans les logs
+      if (msg.includes('Step 1/4') || msg.includes('Installing mail services')) {
+        updateStepStatus('install', 'running');
+      } else if (msg.includes('Step 2/4') || msg.includes('Generating DKIM keys')) {
+        updateStepStatus('install', 'complete');
+        updateStepStatus('dkim', 'running');
+      } else if (msg.includes('Step 3/4') || msg.includes('Applying configurations')) {
+        updateStepStatus('dkim', 'complete');
+        updateStepStatus('config', 'running');
+      } else if (msg.includes('Step 4/4') || msg.includes('Restarting services')) {
+        updateStepStatus('config', 'complete');
+        updateStepStatus('restart', 'running');
+      } else if (msg.includes('Mail stack configured successfully') || msg.includes('✅ Mail stack')) {
+        updateStepStatus('restart', 'complete');
+      } else if (msg.includes('❌') || msg.includes('failed') || msg.includes('error')) {
+        // Marquer l'étape en cours comme erreur
+        const runningStep = installationSteps.value.find(s => s.status === 'running');
+        if (runningStep) {
+          runningStep.status = 'error';
+          runningStep.message = msg.substring(0, 100);
+        }
+      }
+    }
+  }
 });
+
+// Fonction helper pour mettre à jour le statut d'une étape
+function updateStepStatus(stepId: string, status: 'pending' | 'running' | 'complete' | 'error') {
+  const step = installationSteps.value.find(s => s.id === stepId);
+  if (step && step.status !== 'complete' && step.status !== 'error') {
+    step.status = status;
+  }
+}
 
 // Watch for hostname auto-generation
 watch(() => config.value.domain.primaryDomain, (newDomain) => {
