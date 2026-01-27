@@ -283,38 +283,75 @@ export async function installClamav(onLog: LogFn): Promise<string> {
     }
 
     // ============================================
-    // ÉTAPE 2 : Installation des packages
+    // ÉTAPE 2 : Création de l'utilisateur clamav
+    // ============================================
+    // On crée l'utilisateur NOUS-MÊMES avant l'installation pour éviter
+    // les problèmes avec les scripts post-installation corrompus
+    onLog(`👤 Création de l'utilisateur clamav...\n`, 'stdout');
+
+    // Supprimer tout utilisateur/groupe clamav existant (potentiellement corrompu)
+    try { await runCommandSilent('userdel', ['-f', 'clamav']); } catch { }
+    try { await runCommandSilent('groupdel', ['clamav']); } catch { }
+
+    // Créer le groupe clamav
+    try {
+        await runCommand('groupadd', ['--system', 'clamav'], onLog);
+    } catch {
+        // Le groupe existe peut-être déjà
+    }
+
+    // Créer l'utilisateur clamav
+    try {
+        await runCommand('useradd', [
+            '--system',
+            '--no-create-home',
+            '--shell', '/usr/sbin/nologin',
+            '--gid', 'clamav',
+            '--comment', 'ClamAV Antivirus',
+            'clamav'
+        ], onLog);
+    } catch {
+        // L'utilisateur existe peut-être déjà
+    }
+
+    // Ajouter clamav au groupe adm pour les logs
+    try { await runCommandSilent('usermod', ['-aG', 'adm', 'clamav']); } catch { }
+
+    onLog(`   ✅ Utilisateur clamav créé\n`, 'stdout');
+
+    // ============================================
+    // ÉTAPE 3 : Installation des packages
     // ============================================
     await runCommand('apt-get', ['update'], onLog);
 
     try {
         await runCommand('apt-get', ['install', '-y', 'clamav', 'clamav-daemon', 'clamav-freshclam'], onLog);
     } catch (installErr: any) {
-        onLog(`⚠️ Installation échouée, nettoyage agressif...\n`, 'stderr');
+        onLog(`⚠️ Installation échouée, tentative de récupération...\n`, 'stderr');
 
-        // Nettoyage AGRESSIF : supprimer utilisateur/groupe corrompus
-        onLog(`   🔧 Suppression utilisateur/groupe clamav corrompus...\n`, 'stdout');
-        try { await runCommandSilent('userdel', ['-f', 'clamav']); } catch { }
-        try { await runCommandSilent('groupdel', ['clamav']); } catch { }
-
-        // Forcer dpkg à abandonner le package cassé
+        // Reconfigurer les packages cassés
         try {
-            await runCommand('dpkg', ['--remove', '--force-remove-reinstreq', 'clamav-daemon'], onLog);
+            await runCommand('dpkg', ['--configure', '-a'], onLog);
         } catch { }
 
-        // Nettoyer apt
-        try { await runCommand('apt-get', ['clean'], onLog); } catch { }
-
-        // Réessayer l'installation
+        // Réparer les dépendances
         try {
-            await runCommand('apt-get', ['install', '-y', 'clamav', 'clamav-daemon', 'clamav-freshclam'], onLog);
-        } catch (retryErr: any) {
-            throw new Error(`Installation ClamAV échouée: ${retryErr.message}. Vérifiez /etc/passwd et /etc/group pour des caractères corrompus.`);
+            await runCommand('apt-get', ['install', '-f', '-y'], onLog);
+        } catch { }
+
+        // Vérifier si l'installation a finalement réussi
+        try {
+            const dpkgCheck = await runCommandSilent('dpkg', ['-s', 'clamav-daemon']);
+            if (!dpkgCheck.includes('Status: install ok configured')) {
+                throw new Error('Package not configured');
+            }
+        } catch {
+            throw new Error(`Installation ClamAV échouée: ${installErr.message}`);
         }
     }
 
     // ============================================
-    // ÉTAPE 3 : Mise à jour des définitions de virus
+    // ÉTAPE 4 : Mise à jour des définitions de virus
     // ============================================
     // Stop freshclam (le service) pour pouvoir lancer freshclam manuellement
     try {
@@ -344,7 +381,7 @@ export async function installClamav(onLog: LogFn): Promise<string> {
     }
 
     // ============================================
-    // ÉTAPE 4 : Vérification des définitions
+    // ÉTAPE 5 : Vérification des définitions
     // ============================================
     // ClamAV daemon ne peut pas démarrer sans au moins main.cvd ou daily.cvd
     const mainCvd = `${clamavDataDir}/main.cvd`;
@@ -360,7 +397,7 @@ export async function installClamav(onLog: LogFn): Promise<string> {
     }
 
     // ============================================
-    // ÉTAPE 5 : Configuration du daemon
+    // ÉTAPE 6 : Configuration du daemon
     // ============================================
     writeConfig('clamav/clamd.conf', '/etc/clamav/clamd.conf', {});
 
@@ -372,7 +409,7 @@ export async function installClamav(onLog: LogFn): Promise<string> {
     }
 
     // ============================================
-    // ÉTAPE 6 : Activation des services
+    // ÉTAPE 7 : Activation des services
     // ============================================
     await runCommand('systemctl', ['enable', 'clamav-freshclam'], onLog);
     await runCommand('systemctl', ['start', 'clamav-freshclam'], onLog);
@@ -397,7 +434,7 @@ export async function installClamav(onLog: LogFn): Promise<string> {
     }
 
     // ============================================
-    // ÉTAPE 7 : Intégration Rspamd (si disponible)
+    // ÉTAPE 8 : Intégration Rspamd (si disponible)
     // ============================================
     const rspamdClamavDir = '/etc/rspamd/local.d';
     if (fs.existsSync(rspamdClamavDir)) {
@@ -415,7 +452,7 @@ export async function installClamav(onLog: LogFn): Promise<string> {
     }
 
     // ============================================
-    // ÉTAPE 8 : Résumé de l'installation
+    // ÉTAPE 9 : Résumé de l'installation
     // ============================================
     onLog(`\n`, 'stdout');
     if (daemonStarted) {
