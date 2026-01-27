@@ -1,108 +1,110 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
-import { useI18n } from 'vue-i18n'
-import MailServerWizard from '@/components/mail/MailServerWizard.vue'
+import { ref, computed, watch, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
+import MailServerWizard from '@/components/mail/MailServerWizard.vue';
 
-const { t } = useI18n()
+const { t } = useI18n();
 
 interface Runtime {
-  type: string
-  installed: boolean
-  version?: string
-  latestVersion?: string
-  updateAvailable?: boolean
-  estimatedSize: string
+  type: string;
+  installed: boolean;
+  version?: string;
+  latestVersion?: string;
+  updateAvailable?: boolean;
+  estimatedSize: string;
 }
 
 interface Database {
-  type: string
-  installed: boolean
-  running: boolean
-  version?: string
+  type: string;
+  installed: boolean;
+  running: boolean;
+  version?: string;
 }
 
 interface Service {
-  type: string
-  installed: boolean
-  running?: boolean
-  version?: string
+  type: string;
+  installed: boolean;
+  running?: boolean;
+  version?: string;
 }
 
 interface InfraStatus {
-  runtimes: Runtime[]
-  databases: Database[]
-  services?: Service[]
+  runtimes: Runtime[];
+  databases: Database[];
+  services?: Service[];
   system: {
-    os: string
-    osVersion: string
-    cpu: number
-    ram: string
-    disk: string
-    uptime: string
-  }
+    os: string;
+    osVersion: string;
+    cpu: number;
+    ram: string;
+    disk: string;
+    uptime: string;
+  };
 }
 
 interface InfraLog {
-  message: string
-  stream: 'stdout' | 'stderr'
+  message: string;
+  stream: 'stdout' | 'stderr';
 }
 
 interface Props {
   server: {
-    id: string
-    alias?: string
-    hostname?: string
-    ip?: string
-    status: string
-  }
-  infraStatus: InfraStatus | null
-  infraStatusLoading: boolean
-  installingRuntime: string | null
-  updatingRuntime: string | null
-  removingRuntime: string | null
-  configuringDatabase: string | null
-  reconfiguringDatabase: string | null
-  removingDatabase: string | null
-  installingService: string | null
-  removingService: string | null
-  startingService: string | null
-  stoppingService: string | null
-  startingDatabase: string | null
-  stoppingDatabase: string | null
-  infrastructureLogs: InfraLog[]
-  fetchingRemoteLogs: boolean
-  remoteLogFilePath: string | null
+    id: string;
+    alias?: string;
+    hostname?: string;
+    ip?: string;
+    status: string;
+  };
+  infraStatus: InfraStatus | null;
+  infraStatusLoading: boolean;
+  installingRuntime: string | null;
+  updatingRuntime: string | null;
+  removingRuntime: string | null;
+  configuringDatabase: string | null;
+  reconfiguringDatabase: string | null;
+  removingDatabase: string | null;
+  installingService: string | null;
+  removingService: string | null;
+  startingService: string | null;
+  stoppingService: string | null;
+  startingDatabase: string | null;
+  stoppingDatabase: string | null;
+  infrastructureLogs: InfraLog[];
+  fetchingRemoteLogs: boolean;
+  remoteLogFilePath: string | null;
   // Mail stack configuration result
-  mailStackResult?: { success: boolean; dkimPublicKey?: string; error?: string } | null
+  mailStackResult?: { success: boolean; dkimPublicKey?: string; error?: string } | null;
 }
 
-const props = defineProps<Props>()
+const props = defineProps<Props>();
 
 const emit = defineEmits<{
-  back: []
-  refresh: []
-  installRuntime: [runtime: string]
-  updateRuntime: [runtime: string]
-  removeRuntime: [runtime: string]
-  openDbConfigModal: [dbType: 'postgresql' | 'mysql' | 'redis' | 'mongodb']
-  configureDatabase: [dbType: string, dbName: string, securityOptions: any]
-  reconfigureDatabase: [dbType: string, dbName: string]
-  removeDatabase: [dbType: string]
-  startDatabase: [dbType: string]
-  stopDatabase: [dbType: string]
-  installService: [service: string]
-  removeService: [service: string]
-  startService: [service: string]
-  stopService: [service: string]
-  fetchServiceLogs: [service: string]
-  fetchRemoteLogs: []
-  clearRemoteLogs: []
-  clearInfraLogs: []
-  copyInfraLogs: []
-  configureMailStack: [serverId: string, config: any]
-}>()
+  back: [];
+  refresh: [];
+  installRuntime: [runtime: string];
+  updateRuntime: [runtime: string];
+  removeRuntime: [runtime: string];
+  openDbConfigModal: [dbType: 'postgresql' | 'mysql' | 'redis' | 'mongodb'];
+  configureDatabase: [dbType: string, dbName: string, securityOptions: any];
+  reconfigureDatabase: [dbType: string, dbName: string];
+  removeDatabase: [dbType: string];
+  startDatabase: [dbType: string];
+  stopDatabase: [dbType: string];
+  installService: [service: string];
+  removeService: [service: string];
+  startService: [service: string];
+  stopService: [service: string];
+  fetchServiceLogs: [service: string];
+  fetchRemoteLogs: [];
+  clearRemoteLogs: [];
+  clearInfraLogs: [];
+  copyInfraLogs: [];
+  configureMailStack: [serverId: string, config: any];
+}>();
 
-const serverName = computed(() => props.server.alias || props.server.hostname || props.server.id.slice(0, 8))
+const serverName = computed(
+  () => props.server.alias || props.server.hostname || props.server.id.slice(0, 8),
+);
 
 // Runtime helpers
 const runtimes = [
@@ -112,120 +114,290 @@ const runtimes = [
   { type: 'go', name: 'Go', icon: 'Go', size: '~500MB', canRemove: true },
   { type: 'docker', name: 'Docker', icon: 'D', size: '~500MB', canRemove: true },
   { type: 'rust', name: 'Rust', icon: 'Rs', size: '~1GB', canRemove: true },
-  { type: 'ruby', name: 'Ruby', icon: 'Rb', size: '~300MB', canRemove: true }
-]
+  { type: 'ruby', name: 'Ruby', icon: 'Rb', size: '~300MB', canRemove: true },
+];
 
 const databases = [
   { type: 'postgresql', name: 'PostgreSQL', icon: 'PG' },
   { type: 'mysql', name: 'MySQL', icon: 'My' },
   { type: 'redis', name: 'Redis', icon: 'Rd' },
-  { type: 'mongodb', name: 'MongoDB', icon: 'Mg' }
-]
+  { type: 'mongodb', name: 'MongoDB', icon: 'Mg' },
+];
 
 // Network & Proxy services
 const networkServices = [
-  { type: 'nginx', name: 'Nginx', icon: 'Nx', size: '~10MB', description: 'Reverse Proxy', canRemove: true },
-  { type: 'haproxy', name: 'HAProxy', icon: 'HA', size: '~10MB', description: 'Load Balancer', canRemove: true },
-  { type: 'keepalived', name: 'Keepalived', icon: 'KA', size: '~5MB', description: 'High Availability', canRemove: true },
-  { type: 'certbot', name: 'Certbot', icon: 'CB', size: '~20MB', description: 'SSL Auto', canRemove: true }
-]
+  {
+    type: 'nginx',
+    name: 'Nginx',
+    icon: 'Nx',
+    size: '~10MB',
+    description: 'Reverse Proxy',
+    canRemove: true,
+  },
+  {
+    type: 'haproxy',
+    name: 'HAProxy',
+    icon: 'HA',
+    size: '~10MB',
+    description: 'Load Balancer',
+    canRemove: true,
+  },
+  {
+    type: 'keepalived',
+    name: 'Keepalived',
+    icon: 'KA',
+    size: '~5MB',
+    description: 'High Availability',
+    canRemove: true,
+  },
+  {
+    type: 'certbot',
+    name: 'Certbot',
+    icon: 'CB',
+    size: '~20MB',
+    description: 'SSL Auto',
+    canRemove: true,
+  },
+];
 
 // Security services
 const securityServices = [
-  { type: 'fail2ban', name: 'Fail2ban', icon: 'F2', size: '~20MB', description: 'Intrusion Prevention', canRemove: true },
+  {
+    type: 'fail2ban',
+    name: 'Fail2ban',
+    icon: 'F2',
+    size: '~20MB',
+    description: 'Intrusion Prevention',
+    canRemove: true,
+  },
   { type: 'ufw', name: 'UFW', icon: 'FW', size: '~5MB', description: 'Firewall', canRemove: true },
-  { type: 'wireguard', name: 'WireGuard', icon: 'WG', size: '~50MB', description: 'VPN', canRemove: true }
-]
+  {
+    type: 'wireguard',
+    name: 'WireGuard',
+    icon: 'WG',
+    size: '~50MB',
+    description: 'VPN',
+    canRemove: true,
+  },
+];
 
 // Monitoring services
 const monitoringServices = [
-  { type: 'pm2', name: 'PM2', icon: 'PM', size: '~50MB', description: 'Process Manager', canRemove: true },
-  { type: 'netdata', name: 'Netdata', icon: 'ND', size: '~100MB', description: 'Real-time Monitoring', canRemove: true },
-  { type: 'loki', name: 'Loki', icon: 'LK', size: '~100MB', description: 'Log Aggregation', canRemove: true }
-]
+  {
+    type: 'pm2',
+    name: 'PM2',
+    icon: 'PM',
+    size: '~50MB',
+    description: 'Process Manager',
+    canRemove: true,
+  },
+  {
+    type: 'netdata',
+    name: 'Netdata',
+    icon: 'ND',
+    size: '~100MB',
+    description: 'Real-time Monitoring',
+    canRemove: true,
+  },
+  {
+    type: 'loki',
+    name: 'Loki',
+    icon: 'LK',
+    size: '~100MB',
+    description: 'Log Aggregation',
+    canRemove: true,
+  },
+];
 
 // DNS services
 const dnsServices = [
-  { type: 'bind9', name: 'BIND9', icon: 'DN', size: '~50MB', description: 'DNS Server', canRemove: true }
-]
+  {
+    type: 'bind9',
+    name: 'BIND9',
+    icon: 'DN',
+    size: '~50MB',
+    description: 'DNS Server',
+    canRemove: true,
+  },
+];
 
 // Mail services - postfix est critique, les autres peuvent être supprimés
 const mailServices = [
-  { type: 'postfix', name: 'Postfix', icon: 'PF', size: '~30MB', description: 'Mail Transfer Agent', canRemove: false },
-  { type: 'dovecot', name: 'Dovecot', icon: 'DC', size: '~40MB', description: 'IMAP/POP3 Server', canRemove: true },
-  { type: 'rspamd', name: 'Rspamd', icon: 'RS', size: '~100MB', description: 'Antispam Filter', canRemove: true },
-  { type: 'opendkim', name: 'OpenDKIM', icon: 'DK', size: '~10MB', description: 'DKIM Signing', canRemove: true },
-  { type: 'clamav', name: 'ClamAV', icon: 'AV', size: '~500MB', description: 'Antivirus Scanner', canRemove: true, warning: '⚠️ Installation gourmande en ressources (RAM/CPU). Peut prendre 5-10 min.' },
-  { type: 'spf-policyd', name: 'SPF Policy', icon: 'SP', size: '~5MB', description: 'SPF Verification', canRemove: true, canStartStop: false }
-]
+  {
+    type: 'postfix',
+    name: 'Postfix',
+    icon: 'PF',
+    size: '~30MB',
+    description: 'Mail Transfer Agent',
+    canRemove: false,
+  },
+  {
+    type: 'dovecot',
+    name: 'Dovecot',
+    icon: 'DC',
+    size: '~40MB',
+    description: 'IMAP/POP3 Server',
+    canRemove: true,
+  },
+  {
+    type: 'rspamd',
+    name: 'Rspamd',
+    icon: 'RS',
+    size: '~100MB',
+    description: 'Antispam Filter',
+    canRemove: true,
+  },
+  {
+    type: 'opendkim',
+    name: 'OpenDKIM',
+    icon: 'DK',
+    size: '~10MB',
+    description: 'DKIM Signing',
+    canRemove: true,
+  },
+  {
+    type: 'clamav',
+    name: 'ClamAV',
+    icon: 'AV',
+    size: '~500MB',
+    description: 'Antivirus Scanner',
+    canRemove: true,
+    warning: '⚠️ Installation gourmande en ressources (RAM/CPU). Peut prendre 5-10 min.',
+  },
+  {
+    type: 'spf-policyd',
+    name: 'SPF Policy',
+    icon: 'SP',
+    size: '~5MB',
+    description: 'SPF Verification',
+    canRemove: true,
+    canStartStop: false,
+  },
+];
 
 // Backup services (tools, not services - cannot be started/stopped)
 const backupServices = [
-  { type: 'rsync', name: 'Rsync', icon: 'RS', size: '~5MB', description: 'File Sync', canRemove: true, canStartStop: false },
-  { type: 'rclone', name: 'Rclone', icon: 'RC', size: '~50MB', description: 'Cloud Storage Sync', canRemove: true, canStartStop: false },
-  { type: 'restic', name: 'Restic', icon: 'RT', size: '~30MB', description: 'Encrypted Backups', canRemove: true, canStartStop: false }
-]
+  {
+    type: 'rsync',
+    name: 'Rsync',
+    icon: 'RS',
+    size: '~5MB',
+    description: 'File Sync',
+    canRemove: true,
+    canStartStop: false,
+  },
+  {
+    type: 'rclone',
+    name: 'Rclone',
+    icon: 'RC',
+    size: '~50MB',
+    description: 'Cloud Storage Sync',
+    canRemove: true,
+    canStartStop: false,
+  },
+  {
+    type: 'restic',
+    name: 'Restic',
+    icon: 'RT',
+    size: '~30MB',
+    description: 'Encrypted Backups',
+    canRemove: true,
+    canStartStop: false,
+  },
+];
 
 // System services (protected - cannot be removed)
 const systemServices = [
-  { type: 'ssh', name: 'SSH', icon: 'SS', size: '~5MB', description: 'Secure Shell', canRemove: false },
-  { type: 'cron', name: 'Cron', icon: 'CR', size: '~2MB', description: 'Task Scheduler', canRemove: false }
-]
+  {
+    type: 'ssh',
+    name: 'SSH',
+    icon: 'SS',
+    size: '~5MB',
+    description: 'Secure Shell',
+    canRemove: false,
+  },
+  {
+    type: 'cron',
+    name: 'Cron',
+    icon: 'CR',
+    size: '~2MB',
+    description: 'Task Scheduler',
+    canRemove: false,
+  },
+];
 
 // FTP services
 const ftpServices = [
-  { type: 'vsftpd', name: 'vsftpd', icon: 'VS', size: '~5MB', description: 'Very Secure FTP', canRemove: true },
-  { type: 'proftpd', name: 'ProFTPD', icon: 'PF', size: '~10MB', description: 'Modular FTP Server', canRemove: true }
-]
+  {
+    type: 'vsftpd',
+    name: 'vsftpd',
+    icon: 'VS',
+    size: '~5MB',
+    description: 'Very Secure FTP',
+    canRemove: true,
+  },
+  {
+    type: 'proftpd',
+    name: 'ProFTPD',
+    icon: 'PF',
+    size: '~10MB',
+    description: 'Modular FTP Server',
+    canRemove: true,
+  },
+];
 
 // Storage services
 const storageServices = [
-  { type: 'nfs', name: 'NFS', icon: 'NF', size: '~10MB', description: 'Network File System', canRemove: true }
-]
+  {
+    type: 'nfs',
+    name: 'NFS',
+    icon: 'NF',
+    size: '~10MB',
+    description: 'Network File System',
+    canRemove: true,
+  },
+];
 
 function getRuntime(type: string) {
-  return props.infraStatus?.runtimes.find(r => r.type === type)
+  return props.infraStatus?.runtimes.find((r) => r.type === type);
 }
 
 function getDatabase(type: string) {
-  return props.infraStatus?.databases.find(d => d.type === type)
+  return props.infraStatus?.databases.find((d) => d.type === type);
 }
 
 function getService(type: string) {
-  return props.infraStatus?.services?.find(s => s.type === type)
+  return props.infraStatus?.services?.find((s) => s.type === type);
 }
 
 // Console Modal State
-const showConsoleModal = ref(false)
-const consoleModalTitle = ref('')
-const consoleContainer = ref<HTMLDivElement | null>(null)
-const consoleModalMode = ref<'operation' | 'logs'>('logs') // Track why modal was opened
-const operationCompleted = ref(false) // Track if operation finished successfully
+const showConsoleModal = ref(false);
+const consoleModalTitle = ref('');
+const consoleContainer = ref<HTMLDivElement | null>(null);
+const consoleModalMode = ref<'operation' | 'logs'>('logs'); // Track why modal was opened
+const operationCompleted = ref(false); // Track if operation finished successfully
 
 // Mail Wizard
-const showMailWizard = ref(false)
-const showManualMailConfig = ref(false)
+const showMailWizard = ref(false);
+const showManualMailConfig = ref(false);
+const isWizardCtaCollapsed = ref(false);
 
 // Computed pour vérifier si des services mail sont installés
 const hasAnyMailServiceInstalled = computed(() => {
-  if (!props.infraStatus?.services) return false
-  return mailServices.some(svc => getService(svc.type)?.installed)
-})
+  if (!props.infraStatus?.services) return false;
+  return mailServices.some((svc) => getService(svc.type)?.installed);
+});
 
-const hasAllMailServicesInstalled = computed(() => {
-  if (!props.infraStatus?.services) return false
-  // Vérifier si au moins postfix et dovecot sont installés (les essentiels)
-  const postfix = getService('postfix')
-  const dovecot = getService('dovecot')
-  return postfix?.installed && dovecot?.installed
-})
-
-// Ouvrir automatiquement la config manuelle si des services mail sont installés
-watch(hasAnyMailServiceInstalled, (hasServices) => {
-  if (hasServices && !showManualMailConfig.value) {
-    showManualMailConfig.value = true
-  }
-}, { immediate: true })
+// Réduire automatiquement le wizard CTA si des services mail sont installés
+watch(
+  hasAnyMailServiceInstalled,
+  (hasServices) => {
+    if (hasServices) {
+      isWizardCtaCollapsed.value = true;
+    }
+  },
+  { immediate: true },
+);
 
 /**
  * **handleMailWizardComplete()** - Gère la fin du wizard mail
@@ -235,115 +407,134 @@ watch(hasAnyMailServiceInstalled, (hasServices) => {
  * pour afficher les nouveaux services installés.
  */
 function handleMailWizardComplete(config: any) {
-  console.log('Mail wizard completed with config:', config)
-  showMailWizard.value = false
+  console.log('Mail wizard completed with config:', config);
+  showMailWizard.value = false;
   // Rafraîchir le statut du serveur pour voir les nouveaux services
-  emit('refresh')
+  emit('refresh');
 }
 
 // Track if an operation is in progress
-const isOperationInProgress = computed(() =>
-  props.installingRuntime !== null ||
-  props.updatingRuntime !== null ||
-  props.removingRuntime !== null ||
-  props.configuringDatabase !== null ||
-  props.reconfiguringDatabase !== null ||
-  props.removingDatabase !== null ||
-  props.startingDatabase !== null ||
-  props.stoppingDatabase !== null ||
-  props.installingService !== null ||
-  props.removingService !== null ||
-  props.startingService !== null ||
-  props.stoppingService !== null
-)
+const isOperationInProgress = computed(
+  () =>
+    props.installingRuntime !== null ||
+    props.updatingRuntime !== null ||
+    props.removingRuntime !== null ||
+    props.configuringDatabase !== null ||
+    props.reconfiguringDatabase !== null ||
+    props.removingDatabase !== null ||
+    props.startingDatabase !== null ||
+    props.stoppingDatabase !== null ||
+    props.installingService !== null ||
+    props.removingService !== null ||
+    props.startingService !== null ||
+    props.stoppingService !== null,
+);
 
 // Auto-open console modal when operation starts
 watch(isOperationInProgress, (inProgress, wasInProgress) => {
   if (inProgress) {
     // Starting a new operation
-    operationCompleted.value = false
-    consoleModalMode.value = 'operation'
+    operationCompleted.value = false;
+    consoleModalMode.value = 'operation';
 
     // Clear previous logs when starting a new operation
-    emit('clearInfraLogs')
+    emit('clearInfraLogs');
 
     // Determine title based on operation
     if (props.installingRuntime) {
-      consoleModalTitle.value = t('infrastructure.installingRuntime', { runtime: props.installingRuntime })
+      consoleModalTitle.value = t('infrastructure.installingRuntime', {
+        runtime: props.installingRuntime,
+      });
     } else if (props.updatingRuntime) {
-      consoleModalTitle.value = t('infrastructure.updatingRuntime', { runtime: props.updatingRuntime })
+      consoleModalTitle.value = t('infrastructure.updatingRuntime', {
+        runtime: props.updatingRuntime,
+      });
     } else if (props.removingRuntime) {
-      consoleModalTitle.value = t('infrastructure.removingRuntime', { runtime: props.removingRuntime })
+      consoleModalTitle.value = t('infrastructure.removingRuntime', {
+        runtime: props.removingRuntime,
+      });
     } else if (props.configuringDatabase) {
-      consoleModalTitle.value = t('infrastructure.configuringDb', { db: props.configuringDatabase })
+      consoleModalTitle.value = t('infrastructure.configuringDb', {
+        db: props.configuringDatabase,
+      });
     } else if (props.reconfiguringDatabase) {
-      consoleModalTitle.value = t('infrastructure.reconfiguringDb', { db: props.reconfiguringDatabase })
+      consoleModalTitle.value = t('infrastructure.reconfiguringDb', {
+        db: props.reconfiguringDatabase,
+      });
     } else if (props.removingDatabase) {
-      consoleModalTitle.value = t('infrastructure.removingDb', { db: props.removingDatabase })
+      consoleModalTitle.value = t('infrastructure.removingDb', { db: props.removingDatabase });
     } else if (props.installingService) {
-      consoleModalTitle.value = t('infrastructure.installingService', { service: props.installingService })
+      consoleModalTitle.value = t('infrastructure.installingService', {
+        service: props.installingService,
+      });
     } else if (props.removingService) {
-      consoleModalTitle.value = t('infrastructure.removingService', { service: props.removingService })
+      consoleModalTitle.value = t('infrastructure.removingService', {
+        service: props.removingService,
+      });
     } else if (props.startingService) {
-      consoleModalTitle.value = t('infrastructure.startingService', { service: props.startingService })
+      consoleModalTitle.value = t('infrastructure.startingService', {
+        service: props.startingService,
+      });
     } else if (props.stoppingService) {
-      consoleModalTitle.value = t('infrastructure.stoppingService', { service: props.stoppingService })
+      consoleModalTitle.value = t('infrastructure.stoppingService', {
+        service: props.stoppingService,
+      });
     } else if (props.startingDatabase) {
-      consoleModalTitle.value = t('infrastructure.startingDb', { db: props.startingDatabase })
+      consoleModalTitle.value = t('infrastructure.startingDb', { db: props.startingDatabase });
     } else if (props.stoppingDatabase) {
-      consoleModalTitle.value = t('infrastructure.stoppingDb', { db: props.stoppingDatabase })
+      consoleModalTitle.value = t('infrastructure.stoppingDb', { db: props.stoppingDatabase });
     }
-    showConsoleModal.value = true
+    showConsoleModal.value = true;
   } else if (wasInProgress) {
     // Operation just finished
-    operationCompleted.value = true
+    operationCompleted.value = true;
   }
-})
+});
 
 // Auto-scroll console
 watch(
   () => props.infrastructureLogs.length,
   async () => {
-    await nextTick()
+    await nextTick();
     if (consoleContainer.value) {
-      consoleContainer.value.scrollTop = consoleContainer.value.scrollHeight
+      consoleContainer.value.scrollTop = consoleContainer.value.scrollHeight;
     }
-  }
-)
+  },
+);
 
 function openConsoleForLogs(service: string) {
-  consoleModalMode.value = 'logs'
-  operationCompleted.value = false
-  consoleModalTitle.value = t('infrastructure.logsFor', { service })
-  emit('fetchServiceLogs', service)
-  showConsoleModal.value = true
+  consoleModalMode.value = 'logs';
+  operationCompleted.value = false;
+  consoleModalTitle.value = t('infrastructure.logsFor', { service });
+  emit('fetchServiceLogs', service);
+  showConsoleModal.value = true;
 }
 
 function openRemoteLogsModal() {
-  consoleModalMode.value = 'logs'
-  operationCompleted.value = false
-  consoleModalTitle.value = t('infrastructure.serverLogs')
-  emit('fetchRemoteLogs')
-  showConsoleModal.value = true
+  consoleModalMode.value = 'logs';
+  operationCompleted.value = false;
+  consoleModalTitle.value = t('infrastructure.serverLogs');
+  emit('fetchRemoteLogs');
+  showConsoleModal.value = true;
 }
 
 function closeConsoleModal() {
   // Don't close if operation is in progress
-  if (isOperationInProgress.value) return
+  if (isOperationInProgress.value) return;
   // Don't clear logs - let the user review them
   // Logs will be cleared when a new operation starts
-  showConsoleModal.value = false
+  showConsoleModal.value = false;
 }
 
 function copyLogs() {
-  const text = props.infrastructureLogs.map(l => l.message).join('\n')
-  navigator.clipboard.writeText(text)
+  const text = props.infrastructureLogs.map((l) => l.message).join('\n');
+  navigator.clipboard.writeText(text);
 }
 
 // Database Config Modal State
-const showDbConfigModal = ref(false)
-const dbConfigType = ref<'postgresql' | 'mysql' | 'redis'>('postgresql')
-const dbConfigName = ref('')
+const showDbConfigModal = ref(false);
+const dbConfigType = ref<'postgresql' | 'mysql' | 'redis'>('postgresql');
+const dbConfigName = ref('');
 const dbSecurityOptions = ref({
   setRootPassword: true,
   removeAnonymousUsers: true,
@@ -351,25 +542,25 @@ const dbSecurityOptions = ref({
   removeTestDb: true,
   configureHba: true,
   enableProtectedMode: true,
-  bindLocalhost: true
-})
+  bindLocalhost: true,
+});
 
 // Remove Runtime Modal State
-const showRemoveRuntimeModal = ref(false)
-const runtimeToRemove = ref<string | null>(null)
+const showRemoveRuntimeModal = ref(false);
+const runtimeToRemove = ref<string | null>(null);
 
 // Remove Database Modal State
-const showRemoveDatabaseModal = ref(false)
-const databaseToRemove = ref<string | null>(null)
+const showRemoveDatabaseModal = ref(false);
+const databaseToRemove = ref<string | null>(null);
 
 // Reconfigure Database Modal State
-const showReconfigureDatabaseModal = ref(false)
-const reconfigureDbType = ref<string | null>(null)
-const reconfigureDbName = ref('')
+const showReconfigureDatabaseModal = ref(false);
+const reconfigureDbType = ref<string | null>(null);
+const reconfigureDbName = ref('');
 
 function openDbConfig(dbType: 'postgresql' | 'mysql' | 'redis') {
-  dbConfigType.value = dbType
-  dbConfigName.value = ''
+  dbConfigType.value = dbType;
+  dbConfigName.value = '';
   dbSecurityOptions.value = {
     setRootPassword: true,
     removeAnonymousUsers: true,
@@ -377,53 +568,62 @@ function openDbConfig(dbType: 'postgresql' | 'mysql' | 'redis') {
     removeTestDb: true,
     configureHba: true,
     enableProtectedMode: true,
-    bindLocalhost: true
-  }
-  showDbConfigModal.value = true
+    bindLocalhost: true,
+  };
+  showDbConfigModal.value = true;
 }
 
 function submitDbConfig() {
-  emit('configureDatabase', dbConfigType.value, dbConfigName.value || (dbConfigType.value === 'redis' ? '' : 'serverflow'), dbSecurityOptions.value)
-  showDbConfigModal.value = false
+  emit(
+    'configureDatabase',
+    dbConfigType.value,
+    dbConfigName.value || (dbConfigType.value === 'redis' ? '' : 'serverflow'),
+    dbSecurityOptions.value,
+  );
+  showDbConfigModal.value = false;
 }
 
 function openRemoveRuntime(runtime: string) {
-  runtimeToRemove.value = runtime
-  showRemoveRuntimeModal.value = true
+  runtimeToRemove.value = runtime;
+  showRemoveRuntimeModal.value = true;
 }
 
 function confirmRemoveRuntime() {
   if (runtimeToRemove.value) {
-    emit('removeRuntime', runtimeToRemove.value)
-    showRemoveRuntimeModal.value = false
-    runtimeToRemove.value = null
+    emit('removeRuntime', runtimeToRemove.value);
+    showRemoveRuntimeModal.value = false;
+    runtimeToRemove.value = null;
   }
 }
 
 function openRemoveDatabase(dbType: string) {
-  databaseToRemove.value = dbType
-  showRemoveDatabaseModal.value = true
+  databaseToRemove.value = dbType;
+  showRemoveDatabaseModal.value = true;
 }
 
 function confirmRemoveDatabase() {
   if (databaseToRemove.value) {
-    emit('removeDatabase', databaseToRemove.value)
-    showRemoveDatabaseModal.value = false
-    databaseToRemove.value = null
+    emit('removeDatabase', databaseToRemove.value);
+    showRemoveDatabaseModal.value = false;
+    databaseToRemove.value = null;
   }
 }
 
 function openReconfigureDatabase(dbType: string) {
-  reconfigureDbType.value = dbType
-  reconfigureDbName.value = ''
-  showReconfigureDatabaseModal.value = true
+  reconfigureDbType.value = dbType;
+  reconfigureDbName.value = '';
+  showReconfigureDatabaseModal.value = true;
 }
 
 function confirmReconfigureDatabase() {
   if (reconfigureDbType.value) {
-    emit('reconfigureDatabase', reconfigureDbType.value, reconfigureDbName.value || (reconfigureDbType.value === 'redis' ? '' : 'serverflow_new'))
-    showReconfigureDatabaseModal.value = false
-    reconfigureDbType.value = null
+    emit(
+      'reconfigureDatabase',
+      reconfigureDbType.value,
+      reconfigureDbName.value || (reconfigureDbType.value === 'redis' ? '' : 'serverflow_new'),
+    );
+    showReconfigureDatabaseModal.value = false;
+    reconfigureDbType.value = null;
   }
 }
 </script>
@@ -438,11 +638,18 @@ function confirmReconfigureDatabase() {
           @click="emit('back')"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
         </button>
         <div>
-          <h1 class="text-2xl font-bold text-slate-900">{{ t('infrastructure.serverSettings') }}</h1>
+          <h1 class="text-2xl font-bold text-slate-900">
+            {{ t('infrastructure.serverSettings') }}
+          </h1>
           <p class="text-slate-500 text-sm mt-1">{{ serverName }}</p>
         </div>
       </div>
@@ -452,7 +659,12 @@ function confirmReconfigureDatabase() {
           @click="openRemoteLogsModal"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
           </svg>
           {{ t('infrastructure.viewLogs') }}
         </button>
@@ -461,10 +673,24 @@ function confirmReconfigureDatabase() {
           :disabled="infraStatusLoading"
           @click="emit('refresh')"
         >
-          <svg v-if="!infraStatusLoading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          <svg
+            v-if="!infraStatusLoading"
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
           </svg>
-          <div v-else class="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+          <div
+            v-else
+            class="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin"
+          />
           {{ t('common.refresh') }}
         </button>
       </div>
@@ -475,7 +701,9 @@ function confirmReconfigureDatabase() {
       <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
         <div class="text-center">
           <p class="text-xs text-slate-500 uppercase font-medium mb-1">OS</p>
-          <p class="text-sm font-semibold text-slate-800">{{ infraStatus.system.os }} {{ infraStatus.system.osVersion }}</p>
+          <p class="text-sm font-semibold text-slate-800">
+            {{ infraStatus.system.os }} {{ infraStatus.system.osVersion }}
+          </p>
         </div>
         <div class="text-center">
           <p class="text-xs text-slate-500 uppercase font-medium mb-1">CPU</p>
@@ -490,20 +718,27 @@ function confirmReconfigureDatabase() {
           <p class="text-sm font-semibold text-slate-800">{{ infraStatus.system.disk }}</p>
         </div>
         <div class="text-center">
-          <p class="text-xs text-slate-500 uppercase font-medium mb-1">{{ t('infrastructure.uptime') }}</p>
+          <p class="text-xs text-slate-500 uppercase font-medium mb-1">
+            {{ t('infrastructure.uptime') }}
+          </p>
           <p class="text-sm font-semibold text-slate-800">{{ infraStatus.system.uptime }}</p>
         </div>
       </div>
     </div>
     <div v-else-if="infraStatusLoading" class="glass-card p-8 mb-6 text-center">
-      <div class="w-8 h-8 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin mx-auto mb-3" />
+      <div
+        class="w-8 h-8 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin mx-auto mb-3"
+      />
       <p class="text-slate-500">{{ t('common.loading') }}</p>
     </div>
 
     <!-- Runtimes Section -->
     <section class="mb-8">
       <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-        <span class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 text-sm font-bold">R</span>
+        <span
+          class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 text-sm font-bold"
+          >R</span
+        >
         {{ t('infrastructure.runtimes') }}
       </h2>
       <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -514,7 +749,9 @@ function confirmReconfigureDatabase() {
           :class="{ 'ring-2 ring-emerald-500/30': getRuntime(rt.type)?.installed }"
         >
           <div class="flex items-start gap-4">
-            <div class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-lg font-bold text-slate-600 flex-shrink-0">
+            <div
+              class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-lg font-bold text-slate-600 flex-shrink-0"
+            >
               {{ rt.icon }}
             </div>
             <div class="flex-1 min-w-0">
@@ -535,7 +772,11 @@ function confirmReconfigureDatabase() {
                 :disabled="installingRuntime !== null"
                 @click="emit('installRuntime', rt.type)"
               >
-                {{ installingRuntime === rt.type ? t('infrastructure.installing') : t('infrastructure.install') }}
+                {{
+                  installingRuntime === rt.type
+                    ? t('infrastructure.installing')
+                    : t('infrastructure.install')
+                }}
               </button>
             </template>
             <template v-else-if="getRuntime(rt.type)?.updateAvailable">
@@ -544,11 +785,17 @@ function confirmReconfigureDatabase() {
                 :disabled="updatingRuntime !== null"
                 @click="emit('updateRuntime', rt.type)"
               >
-                {{ updatingRuntime === rt.type ? t('infrastructure.updating') : t('infrastructure.updateAvailable') }}
+                {{
+                  updatingRuntime === rt.type
+                    ? t('infrastructure.updating')
+                    : t('infrastructure.updateAvailable')
+                }}
               </button>
             </template>
             <template v-else>
-              <span class="flex-1 px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium text-center">
+              <span
+                class="flex-1 px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium text-center"
+              >
                 {{ t('infrastructure.installed') }}
               </span>
             </template>
@@ -559,7 +806,12 @@ function confirmReconfigureDatabase() {
               @click="openConsoleForLogs(rt.type)"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
               </svg>
             </button>
             <button
@@ -569,7 +821,12 @@ function confirmReconfigureDatabase() {
               @click="openRemoveRuntime(rt.type)"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
               </svg>
             </button>
           </div>
@@ -580,7 +837,10 @@ function confirmReconfigureDatabase() {
     <!-- Databases Section -->
     <section class="mb-8">
       <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-        <span class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 text-sm font-bold">DB</span>
+        <span
+          class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 text-sm font-bold"
+          >DB</span
+        >
         {{ t('infrastructure.databases') }}
       </h2>
       <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -591,18 +851,32 @@ function confirmReconfigureDatabase() {
           :class="{ 'ring-2 ring-emerald-500/30': getDatabase(db.type)?.installed }"
         >
           <div class="flex items-start gap-3">
-            <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-sm font-bold text-blue-600 flex-shrink-0">
+            <div
+              class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-sm font-bold text-blue-600 flex-shrink-0"
+            >
               {{ db.icon }}
             </div>
             <div class="flex-1 min-w-0">
               <h3 class="font-semibold text-slate-800 text-sm">{{ db.name }}</h3>
               <p v-if="getDatabase(db.type)?.installed" class="text-xs font-medium mt-0.5">
-                <span class="inline-flex items-center gap-1" :class="getDatabase(db.type)?.running ? 'text-emerald-600' : 'text-red-500'">
-                  <span class="w-1.5 h-1.5 rounded-full" :class="getDatabase(db.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"></span>
-                  {{ getDatabase(db.type)?.running ? t('infrastructure.running') : t('infrastructure.stopped') }}
+                <span
+                  class="inline-flex items-center gap-1"
+                  :class="getDatabase(db.type)?.running ? 'text-emerald-600' : 'text-red-500'"
+                >
+                  <span
+                    class="w-1.5 h-1.5 rounded-full"
+                    :class="getDatabase(db.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"
+                  ></span>
+                  {{
+                    getDatabase(db.type)?.running
+                      ? t('infrastructure.running')
+                      : t('infrastructure.stopped')
+                  }}
                 </span>
               </p>
-              <p v-else class="text-xs text-slate-400 mt-0.5">{{ t('infrastructure.notConfigured') }}</p>
+              <p v-else class="text-xs text-slate-400 mt-0.5">
+                {{ t('infrastructure.notConfigured') }}
+              </p>
               <p v-if="getDatabase(db.type)?.version" class="text-xs text-slate-500 mt-0.5">
                 v{{ getDatabase(db.type)?.version }}
               </p>
@@ -615,7 +889,11 @@ function confirmReconfigureDatabase() {
                 :disabled="configuringDatabase !== null"
                 @click="openDbConfig(db.type as any)"
               >
-                {{ configuringDatabase === db.type ? t('infrastructure.settingUp') : t('infrastructure.setup') }}
+                {{
+                  configuringDatabase === db.type
+                    ? t('infrastructure.settingUp')
+                    : t('infrastructure.setup')
+                }}
               </button>
             </template>
             <template v-else>
@@ -626,7 +904,11 @@ function confirmReconfigureDatabase() {
                 :disabled="stoppingDatabase !== null"
                 @click="emit('stopDatabase', db.type)"
               >
-                {{ stoppingDatabase === db.type ? t('infrastructure.stopping') : t('infrastructure.stop') }}
+                {{
+                  stoppingDatabase === db.type
+                    ? t('infrastructure.stopping')
+                    : t('infrastructure.stop')
+                }}
               </button>
               <button
                 v-else
@@ -634,7 +916,11 @@ function confirmReconfigureDatabase() {
                 :disabled="startingDatabase !== null"
                 @click="emit('startDatabase', db.type)"
               >
-                {{ startingDatabase === db.type ? t('infrastructure.starting') : t('infrastructure.start') }}
+                {{
+                  startingDatabase === db.type
+                    ? t('infrastructure.starting')
+                    : t('infrastructure.start')
+                }}
               </button>
               <!-- Logs button -->
               <button
@@ -643,7 +929,12 @@ function confirmReconfigureDatabase() {
                 @click="openConsoleForLogs(db.type)"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
                 </svg>
               </button>
               <!-- Reconfigure button -->
@@ -654,8 +945,18 @@ function confirmReconfigureDatabase() {
                 @click="openReconfigureDatabase(db.type)"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
                 </svg>
               </button>
               <!-- Delete button -->
@@ -665,7 +966,12 @@ function confirmReconfigureDatabase() {
                 @click="openRemoveDatabase(db.type)"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
                 </svg>
               </button>
             </template>
@@ -677,7 +983,10 @@ function confirmReconfigureDatabase() {
     <!-- Network & Proxy Section -->
     <section class="mb-8">
       <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-        <span class="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center text-cyan-600 text-sm font-bold">N</span>
+        <span
+          class="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center text-cyan-600 text-sm font-bold"
+          >N</span
+        >
         {{ t('infrastructure.networkProxy') }}
       </h2>
       <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -688,16 +997,28 @@ function confirmReconfigureDatabase() {
           :class="{ 'ring-2 ring-emerald-500/30': getService(svc.type)?.installed }"
         >
           <div class="flex items-start gap-3">
-            <div class="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center text-sm font-bold text-cyan-600 flex-shrink-0">
+            <div
+              class="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center text-sm font-bold text-cyan-600 flex-shrink-0"
+            >
               {{ svc.icon }}
             </div>
             <div class="flex-1 min-w-0">
               <h3 class="font-semibold text-slate-800 text-sm">{{ svc.name }}</h3>
               <p class="text-xs text-slate-500">{{ svc.description }}</p>
               <p v-if="getService(svc.type)?.installed" class="text-xs font-medium mt-0.5">
-                <span class="inline-flex items-center gap-1" :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-500'">
-                  <span class="w-1.5 h-1.5 rounded-full" :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"></span>
-                  {{ getService(svc.type)?.running ? t('infrastructure.running') : t('infrastructure.stopped') }}
+                <span
+                  class="inline-flex items-center gap-1"
+                  :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-500'"
+                >
+                  <span
+                    class="w-1.5 h-1.5 rounded-full"
+                    :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"
+                  ></span>
+                  {{
+                    getService(svc.type)?.running
+                      ? t('infrastructure.running')
+                      : t('infrastructure.stopped')
+                  }}
                 </span>
               </p>
               <p v-else class="text-xs text-slate-400 mt-0.5">{{ svc.size }}</p>
@@ -713,7 +1034,11 @@ function confirmReconfigureDatabase() {
                 :disabled="installingService !== null"
                 @click="emit('installService', svc.type)"
               >
-                {{ installingService === svc.type ? t('infrastructure.installing') : t('infrastructure.install') }}
+                {{
+                  installingService === svc.type
+                    ? t('infrastructure.installing')
+                    : t('infrastructure.install')
+                }}
               </button>
             </template>
             <template v-else>
@@ -724,7 +1049,11 @@ function confirmReconfigureDatabase() {
                 :disabled="stoppingService !== null"
                 @click="emit('stopService', svc.type)"
               >
-                {{ stoppingService === svc.type ? t('infrastructure.stopping') : t('infrastructure.stop') }}
+                {{
+                  stoppingService === svc.type
+                    ? t('infrastructure.stopping')
+                    : t('infrastructure.stop')
+                }}
               </button>
               <button
                 v-else
@@ -732,7 +1061,11 @@ function confirmReconfigureDatabase() {
                 :disabled="startingService !== null"
                 @click="emit('startService', svc.type)"
               >
-                {{ startingService === svc.type ? t('infrastructure.starting') : t('infrastructure.start') }}
+                {{
+                  startingService === svc.type
+                    ? t('infrastructure.starting')
+                    : t('infrastructure.start')
+                }}
               </button>
               <!-- Logs button -->
               <button
@@ -741,7 +1074,12 @@ function confirmReconfigureDatabase() {
                 @click="openConsoleForLogs(svc.type)"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
                 </svg>
               </button>
               <!-- Delete button -->
@@ -752,7 +1090,12 @@ function confirmReconfigureDatabase() {
                 @click="emit('removeService', svc.type)"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
                 </svg>
               </button>
             </template>
@@ -764,7 +1107,10 @@ function confirmReconfigureDatabase() {
     <!-- Security Section -->
     <section class="mb-8">
       <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-        <span class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center text-red-600 text-sm font-bold">S</span>
+        <span
+          class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center text-red-600 text-sm font-bold"
+          >S</span
+        >
         {{ t('infrastructure.security') }}
       </h2>
       <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -775,16 +1121,28 @@ function confirmReconfigureDatabase() {
           :class="{ 'ring-2 ring-emerald-500/30': getService(svc.type)?.installed }"
         >
           <div class="flex items-start gap-3">
-            <div class="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-sm font-bold text-red-600 flex-shrink-0">
+            <div
+              class="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-sm font-bold text-red-600 flex-shrink-0"
+            >
               {{ svc.icon }}
             </div>
             <div class="flex-1 min-w-0">
               <h3 class="font-semibold text-slate-800 text-sm">{{ svc.name }}</h3>
               <p class="text-xs text-slate-500">{{ svc.description }}</p>
               <p v-if="getService(svc.type)?.installed" class="text-xs font-medium mt-0.5">
-                <span class="inline-flex items-center gap-1" :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-500'">
-                  <span class="w-1.5 h-1.5 rounded-full" :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"></span>
-                  {{ getService(svc.type)?.running ? t('infrastructure.running') : t('infrastructure.stopped') }}
+                <span
+                  class="inline-flex items-center gap-1"
+                  :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-500'"
+                >
+                  <span
+                    class="w-1.5 h-1.5 rounded-full"
+                    :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"
+                  ></span>
+                  {{
+                    getService(svc.type)?.running
+                      ? t('infrastructure.running')
+                      : t('infrastructure.stopped')
+                  }}
                 </span>
               </p>
               <p v-else class="text-xs text-slate-400 mt-0.5">{{ svc.size }}</p>
@@ -800,7 +1158,11 @@ function confirmReconfigureDatabase() {
                 :disabled="installingService !== null"
                 @click="emit('installService', svc.type)"
               >
-                {{ installingService === svc.type ? t('infrastructure.installing') : t('infrastructure.install') }}
+                {{
+                  installingService === svc.type
+                    ? t('infrastructure.installing')
+                    : t('infrastructure.install')
+                }}
               </button>
             </template>
             <template v-else>
@@ -811,7 +1173,11 @@ function confirmReconfigureDatabase() {
                 :disabled="stoppingService !== null"
                 @click="emit('stopService', svc.type)"
               >
-                {{ stoppingService === svc.type ? t('infrastructure.stopping') : t('infrastructure.stop') }}
+                {{
+                  stoppingService === svc.type
+                    ? t('infrastructure.stopping')
+                    : t('infrastructure.stop')
+                }}
               </button>
               <button
                 v-else
@@ -819,7 +1185,11 @@ function confirmReconfigureDatabase() {
                 :disabled="startingService !== null"
                 @click="emit('startService', svc.type)"
               >
-                {{ startingService === svc.type ? t('infrastructure.starting') : t('infrastructure.start') }}
+                {{
+                  startingService === svc.type
+                    ? t('infrastructure.starting')
+                    : t('infrastructure.start')
+                }}
               </button>
               <!-- Logs button -->
               <button
@@ -828,7 +1198,12 @@ function confirmReconfigureDatabase() {
                 @click="openConsoleForLogs(svc.type)"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
                 </svg>
               </button>
               <!-- Delete button -->
@@ -839,7 +1214,12 @@ function confirmReconfigureDatabase() {
                 @click="emit('removeService', svc.type)"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
                 </svg>
               </button>
             </template>
@@ -851,7 +1231,10 @@ function confirmReconfigureDatabase() {
     <!-- Monitoring Section -->
     <section class="mb-8">
       <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-        <span class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600 text-sm font-bold">M</span>
+        <span
+          class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600 text-sm font-bold"
+          >M</span
+        >
         {{ t('infrastructure.monitoring') }}
       </h2>
       <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -862,16 +1245,28 @@ function confirmReconfigureDatabase() {
           :class="{ 'ring-2 ring-emerald-500/30': getService(svc.type)?.installed }"
         >
           <div class="flex items-start gap-3">
-            <div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-sm font-bold text-purple-600 flex-shrink-0">
+            <div
+              class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-sm font-bold text-purple-600 flex-shrink-0"
+            >
               {{ svc.icon }}
             </div>
             <div class="flex-1 min-w-0">
               <h3 class="font-semibold text-slate-800 text-sm">{{ svc.name }}</h3>
               <p class="text-xs text-slate-500">{{ svc.description }}</p>
               <p v-if="getService(svc.type)?.installed" class="text-xs font-medium mt-0.5">
-                <span class="inline-flex items-center gap-1" :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-500'">
-                  <span class="w-1.5 h-1.5 rounded-full" :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"></span>
-                  {{ getService(svc.type)?.running ? t('infrastructure.running') : t('infrastructure.stopped') }}
+                <span
+                  class="inline-flex items-center gap-1"
+                  :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-500'"
+                >
+                  <span
+                    class="w-1.5 h-1.5 rounded-full"
+                    :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"
+                  ></span>
+                  {{
+                    getService(svc.type)?.running
+                      ? t('infrastructure.running')
+                      : t('infrastructure.stopped')
+                  }}
                 </span>
               </p>
               <p v-else class="text-xs text-slate-400 mt-0.5">{{ svc.size }}</p>
@@ -887,7 +1282,11 @@ function confirmReconfigureDatabase() {
                 :disabled="installingService !== null"
                 @click="emit('installService', svc.type)"
               >
-                {{ installingService === svc.type ? t('infrastructure.installing') : t('infrastructure.install') }}
+                {{
+                  installingService === svc.type
+                    ? t('infrastructure.installing')
+                    : t('infrastructure.install')
+                }}
               </button>
             </template>
             <template v-else>
@@ -898,7 +1297,11 @@ function confirmReconfigureDatabase() {
                 :disabled="stoppingService !== null"
                 @click="emit('stopService', svc.type)"
               >
-                {{ stoppingService === svc.type ? t('infrastructure.stopping') : t('infrastructure.stop') }}
+                {{
+                  stoppingService === svc.type
+                    ? t('infrastructure.stopping')
+                    : t('infrastructure.stop')
+                }}
               </button>
               <button
                 v-else
@@ -906,7 +1309,11 @@ function confirmReconfigureDatabase() {
                 :disabled="startingService !== null"
                 @click="emit('startService', svc.type)"
               >
-                {{ startingService === svc.type ? t('infrastructure.starting') : t('infrastructure.start') }}
+                {{
+                  startingService === svc.type
+                    ? t('infrastructure.starting')
+                    : t('infrastructure.start')
+                }}
               </button>
               <!-- Logs button -->
               <button
@@ -915,7 +1322,12 @@ function confirmReconfigureDatabase() {
                 @click="openConsoleForLogs(svc.type)"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
                 </svg>
               </button>
               <!-- Delete button -->
@@ -926,7 +1338,12 @@ function confirmReconfigureDatabase() {
                 @click="emit('removeService', svc.type)"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
                 </svg>
               </button>
             </template>
@@ -938,7 +1355,10 @@ function confirmReconfigureDatabase() {
     <!-- DNS Section -->
     <section class="mb-8">
       <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-        <span class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 text-sm font-bold">D</span>
+        <span
+          class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 text-sm font-bold"
+          >D</span
+        >
         {{ t('infrastructure.dns') }}
       </h2>
       <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -949,16 +1369,28 @@ function confirmReconfigureDatabase() {
           :class="{ 'ring-2 ring-emerald-500/30': getService(svc.type)?.installed }"
         >
           <div class="flex items-start gap-3">
-            <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-sm font-bold text-indigo-600 flex-shrink-0">
+            <div
+              class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-sm font-bold text-indigo-600 flex-shrink-0"
+            >
               {{ svc.icon }}
             </div>
             <div class="flex-1 min-w-0">
               <h3 class="font-semibold text-slate-800 text-sm">{{ svc.name }}</h3>
               <p class="text-xs text-slate-500">{{ svc.description }}</p>
               <p v-if="getService(svc.type)?.installed" class="text-xs font-medium mt-0.5">
-                <span class="inline-flex items-center gap-1" :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-500'">
-                  <span class="w-1.5 h-1.5 rounded-full" :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"></span>
-                  {{ getService(svc.type)?.running ? t('infrastructure.running') : t('infrastructure.stopped') }}
+                <span
+                  class="inline-flex items-center gap-1"
+                  :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-500'"
+                >
+                  <span
+                    class="w-1.5 h-1.5 rounded-full"
+                    :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"
+                  ></span>
+                  {{
+                    getService(svc.type)?.running
+                      ? t('infrastructure.running')
+                      : t('infrastructure.stopped')
+                  }}
                 </span>
               </p>
               <p v-else class="text-xs text-slate-400 mt-0.5">{{ svc.size }}</p>
@@ -974,7 +1406,11 @@ function confirmReconfigureDatabase() {
                 :disabled="installingService !== null"
                 @click="emit('installService', svc.type)"
               >
-                {{ installingService === svc.type ? t('infrastructure.installing') : t('infrastructure.install') }}
+                {{
+                  installingService === svc.type
+                    ? t('infrastructure.installing')
+                    : t('infrastructure.install')
+                }}
               </button>
             </template>
             <template v-else>
@@ -985,7 +1421,11 @@ function confirmReconfigureDatabase() {
                 :disabled="stoppingService !== null"
                 @click="emit('stopService', svc.type)"
               >
-                {{ stoppingService === svc.type ? t('infrastructure.stopping') : t('infrastructure.stop') }}
+                {{
+                  stoppingService === svc.type
+                    ? t('infrastructure.stopping')
+                    : t('infrastructure.stop')
+                }}
               </button>
               <button
                 v-else
@@ -993,7 +1433,11 @@ function confirmReconfigureDatabase() {
                 :disabled="startingService !== null"
                 @click="emit('startService', svc.type)"
               >
-                {{ startingService === svc.type ? t('infrastructure.starting') : t('infrastructure.start') }}
+                {{
+                  startingService === svc.type
+                    ? t('infrastructure.starting')
+                    : t('infrastructure.start')
+                }}
               </button>
               <!-- Logs button -->
               <button
@@ -1002,7 +1446,12 @@ function confirmReconfigureDatabase() {
                 @click="openConsoleForLogs(svc.type)"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
                 </svg>
               </button>
               <!-- Delete button -->
@@ -1013,7 +1462,12 @@ function confirmReconfigureDatabase() {
                 @click="emit('removeService', svc.type)"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
                 </svg>
               </button>
             </template>
@@ -1026,45 +1480,299 @@ function confirmReconfigureDatabase() {
     <section class="mb-8">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-          <span class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600 text-sm font-bold">M</span>
+          <span
+            class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600 text-sm font-bold"
+            >M</span
+          >
           {{ t('infrastructure.mail') }}
         </h2>
       </div>
 
-      <!-- Wizard CTA Card (si aucun service mail installé ou pas tous installés) -->
+      <!-- Wizard CTA Card - Collapsible quand services installés -->
       <div
-        v-if="!hasAllMailServicesInstalled"
-        class="glass-card p-6 mb-4 bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200/50"
+        class="glass-card mb-4 overflow-hidden transition-all duration-300 ease-out relative"
+        :class="[
+          hasAnyMailServiceInstalled && isWizardCtaCollapsed
+            ? 'bg-gradient-to-r from-orange-50/50 to-amber-50/50 border border-orange-100/50 cursor-pointer hover:border-orange-200 hover:shadow-md'
+            : 'bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200/50',
+        ]"
+        @click="
+          hasAnyMailServiceInstalled && isWizardCtaCollapsed ? (isWizardCtaCollapsed = false) : null
+        "
       >
-        <div class="flex flex-col md:flex-row items-start md:items-center gap-4">
-          <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-orange-500/20">
-            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <div class="flex-1">
-            <h3 class="text-lg font-bold text-slate-900 mb-1">{{ t('mail.wizard.cta.title') || 'Configurer votre serveur mail' }}</h3>
-            <p class="text-sm text-slate-600 mb-3">
-              {{ t('mail.wizard.cta.description') || 'L\'assistant guidé configure automatiquement Postfix, Dovecot, DKIM, SPF et l\'antispam en quelques clics.' }}
-            </p>
-            <div class="flex flex-wrap items-center gap-3">
-              <button
-                @click="showMailWizard = true"
-                class="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-all shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/30"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                {{ t('mail.wizard.cta.button') || 'Lancer l\'assistant' }}
-              </button>
-              <span class="text-xs text-slate-500 flex items-center gap-1">
-                <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {{ t('mail.wizard.cta.recommended') || 'Recommandé' }}
-              </span>
+        <!-- Version collapsed (quand services installés) -->
+        <div
+          v-if="hasAnyMailServiceInstalled && isWizardCtaCollapsed"
+          class="p-3 flex items-center justify-between group"
+        >
+          <div class="flex items-center gap-3">
+            <div
+              class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center flex-shrink-0 shadow-sm shadow-orange-500/10 transition-transform group-hover:scale-105"
+            >
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-sm font-semibold text-slate-700">
+                {{ t('mail.wizard.cta.collapsed') || 'Assistant de configuration mail' }}
+              </h3>
+              <p class="text-xs text-slate-500">
+                {{ t('mail.wizard.cta.clickExpand') || 'Cliquez pour développer' }}
+              </p>
             </div>
           </div>
+          <svg
+            class="w-5 h-5 text-orange-400 transition-transform group-hover:translate-y-0.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </div>
+
+        <!-- Version expanded (par défaut ou quand déplié) -->
+        <div v-else class="p-6">
+          <!-- Bouton collapse (visible uniquement si services installés) -->
+          <button
+            v-if="hasAnyMailServiceInstalled"
+            @click.stop="isWizardCtaCollapsed = true"
+            class="absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-white/60 transition-all"
+            :title="t('mail.wizard.cta.collapse') || 'Réduire'"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 15l7-7 7 7"
+              />
+            </svg>
+          </button>
+
+          <div class="flex flex-col md:flex-row items-start md:items-center gap-4">
+            <div
+              class="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-orange-500/20"
+            >
+              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-lg font-bold text-slate-900 mb-1">
+                {{ t('mail.wizard.cta.title') || 'Configurer votre serveur mail' }}
+              </h3>
+              <p class="text-sm text-slate-600 mb-3">
+                {{
+                  t('mail.wizard.cta.description') ||
+                  "L'assistant guidé configure automatiquement Postfix, Dovecot, DKIM, SPF et l'antispam en quelques clics."
+                }}
+              </p>
+              <div class="flex flex-wrap items-center gap-3">
+                <button
+                  @click.stop="showMailWizard = true"
+                  class="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-all shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/30"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                  {{ t('mail.wizard.cta.button') || "Lancer l'assistant" }}
+                </button>
+                <span class="text-xs text-slate-500 flex items-center gap-1">
+                  <svg
+                    class="w-4 h-4 text-emerald-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  {{ t('mail.wizard.cta.recommended') || 'Recommandé' }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barre de statut des services mail installés -->
+      <div v-if="hasAnyMailServiceInstalled" class="glass-card p-3 mb-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">{{
+            t('mail.status.title') || 'Services actifs'
+          }}</span>
+          <button
+            @click="showMailWizard = true"
+            class="text-xs text-orange-500 hover:text-orange-600 font-medium flex items-center gap-1 transition-colors"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+            </svg>
+            {{ t('mail.wizard.reconfigure') || 'Reconfigurer' }}
+          </button>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <template v-for="svc in mailServices" :key="svc.type">
+            <div
+              v-if="getService(svc.type)?.installed"
+              class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm"
+              :class="
+                getService(svc.type)?.running
+                  ? 'bg-emerald-50 border border-emerald-200'
+                  : 'bg-red-50 border border-red-200'
+              "
+            >
+              <!-- Indicateur de statut -->
+              <span
+                class="w-2 h-2 rounded-full flex-shrink-0"
+                :class="
+                  getService(svc.type)?.running ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'
+                "
+              ></span>
+              <!-- Nom du service -->
+              <span
+                class="font-medium"
+                :class="getService(svc.type)?.running ? 'text-emerald-700' : 'text-red-700'"
+              >
+                {{ svc.name }}
+              </span>
+              <!-- Version -->
+              <span v-if="getService(svc.type)?.version" class="text-xs text-slate-400">
+                v{{ getService(svc.type)?.version }}
+              </span>
+              <!-- Actions -->
+              <div class="flex items-center gap-1 ml-1">
+                <!-- Bouton Start/Stop -->
+                <button
+                  v-if="svc.canStartStop !== false"
+                  class="w-6 h-6 flex items-center justify-center rounded transition-colors"
+                  :class="
+                    getService(svc.type)?.running
+                      ? 'text-amber-500 hover:bg-amber-100'
+                      : 'text-emerald-500 hover:bg-emerald-100'
+                  "
+                  :disabled="startingService === svc.type || stoppingService === svc.type"
+                  :title="
+                    getService(svc.type)?.running
+                      ? t('infrastructure.stop')
+                      : t('infrastructure.start')
+                  "
+                  @click="
+                    getService(svc.type)?.running
+                      ? emit('stopService', svc.type)
+                      : emit('startService', svc.type)
+                  "
+                >
+                  <svg
+                    v-if="startingService === svc.type || stoppingService === svc.type"
+                    class="w-3.5 h-3.5 animate-spin"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                  <svg
+                    v-else-if="getService(svc.type)?.running"
+                    class="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"
+                    />
+                  </svg>
+                  <svg
+                    v-else
+                    class="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </button>
+                <!-- Bouton Logs -->
+                <button
+                  class="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                  :title="t('infrastructure.viewLogs')"
+                  @click="openConsoleForLogs(svc.type)"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </template>
         </div>
       </div>
 
@@ -1081,30 +1789,22 @@ function confirmReconfigureDatabase() {
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5l7 7-7 7"
+            />
           </svg>
           <span class="font-medium">{{ t('mail.manual.title') || 'Configuration manuelle' }}</span>
-          <span class="text-xs text-slate-400">({{ t('mail.manual.subtitle') || 'services individuels' }})</span>
-        </button>
-        <!-- Bouton wizard si tous les services sont installés -->
-        <button
-          v-if="hasAllMailServicesInstalled"
-          @click="showMailWizard = true"
-          class="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          {{ t('mail.wizard.reconfigure') || 'Reconfigurer' }}
+          <span class="text-xs text-slate-400"
+            >({{ t('mail.manual.subtitle') || 'services individuels' }})</span
+          >
         </button>
       </div>
 
       <!-- Configuration manuelle (accordéon) -->
-      <div
-        v-show="showManualMailConfig"
-        class="transition-all duration-300"
-      >
+      <div v-show="showManualMailConfig" class="transition-all duration-300">
         <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div
             v-for="svc in mailServices"
@@ -1113,17 +1813,34 @@ function confirmReconfigureDatabase() {
             :class="{ 'ring-2 ring-emerald-500/30': getService(svc.type)?.installed }"
           >
             <div class="flex items-start gap-3">
-              <div class="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-sm font-bold text-orange-600 flex-shrink-0">
+              <div
+                class="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-sm font-bold text-orange-600 flex-shrink-0"
+              >
                 {{ svc.icon }}
               </div>
               <div class="flex-1 min-w-0">
                 <h3 class="font-semibold text-slate-800 text-sm">{{ svc.name }}</h3>
                 <p class="text-xs text-slate-500">{{ svc.description }}</p>
-                <p v-if="svc.warning && !getService(svc.type)?.installed" class="text-xs text-amber-600 mt-0.5 font-medium">{{ svc.warning }}</p>
+                <p
+                  v-if="svc.warning && !getService(svc.type)?.installed"
+                  class="text-xs text-amber-600 mt-0.5 font-medium"
+                >
+                  {{ svc.warning }}
+                </p>
                 <p v-if="getService(svc.type)?.installed" class="text-xs font-medium mt-0.5">
-                  <span class="inline-flex items-center gap-1" :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-500'">
-                    <span class="w-1.5 h-1.5 rounded-full" :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"></span>
-                    {{ getService(svc.type)?.running ? t('infrastructure.running') : t('infrastructure.stopped') }}
+                  <span
+                    class="inline-flex items-center gap-1"
+                    :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-500'"
+                  >
+                    <span
+                      class="w-1.5 h-1.5 rounded-full"
+                      :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"
+                    ></span>
+                    {{
+                      getService(svc.type)?.running
+                        ? t('infrastructure.running')
+                        : t('infrastructure.stopped')
+                    }}
                   </span>
                 </p>
                 <p v-else-if="!svc.warning" class="text-xs text-slate-400 mt-0.5">{{ svc.size }}</p>
@@ -1139,7 +1856,11 @@ function confirmReconfigureDatabase() {
                   :disabled="installingService !== null"
                   @click="emit('installService', svc.type)"
                 >
-                  {{ installingService === svc.type ? t('infrastructure.installing') : t('infrastructure.install') }}
+                  {{
+                    installingService === svc.type
+                      ? t('infrastructure.installing')
+                      : t('infrastructure.install')
+                  }}
                 </button>
               </template>
               <template v-else>
@@ -1151,7 +1872,11 @@ function confirmReconfigureDatabase() {
                     :disabled="stoppingService !== null"
                     @click="emit('stopService', svc.type)"
                   >
-                    {{ stoppingService === svc.type ? t('infrastructure.stopping') : t('infrastructure.stop') }}
+                    {{
+                      stoppingService === svc.type
+                        ? t('infrastructure.stopping')
+                        : t('infrastructure.stop')
+                    }}
                   </button>
                   <button
                     v-else
@@ -1159,11 +1884,18 @@ function confirmReconfigureDatabase() {
                     :disabled="startingService !== null"
                     @click="emit('startService', svc.type)"
                   >
-                    {{ startingService === svc.type ? t('infrastructure.starting') : t('infrastructure.start') }}
+                    {{
+                      startingService === svc.type
+                        ? t('infrastructure.starting')
+                        : t('infrastructure.start')
+                    }}
                   </button>
                 </template>
                 <!-- Tool indicator (for services without start/stop) -->
-                <div v-else class="flex-1 px-3 py-1.5 bg-slate-100 text-slate-500 rounded-lg text-xs font-medium text-center">
+                <div
+                  v-else
+                  class="flex-1 px-3 py-1.5 bg-slate-100 text-slate-500 rounded-lg text-xs font-medium text-center"
+                >
                   {{ t('infrastructure.tool') || 'Outil' }}
                 </div>
                 <!-- Logs button -->
@@ -1173,7 +1905,12 @@ function confirmReconfigureDatabase() {
                   @click="openConsoleForLogs(svc.type)"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
                   </svg>
                 </button>
                 <!-- Delete button (only if canRemove) -->
@@ -1184,7 +1921,12 @@ function confirmReconfigureDatabase() {
                   @click="emit('removeService', svc.type)"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
                   </svg>
                 </button>
                 <!-- Lock icon if cannot remove (critical service) -->
@@ -1194,7 +1936,12 @@ function confirmReconfigureDatabase() {
                   :title="t('infrastructure.criticalService')"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                    />
                   </svg>
                 </div>
               </template>
@@ -1207,7 +1954,10 @@ function confirmReconfigureDatabase() {
     <!-- Backups Section -->
     <section class="mb-8">
       <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-        <span class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 text-sm font-bold">B</span>
+        <span
+          class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 text-sm font-bold"
+          >B</span
+        >
         {{ t('infrastructure.backups') }}
       </h2>
       <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1218,7 +1968,9 @@ function confirmReconfigureDatabase() {
           :class="{ 'ring-2 ring-emerald-500/30': getService(svc.type)?.installed }"
         >
           <div class="flex items-start gap-3">
-            <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-sm font-bold text-amber-600 flex-shrink-0">
+            <div
+              class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-sm font-bold text-amber-600 flex-shrink-0"
+            >
               {{ svc.icon }}
             </div>
             <div class="flex-1 min-w-0">
@@ -1243,12 +1995,18 @@ function confirmReconfigureDatabase() {
                 :disabled="installingService !== null"
                 @click="emit('installService', svc.type)"
               >
-                {{ installingService === svc.type ? t('infrastructure.installing') : t('infrastructure.install') }}
+                {{
+                  installingService === svc.type
+                    ? t('infrastructure.installing')
+                    : t('infrastructure.install')
+                }}
               </button>
             </template>
             <template v-else>
               <!-- Installed badge -->
-              <span class="flex-1 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium text-center">
+              <span
+                class="flex-1 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium text-center"
+              >
                 {{ t('infrastructure.installed') }}
               </span>
               <!-- Delete button -->
@@ -1259,7 +2017,12 @@ function confirmReconfigureDatabase() {
                 @click="emit('removeService', svc.type)"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
                 </svg>
               </button>
             </template>
@@ -1271,7 +2034,10 @@ function confirmReconfigureDatabase() {
     <!-- System Services Section (SSH, Cron - protected) -->
     <section class="mb-8">
       <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-        <span class="w-8 h-8 bg-slate-200 rounded-lg flex items-center justify-center text-slate-700 text-sm font-bold">SY</span>
+        <span
+          class="w-8 h-8 bg-slate-200 rounded-lg flex items-center justify-center text-slate-700 text-sm font-bold"
+          >SY</span
+        >
         {{ t('infrastructure.systemServices') }}
       </h2>
       <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1282,16 +2048,28 @@ function confirmReconfigureDatabase() {
           :class="{ 'ring-2 ring-emerald-500/30': getService(svc.type)?.installed }"
         >
           <div class="flex items-start gap-3">
-            <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-700 flex-shrink-0">
+            <div
+              class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-700 flex-shrink-0"
+            >
               {{ svc.icon }}
             </div>
             <div class="flex-1 min-w-0">
               <h3 class="font-semibold text-slate-800 text-sm">{{ svc.name }}</h3>
               <p class="text-xs text-slate-500">{{ svc.description }}</p>
               <p v-if="getService(svc.type)?.installed" class="text-xs font-medium mt-0.5">
-                <span class="inline-flex items-center gap-1" :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-600'">
-                  <span class="w-1.5 h-1.5 rounded-full" :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"></span>
-                  {{ getService(svc.type)?.running ? t('infrastructure.running') : t('infrastructure.stopped') }}
+                <span
+                  class="inline-flex items-center gap-1"
+                  :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-600'"
+                >
+                  <span
+                    class="w-1.5 h-1.5 rounded-full"
+                    :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"
+                  ></span>
+                  {{
+                    getService(svc.type)?.running
+                      ? t('infrastructure.running')
+                      : t('infrastructure.stopped')
+                  }}
                 </span>
               </p>
               <p v-else class="text-xs text-slate-400 mt-0.5">{{ svc.size }}</p>
@@ -1307,7 +2085,11 @@ function confirmReconfigureDatabase() {
                 :disabled="installingService !== null"
                 @click="emit('installService', svc.type)"
               >
-                {{ installingService === svc.type ? t('infrastructure.installing') : t('infrastructure.install') }}
+                {{
+                  installingService === svc.type
+                    ? t('infrastructure.installing')
+                    : t('infrastructure.install')
+                }}
               </button>
             </template>
             <template v-else>
@@ -1318,7 +2100,11 @@ function confirmReconfigureDatabase() {
                   :disabled="stoppingService !== null"
                   @click="emit('stopService', svc.type)"
                 >
-                  {{ stoppingService === svc.type ? t('infrastructure.stopping') : t('infrastructure.stop') }}
+                  {{
+                    stoppingService === svc.type
+                      ? t('infrastructure.stopping')
+                      : t('infrastructure.stop')
+                  }}
                 </button>
               </template>
               <template v-else>
@@ -1327,7 +2113,11 @@ function confirmReconfigureDatabase() {
                   :disabled="startingService !== null"
                   @click="emit('startService', svc.type)"
                 >
-                  {{ startingService === svc.type ? t('infrastructure.starting') : t('infrastructure.start') }}
+                  {{
+                    startingService === svc.type
+                      ? t('infrastructure.starting')
+                      : t('infrastructure.start')
+                  }}
                 </button>
               </template>
               <!-- Lock icon - protected service -->
@@ -1336,7 +2126,12 @@ function confirmReconfigureDatabase() {
                 :title="t('infrastructure.protectedService')"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
                 </svg>
               </div>
             </template>
@@ -1348,7 +2143,10 @@ function confirmReconfigureDatabase() {
     <!-- FTP Services Section -->
     <section class="mb-8">
       <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-        <span class="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center text-cyan-600 text-sm font-bold">FT</span>
+        <span
+          class="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center text-cyan-600 text-sm font-bold"
+          >FT</span
+        >
         {{ t('infrastructure.ftpServices') }}
       </h2>
       <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1359,16 +2157,28 @@ function confirmReconfigureDatabase() {
           :class="{ 'ring-2 ring-emerald-500/30': getService(svc.type)?.installed }"
         >
           <div class="flex items-start gap-3">
-            <div class="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center text-sm font-bold text-cyan-600 flex-shrink-0">
+            <div
+              class="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center text-sm font-bold text-cyan-600 flex-shrink-0"
+            >
               {{ svc.icon }}
             </div>
             <div class="flex-1 min-w-0">
               <h3 class="font-semibold text-slate-800 text-sm">{{ svc.name }}</h3>
               <p class="text-xs text-slate-500">{{ svc.description }}</p>
               <p v-if="getService(svc.type)?.installed" class="text-xs font-medium mt-0.5">
-                <span class="inline-flex items-center gap-1" :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-600'">
-                  <span class="w-1.5 h-1.5 rounded-full" :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"></span>
-                  {{ getService(svc.type)?.running ? t('infrastructure.running') : t('infrastructure.stopped') }}
+                <span
+                  class="inline-flex items-center gap-1"
+                  :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-600'"
+                >
+                  <span
+                    class="w-1.5 h-1.5 rounded-full"
+                    :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"
+                  ></span>
+                  {{
+                    getService(svc.type)?.running
+                      ? t('infrastructure.running')
+                      : t('infrastructure.stopped')
+                  }}
                 </span>
               </p>
               <p v-else class="text-xs text-slate-400 mt-0.5">{{ svc.size }}</p>
@@ -1384,7 +2194,11 @@ function confirmReconfigureDatabase() {
                 :disabled="installingService !== null"
                 @click="emit('installService', svc.type)"
               >
-                {{ installingService === svc.type ? t('infrastructure.installing') : t('infrastructure.install') }}
+                {{
+                  installingService === svc.type
+                    ? t('infrastructure.installing')
+                    : t('infrastructure.install')
+                }}
               </button>
             </template>
             <template v-else>
@@ -1395,7 +2209,11 @@ function confirmReconfigureDatabase() {
                   :disabled="stoppingService !== null"
                   @click="emit('stopService', svc.type)"
                 >
-                  {{ stoppingService === svc.type ? t('infrastructure.stopping') : t('infrastructure.stop') }}
+                  {{
+                    stoppingService === svc.type
+                      ? t('infrastructure.stopping')
+                      : t('infrastructure.stop')
+                  }}
                 </button>
               </template>
               <template v-else>
@@ -1404,7 +2222,11 @@ function confirmReconfigureDatabase() {
                   :disabled="startingService !== null"
                   @click="emit('startService', svc.type)"
                 >
-                  {{ startingService === svc.type ? t('infrastructure.starting') : t('infrastructure.start') }}
+                  {{
+                    startingService === svc.type
+                      ? t('infrastructure.starting')
+                      : t('infrastructure.start')
+                  }}
                 </button>
               </template>
               <!-- Delete button -->
@@ -1414,7 +2236,12 @@ function confirmReconfigureDatabase() {
                 @click="emit('removeService', svc.type)"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
                 </svg>
               </button>
             </template>
@@ -1426,7 +2253,10 @@ function confirmReconfigureDatabase() {
     <!-- Storage Services Section (NFS) -->
     <section class="mb-8">
       <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-        <span class="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center text-teal-600 text-sm font-bold">ST</span>
+        <span
+          class="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center text-teal-600 text-sm font-bold"
+          >ST</span
+        >
         {{ t('infrastructure.storageServices') }}
       </h2>
       <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1437,16 +2267,28 @@ function confirmReconfigureDatabase() {
           :class="{ 'ring-2 ring-emerald-500/30': getService(svc.type)?.installed }"
         >
           <div class="flex items-start gap-3">
-            <div class="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-sm font-bold text-teal-600 flex-shrink-0">
+            <div
+              class="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-sm font-bold text-teal-600 flex-shrink-0"
+            >
               {{ svc.icon }}
             </div>
             <div class="flex-1 min-w-0">
               <h3 class="font-semibold text-slate-800 text-sm">{{ svc.name }}</h3>
               <p class="text-xs text-slate-500">{{ svc.description }}</p>
               <p v-if="getService(svc.type)?.installed" class="text-xs font-medium mt-0.5">
-                <span class="inline-flex items-center gap-1" :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-600'">
-                  <span class="w-1.5 h-1.5 rounded-full" :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"></span>
-                  {{ getService(svc.type)?.running ? t('infrastructure.running') : t('infrastructure.stopped') }}
+                <span
+                  class="inline-flex items-center gap-1"
+                  :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-600'"
+                >
+                  <span
+                    class="w-1.5 h-1.5 rounded-full"
+                    :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"
+                  ></span>
+                  {{
+                    getService(svc.type)?.running
+                      ? t('infrastructure.running')
+                      : t('infrastructure.stopped')
+                  }}
                 </span>
               </p>
               <p v-else class="text-xs text-slate-400 mt-0.5">{{ svc.size }}</p>
@@ -1462,7 +2304,11 @@ function confirmReconfigureDatabase() {
                 :disabled="installingService !== null"
                 @click="emit('installService', svc.type)"
               >
-                {{ installingService === svc.type ? t('infrastructure.installing') : t('infrastructure.install') }}
+                {{
+                  installingService === svc.type
+                    ? t('infrastructure.installing')
+                    : t('infrastructure.install')
+                }}
               </button>
             </template>
             <template v-else>
@@ -1473,7 +2319,11 @@ function confirmReconfigureDatabase() {
                   :disabled="stoppingService !== null"
                   @click="emit('stopService', svc.type)"
                 >
-                  {{ stoppingService === svc.type ? t('infrastructure.stopping') : t('infrastructure.stop') }}
+                  {{
+                    stoppingService === svc.type
+                      ? t('infrastructure.stopping')
+                      : t('infrastructure.stop')
+                  }}
                 </button>
               </template>
               <template v-else>
@@ -1482,7 +2332,11 @@ function confirmReconfigureDatabase() {
                   :disabled="startingService !== null"
                   @click="emit('startService', svc.type)"
                 >
-                  {{ startingService === svc.type ? t('infrastructure.starting') : t('infrastructure.start') }}
+                  {{
+                    startingService === svc.type
+                      ? t('infrastructure.starting')
+                      : t('infrastructure.start')
+                  }}
                 </button>
               </template>
               <!-- Delete button -->
@@ -1492,7 +2346,12 @@ function confirmReconfigureDatabase() {
                 @click="emit('removeService', svc.type)"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
                 </svg>
               </button>
             </template>
@@ -1508,24 +2367,49 @@ function confirmReconfigureDatabase() {
         class="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
         @click.self="closeConsoleModal"
       >
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden">
+        <div
+          class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden"
+        >
           <!-- Header -->
-          <div class="flex justify-between items-center px-6 py-4 border-b border-slate-200 bg-slate-50">
+          <div
+            class="flex justify-between items-center px-6 py-4 border-b border-slate-200 bg-slate-50"
+          >
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center">
-                <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <svg
+                  class="w-5 h-5 text-emerald-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
                 </svg>
               </div>
               <div>
                 <h3 class="text-lg font-bold text-slate-900">{{ consoleModalTitle }}</h3>
-                <p v-if="isOperationInProgress" class="text-sm text-amber-600 font-medium flex items-center gap-2">
+                <p
+                  v-if="isOperationInProgress"
+                  class="text-sm text-amber-600 font-medium flex items-center gap-2"
+                >
                   <span class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
                   {{ t('infrastructure.operationInProgress') }}
                 </p>
-                <p v-else-if="consoleModalMode === 'operation' && operationCompleted" class="text-sm text-emerald-600 font-medium flex items-center gap-2">
+                <p
+                  v-else-if="consoleModalMode === 'operation' && operationCompleted"
+                  class="text-sm text-emerald-600 font-medium flex items-center gap-2"
+                >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   {{ t('infrastructure.operationComplete') }}
                 </p>
@@ -1545,24 +2429,45 @@ function confirmReconfigureDatabase() {
                 @click="closeConsoleModal"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
           </div>
 
           <!-- Console Output -->
-          <div ref="consoleContainer" class="flex-1 overflow-y-auto bg-slate-900 p-4 font-mono text-sm min-h-[300px]">
+          <div
+            ref="consoleContainer"
+            class="flex-1 overflow-y-auto bg-slate-900 p-4 font-mono text-sm min-h-[300px]"
+          >
             <div v-if="infrastructureLogs.length === 0" class="text-slate-500 text-center py-8">
               <!-- Loading state for operation or fetching logs -->
-              <div v-if="fetchingRemoteLogs || isOperationInProgress" class="flex flex-col items-center gap-3">
-                <div class="w-8 h-8 border-2 border-slate-600 border-t-emerald-400 rounded-full animate-spin" />
+              <div
+                v-if="fetchingRemoteLogs || isOperationInProgress"
+                class="flex flex-col items-center gap-3"
+              >
+                <div
+                  class="w-8 h-8 border-2 border-slate-600 border-t-emerald-400 rounded-full animate-spin"
+                />
                 <span>{{ t('infrastructure.loadingLogs') }}</span>
               </div>
               <!-- Operation completed but no logs received -->
-              <div v-else-if="consoleModalMode === 'operation' && operationCompleted" class="flex flex-col items-center gap-3 text-emerald-400">
+              <div
+                v-else-if="consoleModalMode === 'operation' && operationCompleted"
+                class="flex flex-col items-center gap-3 text-emerald-400"
+              >
                 <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
                 <span>{{ t('infrastructure.operationComplete') }}</span>
               </div>
@@ -1580,7 +2485,9 @@ function confirmReconfigureDatabase() {
           </div>
 
           <!-- Footer -->
-          <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
+          <div
+            class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center"
+          >
             <p class="text-sm text-slate-500">
               {{ infrastructureLogs.length }} {{ t('console.lines') }}
             </p>
@@ -1615,21 +2522,40 @@ function confirmReconfigureDatabase() {
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
           <div class="flex justify-between items-center px-6 py-4 border-b border-slate-200">
             <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <span class="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center text-violet-600 text-sm font-bold">DB</span>
-              {{ t('infrastructure.setupDbTitle', { db: dbConfigType === 'postgresql' ? 'PostgreSQL' : dbConfigType === 'mysql' ? 'MySQL' : 'Redis' }) }}
+              <span
+                class="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center text-violet-600 text-sm font-bold"
+                >DB</span
+              >
+              {{
+                t('infrastructure.setupDbTitle', {
+                  db:
+                    dbConfigType === 'postgresql'
+                      ? 'PostgreSQL'
+                      : dbConfigType === 'mysql'
+                        ? 'MySQL'
+                        : 'Redis',
+                })
+              }}
             </h3>
             <button
               class="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors"
               @click="showDbConfigModal = false"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
           <div class="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-180px)]">
             <div v-if="dbConfigType !== 'redis'" class="space-y-2">
-              <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide">{{ t('infrastructure.databaseName') }}</label>
+              <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide">{{
+                t('infrastructure.databaseName')
+              }}</label>
               <input
                 v-model="dbConfigName"
                 type="text"
@@ -1643,46 +2569,108 @@ function confirmReconfigureDatabase() {
               <h4 class="font-medium text-slate-700">{{ t('infrastructure.securityOptions') }}</h4>
 
               <template v-if="dbConfigType === 'mysql'">
-                <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
-                  <input v-model="dbSecurityOptions.setRootPassword" type="checkbox" class="w-4 h-4 text-violet-600 rounded" />
-                  <span class="text-sm text-slate-700">{{ t('infrastructure.setRootPassword') }}</span>
+                <label
+                  class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors"
+                >
+                  <input
+                    v-model="dbSecurityOptions.setRootPassword"
+                    type="checkbox"
+                    class="w-4 h-4 text-violet-600 rounded"
+                  />
+                  <span class="text-sm text-slate-700">{{
+                    t('infrastructure.setRootPassword')
+                  }}</span>
                 </label>
-                <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
-                  <input v-model="dbSecurityOptions.removeAnonymousUsers" type="checkbox" class="w-4 h-4 text-violet-600 rounded" />
-                  <span class="text-sm text-slate-700">{{ t('infrastructure.removeAnonymousUsers') }}</span>
+                <label
+                  class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors"
+                >
+                  <input
+                    v-model="dbSecurityOptions.removeAnonymousUsers"
+                    type="checkbox"
+                    class="w-4 h-4 text-violet-600 rounded"
+                  />
+                  <span class="text-sm text-slate-700">{{
+                    t('infrastructure.removeAnonymousUsers')
+                  }}</span>
                 </label>
-                <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
-                  <input v-model="dbSecurityOptions.disallowRootRemote" type="checkbox" class="w-4 h-4 text-violet-600 rounded" />
-                  <span class="text-sm text-slate-700">{{ t('infrastructure.disallowRootRemote') }}</span>
+                <label
+                  class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors"
+                >
+                  <input
+                    v-model="dbSecurityOptions.disallowRootRemote"
+                    type="checkbox"
+                    class="w-4 h-4 text-violet-600 rounded"
+                  />
+                  <span class="text-sm text-slate-700">{{
+                    t('infrastructure.disallowRootRemote')
+                  }}</span>
                 </label>
-                <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
-                  <input v-model="dbSecurityOptions.removeTestDb" type="checkbox" class="w-4 h-4 text-violet-600 rounded" />
+                <label
+                  class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors"
+                >
+                  <input
+                    v-model="dbSecurityOptions.removeTestDb"
+                    type="checkbox"
+                    class="w-4 h-4 text-violet-600 rounded"
+                  />
                   <span class="text-sm text-slate-700">{{ t('infrastructure.removeTestDb') }}</span>
                 </label>
               </template>
 
               <template v-else-if="dbConfigType === 'postgresql'">
-                <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
-                  <input v-model="dbSecurityOptions.configureHba" type="checkbox" class="w-4 h-4 text-violet-600 rounded" />
+                <label
+                  class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors"
+                >
+                  <input
+                    v-model="dbSecurityOptions.configureHba"
+                    type="checkbox"
+                    class="w-4 h-4 text-violet-600 rounded"
+                  />
                   <span class="text-sm text-slate-700">{{ t('infrastructure.configureHba') }}</span>
                 </label>
               </template>
 
               <template v-else-if="dbConfigType === 'redis'">
-                <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
-                  <input v-model="dbSecurityOptions.enableProtectedMode" type="checkbox" class="w-4 h-4 text-violet-600 rounded" />
-                  <span class="text-sm text-slate-700">{{ t('infrastructure.enableProtectedMode') }}</span>
+                <label
+                  class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors"
+                >
+                  <input
+                    v-model="dbSecurityOptions.enableProtectedMode"
+                    type="checkbox"
+                    class="w-4 h-4 text-violet-600 rounded"
+                  />
+                  <span class="text-sm text-slate-700">{{
+                    t('infrastructure.enableProtectedMode')
+                  }}</span>
                 </label>
-                <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
-                  <input v-model="dbSecurityOptions.bindLocalhost" type="checkbox" class="w-4 h-4 text-violet-600 rounded" />
-                  <span class="text-sm text-slate-700">{{ t('infrastructure.bindLocalhost') }}</span>
+                <label
+                  class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors"
+                >
+                  <input
+                    v-model="dbSecurityOptions.bindLocalhost"
+                    type="checkbox"
+                    class="w-4 h-4 text-violet-600 rounded"
+                  />
+                  <span class="text-sm text-slate-700">{{
+                    t('infrastructure.bindLocalhost')
+                  }}</span>
                 </label>
               </template>
             </div>
 
             <div class="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-              <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              <svg
+                class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
               </svg>
               <p class="text-sm text-amber-800">
                 {{ t('infrastructure.connectionStringWarning') }}
@@ -1701,7 +2689,11 @@ function confirmReconfigureDatabase() {
               :disabled="configuringDatabase !== null"
               @click="submitDbConfig"
             >
-              {{ configuringDatabase ? t('infrastructure.settingUp') : t('infrastructure.installAndSecure') }}
+              {{
+                configuringDatabase
+                  ? t('infrastructure.settingUp')
+                  : t('infrastructure.installAndSecure')
+              }}
             </button>
           </div>
         </div>
@@ -1716,10 +2708,17 @@ function confirmReconfigureDatabase() {
         @click.self="showRemoveRuntimeModal = false"
       >
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-          <div class="flex justify-between items-center px-6 py-4 border-b border-red-200 bg-red-50 rounded-t-2xl">
+          <div
+            class="flex justify-between items-center px-6 py-4 border-b border-red-200 bg-red-50 rounded-t-2xl"
+          >
             <h3 class="text-lg font-bold text-red-800 flex items-center gap-2">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
               </svg>
               {{ t('infrastructure.removeRuntimeTitle', { runtime: runtimeToRemove }) }}
             </h3>
@@ -1728,14 +2727,23 @@ function confirmReconfigureDatabase() {
               @click="showRemoveRuntimeModal = false"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
           <div class="p-6">
-            <p class="text-slate-600">{{ t('infrastructure.removeRuntimeWarning', { runtime: runtimeToRemove }) }}</p>
+            <p class="text-slate-600">
+              {{ t('infrastructure.removeRuntimeWarning', { runtime: runtimeToRemove }) }}
+            </p>
           </div>
-          <div class="flex justify-end gap-3 px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
+          <div
+            class="flex justify-end gap-3 px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl"
+          >
             <button
               class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-colors"
               @click="showRemoveRuntimeModal = false"
@@ -1762,10 +2770,17 @@ function confirmReconfigureDatabase() {
         @click.self="showRemoveDatabaseModal = false"
       >
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-          <div class="flex justify-between items-center px-6 py-4 border-b border-red-200 bg-red-50 rounded-t-2xl">
+          <div
+            class="flex justify-between items-center px-6 py-4 border-b border-red-200 bg-red-50 rounded-t-2xl"
+          >
             <h3 class="text-lg font-bold text-red-800 flex items-center gap-2">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
               </svg>
               {{ t('infrastructure.removeDatabaseTitle', { db: databaseToRemove }) }}
             </h3>
@@ -1774,14 +2789,23 @@ function confirmReconfigureDatabase() {
               @click="showRemoveDatabaseModal = false"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
           <div class="p-6">
-            <p class="text-slate-600">{{ t('infrastructure.removeDatabaseWarning', { db: databaseToRemove }) }}</p>
+            <p class="text-slate-600">
+              {{ t('infrastructure.removeDatabaseWarning', { db: databaseToRemove }) }}
+            </p>
           </div>
-          <div class="flex justify-end gap-3 px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
+          <div
+            class="flex justify-end gap-3 px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl"
+          >
             <button
               class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-colors"
               @click="showRemoveDatabaseModal = false"
@@ -1810,8 +2834,18 @@ function confirmReconfigureDatabase() {
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
           <div class="flex justify-between items-center px-6 py-4 border-b border-slate-200">
             <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              <svg
+                class="w-5 h-5 text-amber-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
               </svg>
               {{ t('infrastructure.reconfigureDbTitle', { db: reconfigureDbType }) }}
             </h3>
@@ -1820,14 +2854,21 @@ function confirmReconfigureDatabase() {
               @click="showReconfigureDatabaseModal = false"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
           <div class="p-6 space-y-4">
             <p class="text-slate-600">{{ t('infrastructure.reconfigureDbDesc') }}</p>
             <div v-if="reconfigureDbType !== 'redis'" class="space-y-2">
-              <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide">{{ t('infrastructure.newDbName') }}</label>
+              <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide">{{
+                t('infrastructure.newDbName')
+              }}</label>
               <input
                 v-model="reconfigureDbName"
                 type="text"
@@ -1836,7 +2877,9 @@ function confirmReconfigureDatabase() {
               />
             </div>
           </div>
-          <div class="flex justify-end gap-3 px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
+          <div
+            class="flex justify-end gap-3 px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl"
+          >
             <button
               class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-colors"
               @click="showReconfigureDatabaseModal = false"
@@ -1858,13 +2901,15 @@ function confirmReconfigureDatabase() {
     <!-- Mail Server Wizard -->
     <MailServerWizard
       v-if="showMailWizard"
-      :servers="[{
-        id: server.id,
-        hostname: server.alias || server.hostname || `Serveur ${server.id.slice(0, 8)}`,
-        ip: server.ip || '',
-        alias: server.alias,
-        online: server.status === 'online'
-      }]"
+      :servers="[
+        {
+          id: server.id,
+          hostname: server.alias || server.hostname || `Serveur ${server.id.slice(0, 8)}`,
+          ip: server.ip || '',
+          alias: server.alias,
+          online: server.status === 'online',
+        },
+      ]"
       :installation-logs="infrastructureLogs"
       :installation-result="mailStackResult"
       @close="showMailWizard = false"
