@@ -1473,8 +1473,8 @@ fastify.register(async function (fastify) {
                     return;
                 }
 
-                // Infrastructure messages (Story 7.7) + Agent Update + Logs + Removal/Reconfiguration + Start/Stop
-                if (['GET_SERVER_STATUS', 'INSTALL_RUNTIME', 'UPDATE_RUNTIME', 'CONFIGURE_DATABASE', 'UPDATE_AGENT', 'GET_INFRASTRUCTURE_LOGS', 'CLEAR_INFRASTRUCTURE_LOGS', 'GET_SERVICE_LOGS', 'REMOVE_RUNTIME', 'REMOVE_DATABASE', 'RECONFIGURE_DATABASE', 'INSTALL_SERVICE', 'REMOVE_SERVICE', 'START_SERVICE', 'STOP_SERVICE', 'START_DATABASE', 'STOP_DATABASE'].includes(msg.type)) {
+                // Infrastructure messages (Story 7.7) + Agent Update + Logs + Removal/Reconfiguration + Start/Stop + Mail Stack
+                if (['GET_SERVER_STATUS', 'INSTALL_RUNTIME', 'UPDATE_RUNTIME', 'CONFIGURE_DATABASE', 'UPDATE_AGENT', 'GET_INFRASTRUCTURE_LOGS', 'CLEAR_INFRASTRUCTURE_LOGS', 'GET_SERVICE_LOGS', 'REMOVE_RUNTIME', 'REMOVE_DATABASE', 'RECONFIGURE_DATABASE', 'INSTALL_SERVICE', 'REMOVE_SERVICE', 'START_SERVICE', 'STOP_SERVICE', 'START_DATABASE', 'STOP_DATABASE', 'CONFIGURE_MAIL_STACK'].includes(msg.type)) {
                     const ok = await sendToAgentById(nodeId, msg, userId);
                     if (!ok) console.error(`❌ Infrastructure command failed: ${msg.type}`);
                     return;

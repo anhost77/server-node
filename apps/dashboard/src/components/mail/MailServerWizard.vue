@@ -642,6 +642,7 @@
 
           <!-- Installation Progress -->
           <div v-if="installing" class="space-y-4">
+            <!-- Steps -->
             <div v-for="step in installationSteps" :key="step.id" class="flex items-center gap-3">
               <div
                 :class="[
@@ -661,6 +662,30 @@
                   {{ step.name }}
                 </span>
                 <p v-if="step.message" class="text-xs text-slate-500">{{ step.message }}</p>
+              </div>
+            </div>
+
+            <!-- Live Console Logs -->
+            <div class="mt-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-slate-700">Console</span>
+                <span class="text-xs text-slate-500">{{ installationLogs?.length || 0 }} lignes</span>
+              </div>
+              <div
+                ref="logsContainer"
+                class="bg-slate-900 rounded-lg p-3 h-48 overflow-y-auto font-mono text-xs"
+              >
+                <div
+                  v-for="(log, i) in installationLogs"
+                  :key="i"
+                  :class="[
+                    'whitespace-pre-wrap',
+                    log.stream === 'stderr' ? 'text-red-400' : 'text-green-400'
+                  ]"
+                >{{ log.message }}</div>
+                <div v-if="!installationLogs?.length" class="text-slate-500 italic">
+                  En attente des logs...
+                </div>
               </div>
             </div>
           </div>
@@ -725,7 +750,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   Mail, X, Check, CheckCircle2, Server, Network, Database,
