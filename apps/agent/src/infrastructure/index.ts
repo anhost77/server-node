@@ -123,6 +123,194 @@ const DATABASE_SERVICE_NAMES: Record<DatabaseType, string> = {
 };
 
 // ============================================
+// SERVICE CLEANUP CONFIGURATION
+// ============================================
+
+/**
+ * Configuration de nettoyage pour chaque service
+ * - packages : Liste des packages à purger
+ * - user : Utilisateur système à supprimer (optionnel)
+ * - group : Groupe système à supprimer (optionnel)
+ * - dataDirs : Répertoires de données à supprimer en mode purge
+ * - configDirs : Répertoires de configuration à supprimer
+ */
+const SERVICE_CLEANUP_CONFIG: Partial<Record<ServiceType, {
+    packages: string[];
+    user?: string;
+    group?: string;
+    dataDirs?: string[];
+    configDirs?: string[];
+}>> = {
+    clamav: {
+        packages: ['clamav', 'clamav-daemon', 'clamav-freshclam', 'clamav-base', 'clamdscan', 'libclamav11'],
+        user: 'clamav',
+        group: 'clamav',
+        dataDirs: ['/var/lib/clamav', '/var/log/clamav', '/var/run/clamav'],
+        configDirs: ['/etc/clamav']
+    },
+    postfix: {
+        packages: ['postfix', 'postfix-policyd-spf-python', 'libsasl2-modules'],
+        user: 'postfix',
+        group: 'postfix',
+        dataDirs: ['/var/spool/postfix', '/var/lib/postfix'],
+        configDirs: ['/etc/postfix']
+    },
+    dovecot: {
+        packages: ['dovecot-core', 'dovecot-imapd', 'dovecot-pop3d', 'dovecot-lmtpd', 'dovecot-sieve'],
+        user: 'dovecot',
+        group: 'dovecot',
+        dataDirs: ['/var/lib/dovecot', '/var/run/dovecot'],
+        configDirs: ['/etc/dovecot']
+    },
+    rspamd: {
+        packages: ['rspamd'],
+        user: '_rspamd',
+        group: '_rspamd',
+        dataDirs: ['/var/lib/rspamd', '/var/log/rspamd'],
+        configDirs: ['/etc/rspamd']
+    },
+    opendkim: {
+        packages: ['opendkim', 'opendkim-tools'],
+        user: 'opendkim',
+        group: 'opendkim',
+        dataDirs: [],
+        configDirs: ['/etc/opendkim', '/etc/opendkim.conf']
+    },
+    bind9: {
+        packages: ['bind9', 'bind9utils', 'bind9-doc', 'bind9-host'],
+        user: 'bind',
+        group: 'bind',
+        dataDirs: ['/var/cache/bind', '/var/lib/bind'],
+        configDirs: ['/etc/bind']
+    },
+    netdata: {
+        packages: ['netdata'],
+        user: 'netdata',
+        group: 'netdata',
+        dataDirs: ['/var/lib/netdata', '/var/cache/netdata', '/var/log/netdata'],
+        configDirs: ['/etc/netdata']
+    },
+    nginx: {
+        packages: ['nginx', 'nginx-common', 'nginx-full', 'nginx-light', 'nginx-extras'],
+        // www-data est un utilisateur système partagé, on ne le supprime pas
+        dataDirs: ['/var/log/nginx', '/var/cache/nginx'],
+        configDirs: ['/etc/nginx']
+    },
+    vsftpd: {
+        packages: ['vsftpd', 'vsftpd-dbg'],
+        user: 'ftp',
+        group: 'ftp',
+        dataDirs: [],
+        configDirs: ['/etc/vsftpd.conf', '/etc/vsftpd']
+    },
+    proftpd: {
+        packages: ['proftpd', 'proftpd-basic', 'proftpd-core'],
+        user: 'proftpd',
+        group: 'proftpd',
+        dataDirs: ['/var/run/proftpd'],
+        configDirs: ['/etc/proftpd']
+    }
+};
+
+/**
+ * **cleanupServiceArtifacts()** - Nettoie complètement les artefacts d'un service
+ *
+ * Cette fonction effectue un nettoyage profond après la désinstallation :
+ * 1. Supprime les fichiers dpkg info résiduels
+ * 2. Nettoie les entrées dans statoverride
+ * 3. Supprime l'utilisateur/groupe système
+ * 4. Supprime les répertoires de données et config
+ *
+ * @param packagePrefix - Préfixe des packages (ex: "clamav", "postfix")
+ * @param user - Nom de l'utilisateur système à supprimer
+ * @param group - Nom du groupe système à supprimer
+ * @param dataDirs - Répertoires de données à supprimer
+ * @param configDirs - Répertoires de config à supprimer
+ * @param onLog - Fonction de logging
+ */
+async function cleanupServiceArtifacts(
+    packagePrefix: string,
+    user: string | undefined,
+    group: string | undefined,
+    dataDirs: string[],
+    configDirs: string[],
+    onLog: LogFn
+): Promise<void> {
+    // 1. Supprimer les fichiers dpkg info résiduels
+    const dpkgInfoDir = '/var/lib/dpkg/info';
+    if (fs.existsSync(dpkgInfoDir)) {
+        try {
+            const files = fs.readdirSync(dpkgInfoDir);
+            let deletedCount = 0;
+            for (const file of files) {
+                if (file.startsWith(packagePrefix)) {
+                    try {
+                        fs.unlinkSync(`${dpkgInfoDir}/${file}`);
+                        deletedCount++;
+                    } catch { }
+                }
+            }
+            if (deletedCount > 0) {
+                onLog(`   🗑️ ${deletedCount} fichiers dpkg info supprimés\n`, 'stdout');
+            }
+        } catch { }
+    }
+
+    // 2. Nettoyer les entrées dans statoverride
+    const statoverrideFile = '/var/lib/dpkg/statoverride';
+    if (fs.existsSync(statoverrideFile)) {
+        try {
+            const content = fs.readFileSync(statoverrideFile, 'utf-8');
+            const lines = content.split('\n');
+            const cleanedLines = lines.filter(line => !line.includes(packagePrefix));
+            if (lines.length !== cleanedLines.length) {
+                fs.writeFileSync(statoverrideFile, cleanedLines.join('\n'));
+                onLog(`   🧹 Entrées statoverride nettoyées\n`, 'stdout');
+            }
+        } catch { }
+    }
+
+    // 3. Supprimer l'utilisateur et le groupe système
+    // On utilise sed car userdel/groupdel peuvent échouer si le nom contient des caractères corrompus
+    if (user) {
+        try {
+            // Supprimer de passwd, shadow, group, gshadow
+            await runCommandSilent('bash', ['-c', `sed -i '/^${user}/d' /etc/passwd /etc/shadow 2>/dev/null || true`]);
+            onLog(`   👤 Utilisateur ${user} supprimé\n`, 'stdout');
+        } catch { }
+    }
+    if (group) {
+        try {
+            await runCommandSilent('bash', ['-c', `sed -i '/^${group}/d' /etc/group /etc/gshadow 2>/dev/null || true`]);
+            onLog(`   👥 Groupe ${group} supprimé\n`, 'stdout');
+        } catch { }
+    }
+
+    // 4. Supprimer les répertoires de données
+    for (const dir of dataDirs) {
+        if (fs.existsSync(dir)) {
+            try {
+                await runCommandSilent('rm', ['-rf', dir]);
+            } catch { }
+        }
+    }
+
+    // 5. Supprimer les répertoires de configuration
+    for (const dir of configDirs) {
+        if (fs.existsSync(dir)) {
+            try {
+                await runCommandSilent('rm', ['-rf', dir]);
+            } catch { }
+        }
+    }
+
+    // 6. Nettoyer le cache debconf pour ce service
+    try {
+        await runCommandSilent('bash', ['-c', `echo PURGE | debconf-communicate ${packagePrefix} 2>/dev/null || true`]);
+    } catch { }
+}
+
+// ============================================
 // INFRASTRUCTURE MANAGER CLASS
 // ============================================
 
@@ -591,133 +779,95 @@ export class InfrastructureManager {
     }
 
     private async doRemoveService(type: ServiceType, removeCmd: string): Promise<void> {
+        // Vérifier si on a une configuration de nettoyage pour ce service
+        const cleanupConfig = SERVICE_CLEANUP_CONFIG[type];
+
+        // Arrêter le service si possible
+        const serviceName = SERVICE_NAMES[type];
+        if (serviceName) {
+            try {
+                await runCommand('systemctl', ['stop', serviceName], this.onLog);
+            } catch { /* Service peut ne pas exister */ }
+        }
+
+        // Cas spéciaux pour certains services
         switch (type) {
-            case 'nginx':
-                await runCommand('systemctl', ['stop', 'nginx'], this.onLog);
-                await runCommand('apt-get', [removeCmd, '-y', 'nginx', 'nginx-common'], this.onLog);
-                break;
-            case 'haproxy':
-                await runCommand('systemctl', ['stop', 'haproxy'], this.onLog);
-                await runCommand('apt-get', [removeCmd, '-y', 'haproxy'], this.onLog);
-                break;
-            case 'keepalived':
-                await runCommand('systemctl', ['stop', 'keepalived'], this.onLog);
-                await runCommand('apt-get', [removeCmd, '-y', 'keepalived'], this.onLog);
-                break;
-            case 'certbot':
-                await runCommand('apt-get', [removeCmd, '-y', 'certbot', 'python3-certbot-nginx'], this.onLog);
-                break;
-            case 'fail2ban':
-                await runCommand('systemctl', ['stop', 'fail2ban'], this.onLog);
-                await runCommand('apt-get', [removeCmd, '-y', 'fail2ban'], this.onLog);
+            case 'clamav':
+                // ClamAV a deux services
+                try { await runCommandSilent('systemctl', ['stop', 'clamav-freshclam']); } catch { }
                 break;
             case 'ufw':
-                await runCommand('ufw', ['disable'], this.onLog);
-                await runCommand('apt-get', [removeCmd, '-y', 'ufw'], this.onLog);
-                break;
-            case 'wireguard':
-                await runCommand('apt-get', [removeCmd, '-y', 'wireguard', 'wireguard-tools'], this.onLog);
+                try { await runCommand('ufw', ['disable'], this.onLog); } catch { }
                 break;
             case 'pm2':
                 await runCommand('npm', ['uninstall', '-g', 'pm2'], this.onLog);
-                break;
-            case 'netdata':
-                await runCommand('systemctl', ['stop', 'netdata'], this.onLog);
-                await runCommand('apt-get', [removeCmd, '-y', 'netdata'], this.onLog);
-                break;
-            case 'loki':
-                await runCommand('systemctl', ['stop', 'loki'], this.onLog);
-                await runCommand('apt-get', [removeCmd, '-y', 'loki'], this.onLog);
-                break;
-            case 'bind9':
-                await runCommand('systemctl', ['stop', 'named'], this.onLog);
-                await runCommand('apt-get', [removeCmd, '-y', 'bind9', 'bind9utils', 'bind9-doc'], this.onLog);
-                break;
-            case 'postfix':
-                await runCommand('systemctl', ['stop', 'postfix'], this.onLog);
-                await runCommand('apt-get', [removeCmd, '-y', 'postfix', 'postfix-policyd-spf-python'], this.onLog);
-                break;
-            case 'dovecot':
-                await runCommand('systemctl', ['stop', 'dovecot'], this.onLog);
-                await runCommand('apt-get', [removeCmd, '-y', 'dovecot-core', 'dovecot-imapd', 'dovecot-pop3d', 'dovecot-lmtpd'], this.onLog);
-                break;
-            case 'rspamd':
-                await runCommand('systemctl', ['stop', 'rspamd'], this.onLog);
-                await runCommand('apt-get', [removeCmd, '-y', 'rspamd'], this.onLog);
-                break;
-            case 'opendkim':
-                await runCommand('systemctl', ['stop', 'opendkim'], this.onLog);
-                await runCommand('apt-get', [removeCmd, '-y', 'opendkim', 'opendkim-tools'], this.onLog);
-                break;
-            case 'clamav':
-                // Arrêter les services (ignorer les erreurs si déjà arrêtés)
-                try {
-                    await runCommand('systemctl', ['stop', 'clamav-daemon'], this.onLog);
-                } catch { /* Service peut ne pas exister */ }
-                try {
-                    await runCommand('systemctl', ['stop', 'clamav-freshclam'], this.onLog);
-                } catch { /* Service peut ne pas exister */ }
-
-                // Supprimer TOUS les packages ClamAV (y compris les dépendances)
-                await runCommand('apt-get', [removeCmd, '-y',
-                    'clamav', 'clamav-daemon', 'clamav-freshclam',
-                    'clamav-base', 'clamdscan', 'libclamav11'
-                ], this.onLog);
-
-                // Nettoyer les fichiers de données pour éviter les problèmes de réinstallation
-                const clamavDataDir = '/var/lib/clamav';
-                if (fs.existsSync(clamavDataDir)) {
-                    // Supprimer mirrors.dat (contient l'état du rate-limiting)
-                    const mirrorsFile = `${clamavDataDir}/mirrors.dat`;
-                    if (fs.existsSync(mirrorsFile)) {
-                        this.onLog(`🧹 Suppression du fichier mirrors.dat (reset rate-limiting)\n`, 'stdout');
-                        try { fs.unlinkSync(mirrorsFile); } catch { }
-                    }
-
-                    // En mode purge, supprimer aussi les définitions de virus
-                    if (removeCmd === 'purge') {
-                        this.onLog(`🧹 Suppression des définitions de virus...\n`, 'stdout');
-                        try { await runCommandSilent('rm', ['-rf', clamavDataDir]); } catch { }
-                    }
-                }
-
-                // Nettoyer les fichiers de socket et PID
-                try { await runCommandSilent('rm', ['-rf', '/var/run/clamav']); } catch { }
-                try { await runCommandSilent('rm', ['-rf', '/var/log/clamav']); } catch { }
-                break;
-            case 'spf-policyd':
-                await runCommand('apt-get', [removeCmd, '-y', 'postfix-policyd-spf-python'], this.onLog);
-                break;
-            case 'rsync':
-                await runCommand('apt-get', [removeCmd, '-y', 'rsync'], this.onLog);
-                break;
+                return; // PM2 n'utilise pas apt
             case 'rclone':
                 await runCommandSilent('rm', ['-f', '/usr/bin/rclone']);
                 await runCommandSilent('rm', ['-f', '/usr/local/share/man/man1/rclone.1']);
                 await runCommandSilent('rm', ['-f', '/usr/share/man/man1/rclone.1.gz']);
                 await runCommandSilent('rm', ['-rf', '/root/.config/rclone']);
                 this.onLog(`🗑️ Rclone binary and config removed\n`, 'stdout');
-                break;
-            case 'restic':
-                await runCommand('apt-get', [removeCmd, '-y', 'restic'], this.onLog);
-                break;
-            case 'vsftpd':
-                await runCommand('systemctl', ['stop', 'vsftpd'], this.onLog);
-                await runCommand('apt-get', [removeCmd, '-y', 'vsftpd', 'vsftpd-dbg'], this.onLog);
-                break;
-            case 'proftpd':
-                await runCommand('systemctl', ['stop', 'proftpd'], this.onLog);
-                await runCommand('apt-get', [removeCmd, '-y', 'proftpd', 'proftpd-basic', 'proftpd-core'], this.onLog);
-                break;
-            case 'nfs':
-                await runCommand('systemctl', ['stop', 'nfs-kernel-server'], this.onLog);
-                await runCommand('apt-get', [removeCmd, '-y', 'nfs-kernel-server', 'nfs-common', 'nfs-utils'], this.onLog);
-                break;
+                return; // Rclone n'utilise pas apt
             case 'ssh':
             case 'cron':
                 throw new Error(`${type} is a protected system service`);
-            default:
-                throw new Error(`Unknown service: ${type}`);
+        }
+
+        // Désinstallation via apt-get
+        if (cleanupConfig) {
+            // Utiliser la configuration centralisée
+            await runCommand('apt-get', [removeCmd, '-y', ...cleanupConfig.packages], this.onLog);
+
+            // Nettoyage complet des artefacts
+            this.onLog(`🧹 Nettoyage complet de ${type}...\n`, 'stdout');
+            await cleanupServiceArtifacts(
+                type, // Préfixe pour dpkg info
+                cleanupConfig.user,
+                cleanupConfig.group,
+                cleanupConfig.dataDirs || [],
+                cleanupConfig.configDirs || [],
+                this.onLog
+            );
+        } else {
+            // Services sans configuration spéciale - désinstallation simple
+            switch (type) {
+                case 'haproxy':
+                    await runCommand('apt-get', [removeCmd, '-y', 'haproxy'], this.onLog);
+                    break;
+                case 'keepalived':
+                    await runCommand('apt-get', [removeCmd, '-y', 'keepalived'], this.onLog);
+                    break;
+                case 'certbot':
+                    await runCommand('apt-get', [removeCmd, '-y', 'certbot', 'python3-certbot-nginx'], this.onLog);
+                    break;
+                case 'fail2ban':
+                    await runCommand('apt-get', [removeCmd, '-y', 'fail2ban'], this.onLog);
+                    break;
+                case 'ufw':
+                    await runCommand('apt-get', [removeCmd, '-y', 'ufw'], this.onLog);
+                    break;
+                case 'wireguard':
+                    await runCommand('apt-get', [removeCmd, '-y', 'wireguard', 'wireguard-tools'], this.onLog);
+                    break;
+                case 'loki':
+                    await runCommand('apt-get', [removeCmd, '-y', 'loki'], this.onLog);
+                    break;
+                case 'spf-policyd':
+                    await runCommand('apt-get', [removeCmd, '-y', 'postfix-policyd-spf-python'], this.onLog);
+                    break;
+                case 'rsync':
+                    await runCommand('apt-get', [removeCmd, '-y', 'rsync'], this.onLog);
+                    break;
+                case 'restic':
+                    await runCommand('apt-get', [removeCmd, '-y', 'restic'], this.onLog);
+                    break;
+                case 'nfs':
+                    await runCommand('apt-get', [removeCmd, '-y', 'nfs-kernel-server', 'nfs-common', 'nfs-utils'], this.onLog);
+                    break;
+                default:
+                    throw new Error(`Unknown service: ${type}`);
+            }
         }
     }
 
