@@ -355,7 +355,11 @@ export class TemplateManager {
         variables: TemplateVariables,
         options: WriteConfigOptions = {}
     ): void {
-        const content = this.render(templateName, variables);
+        let content = this.render(templateName, variables);
+
+        // IMPORTANT: Toujours convertir en format Unix (LF) pour éviter les problèmes
+        // Les fichiers avec CRLF (Windows) cassent les scripts Linux !
+        content = content.replace(/\r\n/g, '\n').replace(/\r/g, '');
 
         // Créer les répertoires parents si nécessaire
         if (options.createDirs !== false) {

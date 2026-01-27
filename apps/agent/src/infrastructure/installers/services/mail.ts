@@ -185,31 +185,55 @@ export async function installClamav(onLog: LogFn): Promise<string> {
     // ============================================
     // ÉTAPE 0 : Nettoyage COMPLET des corruptions CRLF
     // ============================================
-    // Les fichiers /etc/passwd, /etc/group peuvent contenir des \r (Windows)
-    // qui créent des utilisateurs avec des noms corrompus comme "clamav\r"
-    onLog(`🔧 Vérification et nettoyage des fichiers système...\n`, 'stdout');
+    // Les fichiers peuvent contenir des \r (Windows line endings) qui cassent tout
+    onLog(`🔧 Nettoyage des fichiers corrompus (CRLF)...\n`, 'stdout');
 
+    // 1. Fichiers système (/etc/passwd, /etc/group, etc.)
     const systemFiles = ['/etc/passwd', '/etc/group', '/etc/shadow', '/etc/gshadow'];
-    let filesFixed = false;
+
+    // 2. Scripts dpkg de clamav (c'est souvent LÀ que le problème se trouve !)
+    const dpkgInfoDir = '/var/lib/dpkg/info';
+    if (fs.existsSync(dpkgInfoDir)) {
+        try {
+            const files = fs.readdirSync(dpkgInfoDir);
+            for (const file of files) {
+                if (file.startsWith('clamav')) {
+                    systemFiles.push(`${dpkgInfoDir}/${file}`);
+                }
+            }
+        } catch { }
+    }
+
+    // 3. Fichiers de configuration debconf
+    const debconfFiles = [
+        '/var/cache/debconf/config.dat',
+        '/var/cache/debconf/passwords.dat',
+        '/var/cache/debconf/templates.dat'
+    ];
+    systemFiles.push(...debconfFiles);
+
+    let filesFixed = 0;
 
     for (const filePath of systemFiles) {
         if (fs.existsSync(filePath)) {
             try {
                 const content = fs.readFileSync(filePath, 'utf-8');
                 if (content.includes('\r')) {
-                    onLog(`   🔧 Correction CRLF dans ${filePath}\n`, 'stdout');
+                    onLog(`   🔧 Correction: ${filePath}\n`, 'stdout');
                     const fixedContent = content.replace(/\r\n/g, '\n').replace(/\r/g, '');
                     fs.writeFileSync(filePath, fixedContent);
-                    filesFixed = true;
+                    filesFixed++;
                 }
-            } catch (err) {
-                onLog(`   ⚠️ Impossible de corriger ${filePath}\n`, 'stderr');
+            } catch {
+                // Ignorer les fichiers qu'on ne peut pas lire/écrire
             }
         }
     }
 
-    if (filesFixed) {
-        onLog(`   ✅ Fichiers système corrigés\n`, 'stdout');
+    if (filesFixed > 0) {
+        onLog(`   ✅ ${filesFixed} fichier(s) corrigé(s)\n`, 'stdout');
+    } else {
+        onLog(`   ✅ Aucun fichier corrompu trouvé\n`, 'stdout');
     }
 
     // ============================================
