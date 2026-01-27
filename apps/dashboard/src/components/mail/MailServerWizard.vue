@@ -818,8 +818,16 @@ const installationSteps = ref<Array<{
   message?: string;
 }>>([]);
 
+// Debug: log servers reçus
+console.log('[MailServerWizard] props.servers:', props.servers);
+
 // Computed
-const availableServers = computed(() => props.servers.filter(s => s.online));
+const availableServers = computed(() => {
+  console.log('[MailServerWizard] computing availableServers from:', props.servers);
+  const filtered = props.servers.filter(s => s.online);
+  console.log('[MailServerWizard] filtered (online only):', filtered);
+  return filtered;
+});
 
 const singleServerServices = [
   { type: 'postfix', name: 'Postfix (MTA)' },

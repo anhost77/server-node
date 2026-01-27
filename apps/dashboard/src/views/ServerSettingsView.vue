@@ -52,6 +52,7 @@ interface Props {
     id: string
     alias?: string
     hostname?: string
+    ip?: string
     status: string
   }
   infraStatus: InfraStatus | null
@@ -1769,8 +1770,8 @@ function confirmReconfigureDatabase() {
       v-if="showMailWizard"
       :servers="[{
         id: server.id,
-        hostname: server.hostname || server.alias || server.id,
-        ip: server.hostname || '',
+        hostname: server.alias || server.hostname || `Serveur ${server.id.slice(0, 8)}`,
+        ip: server.ip || '',
         alias: server.alias,
         online: server.status === 'online'
       }]"

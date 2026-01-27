@@ -727,6 +727,11 @@ function connectWS() {
           type: msg.source || 'system',
           serverId: msg.serverId
         })
+        // Extraire l'IP des métriques et la stocker dans le serveur
+        if (msg.stream === 'metrics' && msg.ip && msg.serverId) {
+          const srv = servers.value.find(s => s.id === msg.serverId)
+          if (srv) srv.ip = msg.ip
+        }
         // Also push to deploy modal if open
         if (showDeployModal.value) {
           deployModalLogs.value.push({ data: msg.data, stream: msg.stream || 'stdout' })
