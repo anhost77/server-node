@@ -868,6 +868,19 @@ function connectWS() {
           }
         }
       }
+      // DNS Stack Configuration Response
+      else if (msg.type === 'DNS_STACK_CONFIGURED') {
+        if (msg.serverId === selectedServerId.value) {
+          configuringDnsStack.value = false
+          dnsStackResult.value = {
+            success: msg.success,
+            error: msg.error
+          }
+          if (msg.success) {
+            requestServerStatus()
+          }
+        }
+      }
       else if (msg.type === 'DATABASE_STARTED') {
         if (msg.serverId === selectedServerId.value) {
           startingDatabase.value = null
@@ -1797,6 +1810,23 @@ function configureMailStack(serverId: string, config: any) {
   infrastructureLogs.value = []
   ws?.send(JSON.stringify({
     type: 'CONFIGURE_MAIL_STACK',
+    serverId,
+    config
+  }))
+}
+
+// DNS Stack Configuration
+const configuringDnsStack = ref(false)
+const dnsStackResult = ref<{ success: boolean; error?: string } | null>(null)
+
+function configureDnsStack(serverId: string, config: any) {
+  if (configuringDnsStack.value) return
+
+  configuringDnsStack.value = true
+  dnsStackResult.value = null
+  infrastructureLogs.value = []
+  ws?.send(JSON.stringify({
+    type: 'CONFIGURE_DNS_STACK',
     serverId,
     config
   }))
@@ -4389,6 +4419,7 @@ function openNewCannedResponse() {
              @clear-remote-logs="clearRemoteLogs"
              @clear-infra-logs="() => infrastructureLogs = []"
              @configure-mail-stack="configureMailStack"
+             @configure-dns-stack="configureDnsStack"
            />
 
         </div>

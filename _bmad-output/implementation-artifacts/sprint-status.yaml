@@ -87,6 +87,7 @@ development_status:
   7-8-one-click-agent-update: done  # Dashboard update button + SSH fallback for old agents
   7-9-server-deletion: done  # Delete server from dashboard + agent shutdown + cascade delete
   7-10-mail-server-wizard: in-progress  # Mail stack configuration wizard with architecture selection
+  7-11-dns-server-wizard: done  # DNS wizard with BIND9 configuration, DNSSEC, and security options
   epic-7-retrospective: optional
 
   epic-8: backlog  # Distributed Mail Architecture

@@ -610,6 +610,50 @@ WantedBy=multi-user.target
                 return;
             }
 
+            // Handle CONFIGURE_DNS_STACK - Installation et configuration complète du serveur DNS
+            if (raw.type === 'CONFIGURE_DNS_STACK') {
+                const config = raw.config as {
+                    architecture: 'primary' | 'primary-secondary' | 'cache' | 'split-horizon';
+                    hostname: string;
+                    forwarders: string[];
+                    localNetwork: string;
+                    zones: Array<{ name: string; type: 'master' | 'forward'; ttl: number }>;
+                    createReverseZone: boolean;
+                    security: {
+                        dnssec: { enabled: boolean; algorithm: string; autoRotate: boolean };
+                        tsig: { enabled: boolean };
+                        rrl: { enabled: boolean; responsesPerSecond: number; window: number };
+                        logging: boolean;
+                    };
+                    serverIp: string;
+                };
+                const infraManager = new InfrastructureManager((message, stream) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'INFRASTRUCTURE_LOG',
+                            serverId: currentServerId,
+                            message,
+                            stream
+                        }));
+                    }
+                });
+                infraManager.configureDnsStack(config).then(() => {
+                    ws.send(JSON.stringify({
+                        type: 'DNS_STACK_CONFIGURED',
+                        serverId: currentServerId,
+                        success: true
+                    }));
+                }).catch((error: Error) => {
+                    ws.send(JSON.stringify({
+                        type: 'DNS_STACK_CONFIGURED',
+                        serverId: currentServerId,
+                        success: false,
+                        error: error.message
+                    }));
+                });
+                return;
+            }
+
             // Handle REMOVE_SERVICE
             if (raw.type === 'REMOVE_SERVICE') {
                 const service = raw.service as ServiceType;

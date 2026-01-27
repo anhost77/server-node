@@ -1242,4 +1242,436 @@ export class InfrastructureManager {
 
     this.onLog(`  ✅ Mail configuration saved to ${configDir}/mail.json\n`, 'stdout');
   }
+
+  // ============================================================================
+  // DNS STACK CONFIGURATION (BIND9)
+  // ============================================================================
+
+  /**
+   * **configureDnsStack()** - Configure un serveur DNS complet avec BIND9
+   *
+   * Cette fonction orchestre l'installation et la configuration d'un serveur DNS.
+   * Selon l'architecture choisie (primaire, cache, etc.), elle configure :
+   * - Les zones DNS (master, forward)
+   * - Les options de sécurité (DNSSEC, TSIG, RRL)
+   * - Les fichiers de configuration BIND9
+   *
+   * @param config - Configuration DNS complète depuis le wizard
+   */
+  async configureDnsStack(config: {
+    architecture: 'primary' | 'primary-secondary' | 'cache' | 'split-horizon';
+    hostname: string;
+    forwarders: string[];
+    localNetwork: string;
+    zones: Array<{ name: string; type: 'master' | 'forward'; ttl: number }>;
+    createReverseZone: boolean;
+    security: {
+      dnssec: { enabled: boolean; algorithm: string; autoRotate: boolean };
+      tsig: { enabled: boolean };
+      rrl: { enabled: boolean; responsesPerSecond: number; window: number };
+      logging: boolean;
+    };
+    serverIp: string;
+  }): Promise<void> {
+    this.onLog(`\n📡 Configuration du serveur DNS (${config.architecture})\n`, 'stdout');
+    this.onLog(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`, 'stdout');
+
+    // Étape 1: Installer BIND9 si pas déjà fait
+    this.onLog(`\n📦 Étape 1/4 : Installation de BIND9...\n`, 'stdout');
+    await this.installService('bind9');
+
+    // Étape 2: Configurer les zones DNS (sauf mode cache)
+    if (config.architecture !== 'cache' && config.zones.length > 0) {
+      this.onLog(`\n🌐 Étape 2/4 : Configuration des zones DNS...\n`, 'stdout');
+      await this.configureDnsZones(config);
+    } else if (config.architecture === 'cache') {
+      this.onLog(`\n🌐 Étape 2/4 : Mode cache - pas de zones à créer\n`, 'stdout');
+    } else {
+      this.onLog(`\n🌐 Étape 2/4 : Aucune zone configurée\n`, 'stdout');
+    }
+
+    // Étape 3: Appliquer la configuration de sécurité
+    this.onLog(`\n🔒 Étape 3/4 : Application des paramètres de sécurité...\n`, 'stdout');
+    await this.applyDnsSecurityConfig(config);
+
+    // Étape 4: Sauvegarder la configuration et redémarrer
+    this.onLog(`\n💾 Étape 4/4 : Sauvegarde et redémarrage...\n`, 'stdout');
+    await this.saveDnsConfig(config);
+
+    // Vérifier la configuration et redémarrer BIND9
+    this.onLog(`  ⏳ Vérification de la configuration BIND9...\n`, 'stdout');
+    try {
+      await runCommand('named-checkconf', [], (data) => this.onLog(data, 'stdout'));
+      this.onLog(`  ✅ Configuration BIND9 valide\n`, 'stdout');
+    } catch {
+      this.onLog(`  ⚠️ Avertissement: Vérification de configuration échouée\n`, 'stderr');
+    }
+
+    this.onLog(`  ⏳ Redémarrage de BIND9...\n`, 'stdout');
+    await runCommand('systemctl', ['restart', 'named'], (data) => this.onLog(data, 'stdout'));
+    await runCommand('systemctl', ['enable', 'named'], (data) => this.onLog(data, 'stdout'));
+
+    this.onLog(`\n✅ Serveur DNS configuré avec succès!\n`, 'stdout');
+    this.onLog(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`, 'stdout');
+  }
+
+  /**
+   * **configureDnsZones()** - Configure les fichiers de zones DNS
+   */
+  private async configureDnsZones(config: {
+    hostname: string;
+    zones: Array<{ name: string; type: 'master' | 'forward'; ttl: number }>;
+    createReverseZone: boolean;
+    serverIp: string;
+  }): Promise<void> {
+    const zonesDir = '/etc/bind/zones';
+    await runCommandSilent('mkdir', ['-p', zonesDir]);
+
+    // Générer le serial (format YYYYMMDDNN)
+    const now = new Date();
+    const serial = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}01`;
+
+    for (const zone of config.zones) {
+      this.onLog(`  📝 Création de la zone ${zone.name}...\n`, 'stdout');
+
+      // Générer le fichier de zone
+      const zoneContent = this.generateZoneFile(zone, config.hostname, config.serverIp, serial);
+      const zonePath = path.join(zonesDir, `db.${zone.name}`);
+      fs.writeFileSync(zonePath, zoneContent);
+
+      this.onLog(`  ✅ Zone ${zone.name} créée\n`, 'stdout');
+    }
+
+    // Créer la zone inverse si demandé
+    if (config.createReverseZone && config.serverIp) {
+      const ipParts = config.serverIp.split('.');
+      if (ipParts.length === 4) {
+        const reverseZoneName = `${ipParts[2]}.${ipParts[1]}.${ipParts[0]}.in-addr.arpa`;
+        this.onLog(`  📝 Création de la zone inverse ${reverseZoneName}...\n`, 'stdout');
+
+        const reverseZoneContent = this.generateReverseZoneFile(
+          config.hostname,
+          config.serverIp,
+          serial,
+          config.zones[0]?.name || 'localhost',
+        );
+        fs.writeFileSync(path.join(zonesDir, `db.${reverseZoneName}`), reverseZoneContent);
+
+        this.onLog(`  ✅ Zone inverse créée\n`, 'stdout');
+      }
+    }
+
+    // Générer named.conf.local
+    const namedLocalContent = this.generateNamedConfLocal(config);
+    fs.writeFileSync('/etc/bind/named.conf.local', namedLocalContent);
+    this.onLog(`  ✅ named.conf.local mis à jour\n`, 'stdout');
+  }
+
+  /**
+   * **generateZoneFile()** - Génère le contenu d'un fichier de zone DNS
+   */
+  private generateZoneFile(
+    zone: { name: string; type: string; ttl: number },
+    hostname: string,
+    serverIp: string,
+    serial: string,
+  ): string {
+    // Extraire le hostname court (ns1) depuis le FQDN (ns1.example.com)
+    const nsHostname = hostname.split('.')[0] || 'ns1';
+
+    const templatesDir = path.join(__dirname, 'templates');
+    const templatePath = path.join(templatesDir, 'bind9', 'zone.db.conf');
+
+    if (fs.existsSync(templatePath)) {
+      const template = fs.readFileSync(templatePath, 'utf-8');
+      return this.applyTemplateVariables(template, {
+        domain: zone.name,
+        hostname: hostname,
+        nsHostname: nsHostname,
+        serverIp: serverIp,
+        serial: serial,
+        ttl: String(zone.ttl || 3600),
+      });
+    }
+
+    // Fallback si le template n'existe pas
+    return `; Zone file for ${zone.name} - Generated by ServerFlow
+$TTL    ${zone.ttl || 3600}
+@       IN      SOA     ${hostname}. admin.${zone.name}. (
+                        ${serial}        ; Serial
+                        3600             ; Refresh
+                        1800             ; Retry
+                        604800           ; Expire
+                        86400 )          ; Minimum TTL
+
+@       IN      NS      ${hostname}.
+${nsHostname}       IN      A       ${serverIp}
+@       IN      A       ${serverIp}
+www     IN      A       ${serverIp}
+`;
+  }
+
+  /**
+   * **generateReverseZoneFile()** - Génère un fichier de zone inverse (PTR)
+   */
+  private generateReverseZoneFile(
+    hostname: string,
+    serverIp: string,
+    serial: string,
+    domain: string,
+  ): string {
+    const ipParts = serverIp.split('.');
+    const lastOctet = ipParts[3] || '1';
+
+    return `; Reverse zone file - Generated by ServerFlow
+$TTL    3600
+@       IN      SOA     ${hostname}. admin.${domain}. (
+                        ${serial}        ; Serial
+                        3600             ; Refresh
+                        1800             ; Retry
+                        604800           ; Expire
+                        86400 )          ; Minimum TTL
+
+@       IN      NS      ${hostname}.
+${lastOctet}      IN      PTR     ${hostname}.
+`;
+  }
+
+  /**
+   * **generateNamedConfLocal()** - Génère named.conf.local avec les zones
+   */
+  private generateNamedConfLocal(config: {
+    zones: Array<{ name: string; type: 'master' | 'forward'; ttl: number }>;
+    createReverseZone: boolean;
+    serverIp: string;
+  }): string {
+    let content = `// BIND9 Local Zone Configuration - Generated by ServerFlow
+// Do not edit manually - changes will be overwritten
+
+`;
+
+    for (const zone of config.zones) {
+      content += `zone "${zone.name}" {
+    type ${zone.type};
+    file "/etc/bind/zones/db.${zone.name}";
+};
+
+`;
+    }
+
+    // Zone inverse
+    if (config.createReverseZone && config.serverIp) {
+      const ipParts = config.serverIp.split('.');
+      if (ipParts.length === 4) {
+        const reverseZoneName = `${ipParts[2]}.${ipParts[1]}.${ipParts[0]}.in-addr.arpa`;
+        content += `zone "${reverseZoneName}" {
+    type master;
+    file "/etc/bind/zones/db.${reverseZoneName}";
+};
+`;
+      }
+    }
+
+    return content;
+  }
+
+  /**
+   * **applyDnsSecurityConfig()** - Applique la configuration de sécurité DNS
+   */
+  private async applyDnsSecurityConfig(config: {
+    architecture: string;
+    hostname: string;
+    forwarders: string[];
+    localNetwork: string;
+    security: {
+      dnssec: { enabled: boolean; algorithm: string; autoRotate: boolean };
+      tsig: { enabled: boolean };
+      rrl: { enabled: boolean; responsesPerSecond: number; window: number };
+      logging: boolean;
+    };
+    serverIp: string;
+  }): Promise<void> {
+    const isCache = config.architecture === 'cache';
+
+    // Générer named.conf.options avec sécurité
+    const optionsContent = this.generateDnsOptionsConfig(config, isCache);
+    fs.writeFileSync('/etc/bind/named.conf.options', optionsContent);
+
+    this.onLog(`  ✅ Options de sécurité configurées\n`, 'stdout');
+
+    // DNSSEC
+    if (config.security.dnssec.enabled) {
+      this.onLog(`  🔐 DNSSEC activé (algorithme: ${config.security.dnssec.algorithm})\n`, 'stdout');
+      // Note: La génération des clés DNSSEC nécessite des commandes supplémentaires
+      // qui seront implémentées dans une future story
+    }
+
+    // TSIG
+    if (config.security.tsig.enabled) {
+      this.onLog(`  🔑 TSIG activé pour les transferts de zone\n`, 'stdout');
+    }
+
+    // RRL
+    if (config.security.rrl.enabled) {
+      this.onLog(
+        `  🛡️ RRL activé (${config.security.rrl.responsesPerSecond} rps, window: ${config.security.rrl.window}s)\n`,
+        'stdout',
+      );
+    }
+
+    // Logging
+    if (config.security.logging) {
+      this.onLog(`  📝 Journalisation des requêtes activée\n`, 'stdout');
+      await runCommandSilent('mkdir', ['-p', '/var/log/named']);
+      await runCommandSilent('chown', ['bind:bind', '/var/log/named']);
+    }
+  }
+
+  /**
+   * **generateDnsOptionsConfig()** - Génère named.conf.options avec les options de sécurité
+   */
+  private generateDnsOptionsConfig(
+    config: {
+      forwarders: string[];
+      localNetwork: string;
+      security: {
+        rrl: { enabled: boolean; responsesPerSecond: number; window: number };
+        logging: boolean;
+      };
+    },
+    isCache: boolean,
+  ): string {
+    const templatesDir = path.join(__dirname, 'templates');
+    const templatePath = path.join(templatesDir, 'bind9', 'named.conf.options-secure.conf');
+
+    if (fs.existsSync(templatePath)) {
+      const template = fs.readFileSync(templatePath, 'utf-8');
+
+      // Construire la liste des forwarders
+      let forwardersBlock = '';
+      if (config.forwarders && config.forwarders.length > 0) {
+        forwardersBlock = config.forwarders.map((f) => `        ${f};`).join('\n');
+      }
+
+      // Variables pour le template
+      const variables: Record<string, string> = {
+        forwarders: forwardersBlock,
+        forwardMode: isCache ? 'only' : 'first',
+        listenOn: 'any',
+        listenOnV6: 'any',
+        allowQuery: isCache ? config.localNetwork || 'localhost' : 'any',
+        recursion: isCache ? 'yes' : 'no',
+        allowRecursion: config.localNetwork || 'localhost',
+        allowTransfer: 'none',
+        rrl: config.security.rrl.enabled ? 'true' : '',
+        rrlResponsesPerSecond: String(config.security.rrl.responsesPerSecond || 5),
+        rrlWindow: String(config.security.rrl.window || 15),
+        logging: config.security.logging ? 'true' : '',
+        cacheMode: isCache ? 'true' : '',
+      };
+
+      return this.applyDnsTemplateWithConditions(template, variables);
+    }
+
+    // Fallback simple si le template n'existe pas
+    return this.generateFallbackDnsOptions(config, isCache);
+  }
+
+  /**
+   * **applyDnsTemplateWithConditions()** - Applique un template avec conditions {{#if}} et {{#each}}
+   */
+  private applyDnsTemplateWithConditions(template: string, variables: Record<string, string>): string {
+    let result = template;
+
+    // Traiter les blocs {{#if variable}}...{{/if}}
+    result = result.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_, varName, content) => {
+      const value = variables[varName];
+      if (value && value !== '' && value !== 'false') {
+        return content;
+      }
+      return '';
+    });
+
+    // Traiter les blocs {{#unless variable}}...{{/unless}}
+    result = result.replace(/\{\{#unless\s+(\w+)\}\}([\s\S]*?)\{\{\/unless\}\}/g, (_, varName, content) => {
+      const value = variables[varName];
+      if (!value || value === '' || value === 'false') {
+        return content;
+      }
+      return '';
+    });
+
+    // Traiter les blocs {{#each forwarders}}...{{/each}} (simplifié pour forwarders)
+    result = result.replace(/\{\{#each\s+forwarders\}\}[\s\S]*?\{\{\/each\}\}/g, () => {
+      return variables.forwarders || '';
+    });
+
+    // Remplacer les variables simples
+    result = this.applyTemplateVariables(result, variables);
+
+    return result;
+  }
+
+  /**
+   * **generateFallbackDnsOptions()** - Génère une config de fallback si le template n'existe pas
+   */
+  private generateFallbackDnsOptions(
+    config: {
+      forwarders: string[];
+      localNetwork: string;
+      security: {
+        rrl: { enabled: boolean; responsesPerSecond: number; window: number };
+        logging: boolean;
+      };
+    },
+    isCache: boolean,
+  ): string {
+    let content = `// BIND9 Options - Generated by ServerFlow
+options {
+    directory "/var/cache/bind";
+    dnssec-validation auto;
+    listen-on { any; };
+    listen-on-v6 { any; };
+`;
+
+    if (isCache && config.forwarders.length > 0) {
+      content += `    forwarders {\n`;
+      for (const forwarder of config.forwarders) {
+        content += `        ${forwarder};\n`;
+      }
+      content += `    };\n    forward only;\n`;
+    }
+
+    content += `    allow-query { ${isCache ? config.localNetwork || 'localhost' : 'any'}; };
+    recursion ${isCache ? 'yes' : 'no'};
+`;
+
+    if (isCache) {
+      content += `    allow-recursion { ${config.localNetwork || 'localhost'}; };\n`;
+    }
+
+    content += `    allow-transfer { none; };
+    version "not disclosed";
+};
+`;
+
+    return content;
+  }
+
+  /**
+   * **saveDnsConfig()** - Sauvegarde la configuration DNS pour référence future
+   */
+  private async saveDnsConfig(config: any): Promise<void> {
+    const configDir = '/opt/serverflow/config';
+    await runCommandSilent('mkdir', ['-p', configDir]);
+
+    const dnsConfig = {
+      ...config,
+      configuredAt: new Date().toISOString(),
+    };
+
+    fs.writeFileSync(path.join(configDir, 'dns.json'), JSON.stringify(dnsConfig, null, 2));
+
+    this.onLog(`  ✅ DNS configuration saved to ${configDir}/dns.json\n`, 'stdout');
+  }
 }

@@ -2,6 +2,7 @@
 import { ref, computed, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import MailServerWizard from '@/components/mail/MailServerWizard.vue';
+import DnsServerWizard from '@/components/dns/DnsServerWizard.vue';
 
 const { t } = useI18n();
 
@@ -100,6 +101,7 @@ const emit = defineEmits<{
   clearInfraLogs: [];
   copyInfraLogs: [];
   configureMailStack: [serverId: string, config: any];
+  configureDnsStack: [serverId: string, config: any];
 }>();
 
 const serverName = computed(
@@ -409,6 +411,42 @@ watch(
 function handleMailWizardComplete(config: any) {
   console.log('Mail wizard completed with config:', config);
   showMailWizard.value = false;
+  // Rafraîchir le statut du serveur pour voir les nouveaux services
+  emit('refresh');
+}
+
+// DNS Wizard
+const showDnsWizard = ref(false);
+const showManualDnsConfig = ref(false);
+const isDnsWizardCtaCollapsed = ref(false);
+
+// Computed pour vérifier si des services DNS sont installés
+const hasAnyDnsServiceInstalled = computed(() => {
+  if (!props.infraStatus?.services) return false;
+  return dnsServices.some((svc) => getService(svc.type)?.installed);
+});
+
+// Réduire automatiquement le wizard CTA DNS si des services DNS sont installés
+watch(
+  hasAnyDnsServiceInstalled,
+  (hasServices) => {
+    if (hasServices) {
+      isDnsWizardCtaCollapsed.value = true;
+    }
+  },
+  { immediate: true },
+);
+
+/**
+ * **handleDnsWizardComplete()** - Gère la fin du wizard DNS
+ *
+ * Cette fonction est appelée quand l'utilisateur termine le wizard de
+ * configuration DNS. Elle ferme le modal et rafraîchit le statut du serveur
+ * pour afficher les nouveaux services installés.
+ */
+function handleDnsWizardComplete(config: any) {
+  console.log('DNS wizard completed with config:', config);
+  showDnsWizard.value = false;
   // Rafraîchir le statut du serveur pour voir les nouveaux services
   emit('refresh');
 }
@@ -1354,123 +1392,443 @@ function confirmReconfigureDatabase() {
 
     <!-- DNS Section -->
     <section class="mb-8">
-      <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-        <span
-          class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 text-sm font-bold"
-          >D</span
-        >
-        {{ t('infrastructure.dns') }}
-      </h2>
-      <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <span
+            class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 text-sm font-bold"
+            >D</span
+          >
+          {{ t('infrastructure.dns') }}
+        </h2>
+      </div>
+
+      <!-- Wizard CTA Card - Collapsible quand services installés -->
+      <div
+        class="glass-card mb-4 overflow-hidden transition-all duration-300 ease-out relative"
+        :class="[
+          hasAnyDnsServiceInstalled && isDnsWizardCtaCollapsed
+            ? 'bg-gradient-to-r from-indigo-50/50 to-blue-50/50 border border-indigo-100/50 cursor-pointer hover:border-indigo-200 hover:shadow-md'
+            : 'bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200/50',
+        ]"
+        @click="
+          hasAnyDnsServiceInstalled && isDnsWizardCtaCollapsed ? (isDnsWizardCtaCollapsed = false) : null
+        "
+      >
+        <!-- Version collapsed (quand services installés) -->
         <div
-          v-for="svc in dnsServices"
-          :key="svc.type"
-          class="glass-card p-4"
-          :class="{ 'ring-2 ring-emerald-500/30': getService(svc.type)?.installed }"
+          v-if="hasAnyDnsServiceInstalled && isDnsWizardCtaCollapsed"
+          class="p-3 flex items-center justify-between group"
         >
-          <div class="flex items-start gap-3">
+          <div class="flex items-center gap-3">
             <div
-              class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-sm font-bold text-indigo-600 flex-shrink-0"
+              class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-sm shadow-indigo-500/10 transition-transform group-hover:scale-105"
             >
-              {{ svc.icon }}
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                />
+              </svg>
             </div>
-            <div class="flex-1 min-w-0">
-              <h3 class="font-semibold text-slate-800 text-sm">{{ svc.name }}</h3>
-              <p class="text-xs text-slate-500">{{ svc.description }}</p>
-              <p v-if="getService(svc.type)?.installed" class="text-xs font-medium mt-0.5">
-                <span
-                  class="inline-flex items-center gap-1"
-                  :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-500'"
-                >
-                  <span
-                    class="w-1.5 h-1.5 rounded-full"
-                    :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"
-                  ></span>
-                  {{
-                    getService(svc.type)?.running
-                      ? t('infrastructure.running')
-                      : t('infrastructure.stopped')
-                  }}
-                </span>
-              </p>
-              <p v-else class="text-xs text-slate-400 mt-0.5">{{ svc.size }}</p>
-              <p v-if="getService(svc.type)?.version" class="text-xs text-slate-500">
-                v{{ getService(svc.type)?.version }}
+            <div>
+              <h3 class="text-sm font-semibold text-slate-700">
+                {{ t('dns.wizard.cta.collapsed') || 'Assistant de configuration DNS' }}
+              </h3>
+              <p class="text-xs text-slate-500">
+                {{ t('dns.wizard.cta.clickExpand') || 'Cliquez pour développer' }}
               </p>
             </div>
           </div>
-          <div class="flex items-center gap-2 mt-3">
-            <template v-if="!getService(svc.type)?.installed">
-              <button
-                class="flex-1 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-                :disabled="installingService !== null"
-                @click="emit('installService', svc.type)"
-              >
+          <svg
+            class="w-5 h-5 text-indigo-400 transition-transform group-hover:translate-y-0.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </div>
+
+        <!-- Version expanded (par défaut ou quand déplié) -->
+        <div v-else class="p-6">
+          <!-- Bouton collapse (visible uniquement si services installés) -->
+          <button
+            v-if="hasAnyDnsServiceInstalled"
+            @click.stop="isDnsWizardCtaCollapsed = true"
+            class="absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-white/60 transition-all"
+            :title="t('dns.wizard.cta.collapse') || 'Réduire'"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 15l7-7 7 7"
+              />
+            </svg>
+          </button>
+
+          <div class="flex flex-col md:flex-row items-start md:items-center gap-4">
+            <div
+              class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/20"
+            >
+              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                />
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-lg font-bold text-slate-900 mb-1">
+                {{ t('dns.wizard.cta.title') || 'Configurer votre serveur DNS' }}
+              </h3>
+              <p class="text-sm text-slate-600 mb-3">
                 {{
-                  installingService === svc.type
-                    ? t('infrastructure.installing')
-                    : t('infrastructure.install')
+                  t('dns.wizard.cta.description') ||
+                  "L'assistant guidé configure automatiquement BIND9 avec vos zones DNS, DNSSEC, et les options de sécurité en quelques clics."
                 }}
-              </button>
-            </template>
-            <template v-else>
-              <!-- Start/Stop button -->
-              <button
-                v-if="getService(svc.type)?.running"
-                class="flex-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-                :disabled="stoppingService !== null"
-                @click="emit('stopService', svc.type)"
+              </p>
+              <div class="flex flex-wrap items-center gap-3">
+                <button
+                  @click.stop="showDnsWizard = true"
+                  class="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-all shadow-md shadow-indigo-500/20 hover:shadow-lg hover:shadow-indigo-500/30"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                  {{ t('dns.wizard.cta.button') || "Lancer l'assistant" }}
+                </button>
+                <span class="text-xs text-slate-500 flex items-center gap-1">
+                  <svg
+                    class="w-4 h-4 text-emerald-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  {{ t('dns.wizard.cta.recommended') || 'Recommandé' }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barre de statut des services DNS installés -->
+      <div v-if="hasAnyDnsServiceInstalled" class="glass-card p-3 mb-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">{{
+            t('dns.status.title') || 'Services actifs'
+          }}</span>
+          <button
+            @click="showDnsWizard = true"
+            class="text-xs text-indigo-500 hover:text-indigo-600 font-medium flex items-center gap-1 transition-colors"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+            </svg>
+            {{ t('dns.wizard.reconfigure') || 'Reconfigurer' }}
+          </button>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <template v-for="svc in dnsServices" :key="svc.type">
+            <div
+              v-if="getService(svc.type)?.installed"
+              class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm"
+              :class="
+                getService(svc.type)?.running
+                  ? 'bg-emerald-50 border border-emerald-200'
+                  : 'bg-red-50 border border-red-200'
+              "
+            >
+              <!-- Indicateur de statut -->
+              <span
+                class="w-2 h-2 rounded-full flex-shrink-0"
+                :class="
+                  getService(svc.type)?.running ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'
+                "
+              ></span>
+              <!-- Nom du service -->
+              <span
+                class="font-medium"
+                :class="getService(svc.type)?.running ? 'text-emerald-700' : 'text-red-700'"
               >
-                {{
-                  stoppingService === svc.type
-                    ? t('infrastructure.stopping')
-                    : t('infrastructure.stop')
-                }}
-              </button>
-              <button
-                v-else
-                class="flex-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-                :disabled="startingService !== null"
-                @click="emit('startService', svc.type)"
+                {{ svc.name }}
+              </span>
+              <!-- Version -->
+              <span v-if="getService(svc.type)?.version" class="text-xs text-slate-400">
+                v{{ getService(svc.type)?.version }}
+              </span>
+              <!-- Actions -->
+              <div class="flex items-center gap-1 ml-1">
+                <!-- Bouton Start/Stop -->
+                <button
+                  class="w-6 h-6 flex items-center justify-center rounded transition-colors"
+                  :class="
+                    getService(svc.type)?.running
+                      ? 'text-amber-500 hover:bg-amber-100'
+                      : 'text-emerald-500 hover:bg-emerald-100'
+                  "
+                  :disabled="startingService === svc.type || stoppingService === svc.type"
+                  :title="
+                    getService(svc.type)?.running
+                      ? t('infrastructure.stop')
+                      : t('infrastructure.start')
+                  "
+                  @click="
+                    getService(svc.type)?.running
+                      ? emit('stopService', svc.type)
+                      : emit('startService', svc.type)
+                  "
+                >
+                  <svg
+                    v-if="startingService === svc.type || stoppingService === svc.type"
+                    class="w-3.5 h-3.5 animate-spin"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                  <svg
+                    v-else-if="getService(svc.type)?.running"
+                    class="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"
+                    />
+                  </svg>
+                  <svg
+                    v-else
+                    class="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </button>
+                <!-- Bouton Logs -->
+                <button
+                  class="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                  :title="t('infrastructure.viewLogs')"
+                  @click="openConsoleForLogs(svc.type)"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Toggle pour afficher la configuration manuelle -->
+      <div class="flex items-center justify-between mb-3">
+        <button
+          @click="showManualDnsConfig = !showManualDnsConfig"
+          class="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+        >
+          <svg
+            class="w-4 h-4 transition-transform duration-200"
+            :class="{ 'rotate-90': showManualDnsConfig }"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+          <span class="font-medium">{{ t('dns.manual.title') || 'Configuration manuelle' }}</span>
+          <span class="text-xs text-slate-400"
+            >({{ t('dns.manual.subtitle') || 'services individuels' }})</span
+          >
+        </button>
+      </div>
+
+      <!-- Configuration manuelle (accordéon) -->
+      <div v-show="showManualDnsConfig" class="transition-all duration-300">
+        <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div
+            v-for="svc in dnsServices"
+            :key="svc.type"
+            class="glass-card p-4"
+            :class="{ 'ring-2 ring-emerald-500/30': getService(svc.type)?.installed }"
+          >
+            <div class="flex items-start gap-3">
+              <div
+                class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-sm font-bold text-indigo-600 flex-shrink-0"
               >
-                {{
-                  startingService === svc.type
-                    ? t('infrastructure.starting')
-                    : t('infrastructure.start')
-                }}
-              </button>
-              <!-- Logs button -->
-              <button
-                class="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors"
-                :title="t('infrastructure.viewLogs')"
-                @click="openConsoleForLogs(svc.type)"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-              </button>
-              <!-- Delete button -->
-              <button
-                v-if="svc.canRemove"
-                class="w-8 h-8 flex items-center justify-center bg-red-50 hover:bg-red-100 rounded-lg text-red-500 transition-colors"
-                :disabled="removingService !== null"
-                @click="emit('removeService', svc.type)"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-              </button>
-            </template>
+                {{ svc.icon }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-semibold text-slate-800 text-sm">{{ svc.name }}</h3>
+                <p class="text-xs text-slate-500">{{ svc.description }}</p>
+                <p v-if="getService(svc.type)?.installed" class="text-xs font-medium mt-0.5">
+                  <span
+                    class="inline-flex items-center gap-1"
+                    :class="getService(svc.type)?.running ? 'text-emerald-600' : 'text-red-500'"
+                  >
+                    <span
+                      class="w-1.5 h-1.5 rounded-full"
+                      :class="getService(svc.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"
+                    ></span>
+                    {{
+                      getService(svc.type)?.running
+                        ? t('infrastructure.running')
+                        : t('infrastructure.stopped')
+                    }}
+                  </span>
+                </p>
+                <p v-else class="text-xs text-slate-400 mt-0.5">{{ svc.size }}</p>
+                <p v-if="getService(svc.type)?.version" class="text-xs text-slate-500">
+                  v{{ getService(svc.type)?.version }}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 mt-3">
+              <template v-if="!getService(svc.type)?.installed">
+                <button
+                  class="flex-1 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                  :disabled="installingService !== null"
+                  @click="emit('installService', svc.type)"
+                >
+                  {{
+                    installingService === svc.type
+                      ? t('infrastructure.installing')
+                      : t('infrastructure.install')
+                  }}
+                </button>
+              </template>
+              <template v-else>
+                <!-- Start/Stop button -->
+                <button
+                  v-if="getService(svc.type)?.running"
+                  class="flex-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                  :disabled="stoppingService !== null"
+                  @click="emit('stopService', svc.type)"
+                >
+                  {{
+                    stoppingService === svc.type
+                      ? t('infrastructure.stopping')
+                      : t('infrastructure.stop')
+                  }}
+                </button>
+                <button
+                  v-else
+                  class="flex-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                  :disabled="startingService !== null"
+                  @click="emit('startService', svc.type)"
+                >
+                  {{
+                    startingService === svc.type
+                      ? t('infrastructure.starting')
+                      : t('infrastructure.start')
+                  }}
+                </button>
+                <!-- Logs button -->
+                <button
+                  class="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors"
+                  :title="t('infrastructure.viewLogs')"
+                  @click="openConsoleForLogs(svc.type)"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                </button>
+                <!-- Delete button -->
+                <button
+                  v-if="svc.canRemove"
+                  class="w-8 h-8 flex items-center justify-center bg-red-50 hover:bg-red-100 rounded-lg text-red-500 transition-colors"
+                  :disabled="removingService !== null"
+                  @click="emit('removeService', svc.type)"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
+              </template>
+            </div>
           </div>
         </div>
       </div>
@@ -2915,6 +3273,24 @@ function confirmReconfigureDatabase() {
       @close="showMailWizard = false"
       @complete="handleMailWizardComplete"
       @configure-mail-stack="(serverId, config) => emit('configureMailStack', serverId, config)"
+    />
+
+    <!-- DNS Server Wizard -->
+    <DnsServerWizard
+      v-if="showDnsWizard"
+      :servers="[
+        {
+          id: server.id,
+          hostname: server.alias || server.hostname || `Serveur ${server.id.slice(0, 8)}`,
+          ip: server.ip || '',
+          alias: server.alias,
+          online: server.status === 'online',
+        },
+      ]"
+      :installation-logs="infrastructureLogs"
+      @close="showDnsWizard = false"
+      @complete="handleDnsWizardComplete"
+      @configure-dns-stack="(serverId, config) => emit('configureDnsStack', serverId, config)"
     />
   </div>
 </template>
