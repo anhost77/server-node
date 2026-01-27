@@ -32,9 +32,23 @@ export async function installVsftpd(onLog: LogFn): Promise<string> {
         } catch {
             // Ignore si le service n'est pas en cours
         }
-        await runCommand('apt-get', ['remove', '-y', 'proftpd', 'proftpd-basic', 'proftpd-core'], onLog);
+        // Masquer le service pour éviter les erreurs lors de la purge
+        try {
+            await runCommand('systemctl', ['mask', 'proftpd'], onLog);
+        } catch {
+            // Ignore
+        }
+        // Purger complètement (remove + config files)
+        await runCommand('apt-get', ['purge', '-y', 'proftpd', 'proftpd-basic', 'proftpd-core'], onLog);
         await runCommand('apt-get', ['autoremove', '-y'], onLog);
         onLog(`✅ ProFTPD removed\n`, 'stdout');
+    }
+
+    // Unmask vsftpd au cas où il aurait été masqué précédemment
+    try {
+        await runCommand('systemctl', ['unmask', 'vsftpd'], onLog);
+    } catch {
+        // Ignore si pas masqué
     }
 
     await runCommand('apt-get', ['update'], onLog);
@@ -71,15 +85,32 @@ export async function installProftpd(onLog: LogFn): Promise<string> {
         } catch {
             // Ignore si le service n'est pas en cours
         }
-        await runCommand('apt-get', ['remove', '-y', 'vsftpd'], onLog);
+        // Masquer le service pour éviter les erreurs lors de la purge
+        try {
+            await runCommand('systemctl', ['mask', 'vsftpd'], onLog);
+        } catch {
+            // Ignore
+        }
+        // Purger complètement (remove + config files)
+        await runCommand('apt-get', ['purge', '-y', 'vsftpd'], onLog);
         await runCommand('apt-get', ['autoremove', '-y'], onLog);
         onLog(`✅ vsftpd removed\n`, 'stdout');
+    }
+
+    // Unmask proftpd au cas où il aurait été masqué précédemment
+    // C'est crucial car une désinstallation précédente peut avoir laissé le service masqué
+    onLog(`🔧 Preparing systemd for ProFTPD...\n`, 'stdout');
+    try {
+        await runCommand('systemctl', ['unmask', 'proftpd'], onLog);
+    } catch {
+        // Ignore si pas masqué
     }
 
     await runCommand('apt-get', ['update'], onLog);
     await runCommand('apt-get', ['install', '-y', 'proftpd'], onLog);
 
     // Activer et démarrer le service
+    await runCommand('systemctl', ['daemon-reload'], onLog);
     await runCommand('systemctl', ['enable', 'proftpd'], onLog);
     await runCommand('systemctl', ['restart', 'proftpd'], onLog);
 
