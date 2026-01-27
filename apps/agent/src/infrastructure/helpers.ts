@@ -242,6 +242,124 @@ export function compareVersions(v1: string, v2: string): number {
 }
 
 /**
+ * **prepareServiceReinstall()** - Prépare un service pour une réinstallation propre
+ *
+ * Cette fonction nettoie les artefacts d'une installation précédente pour permettre
+ * à apt de reconfigurer correctement le package. C'est nécessaire car après un
+ * `apt-get purge`, apt garde en mémoire que le package a été configuré et ne
+ * recrée pas les fichiers de config lors d'une réinstallation.
+ *
+ * Actions effectuées :
+ * 1. Arrêt du service (si actif)
+ * 2. Purge des entrées debconf
+ * 3. Suppression des fichiers dpkg info résiduels
+ * 4. Nettoyage des entrées statoverride
+ *
+ * @param packagePrefix - Préfixe des packages (ex: "dovecot", "clamav")
+ * @param packages - Liste des packages à nettoyer (ex: ["dovecot-core", "dovecot-imapd"])
+ * @param serviceName - Nom du service systemd à arrêter (optionnel)
+ * @param onLog - Fonction de callback pour les logs
+ */
+export async function prepareServiceReinstall(
+    packagePrefix: string,
+    packages: string[],
+    serviceName: string | undefined,
+    onLog: LogFn
+): Promise<void> {
+    const fs = await import('node:fs');
+
+    onLog(`🧹 Nettoyage des configurations précédentes (${packagePrefix})...\n`, 'stdout');
+
+    // 1. Arrêter le service s'il existe
+    if (serviceName) {
+        try {
+            await runCommandSilent('systemctl', ['stop', serviceName]);
+        } catch { }
+    }
+
+    // 2. Purger les entrées debconf pour forcer la reconfiguration
+    for (const pkg of packages) {
+        try {
+            await runCommandSilent('bash', ['-c', `echo PURGE | debconf-communicate ${pkg} 2>/dev/null || true`]);
+        } catch { }
+    }
+
+    // 3. Supprimer les fichiers dpkg info résiduels qui pourraient causer des conflits
+    const dpkgInfoDir = '/var/lib/dpkg/info';
+    if (fs.existsSync(dpkgInfoDir)) {
+        try {
+            const files = fs.readdirSync(dpkgInfoDir);
+            let deletedCount = 0;
+            for (const file of files) {
+                if (file.startsWith(packagePrefix)) {
+                    try {
+                        fs.unlinkSync(`${dpkgInfoDir}/${file}`);
+                        deletedCount++;
+                    } catch { }
+                }
+            }
+            if (deletedCount > 0) {
+                onLog(`   🗑️ ${deletedCount} fichiers dpkg info ${packagePrefix} supprimés\n`, 'stdout');
+            }
+        } catch { }
+    }
+
+    // 4. Supprimer les entrées dans statoverride si corrompues
+    const statoverrideFile = '/var/lib/dpkg/statoverride';
+    if (fs.existsSync(statoverrideFile)) {
+        try {
+            const content = fs.readFileSync(statoverrideFile, 'utf-8');
+            const lines = content.split('\n');
+            const cleanedLines = lines.filter(line => !line.includes(packagePrefix));
+            if (lines.length !== cleanedLines.length) {
+                fs.writeFileSync(statoverrideFile, cleanedLines.join('\n'));
+                onLog(`   🔧 Entrées statoverride ${packagePrefix} nettoyées\n`, 'stdout');
+            }
+        } catch { }
+    }
+
+    onLog(`   ✅ Nettoyage terminé\n`, 'stdout');
+}
+
+/**
+ * **regenerateConfigIfMissing()** - Régénère la configuration d'un package si manquante
+ *
+ * Cette fonction vérifie si un fichier de configuration existe et le régénère
+ * via dpkg-reconfigure si nécessaire. Utile après une purge + réinstallation.
+ *
+ * @param configPath - Chemin du fichier de configuration principal
+ * @param packageName - Nom du package à reconfigurer
+ * @param onLog - Fonction de callback pour les logs
+ * @returns true si la config existe ou a été régénérée avec succès
+ */
+export async function regenerateConfigIfMissing(
+    configPath: string,
+    packageName: string,
+    onLog: LogFn
+): Promise<boolean> {
+    const fs = await import('node:fs');
+
+    if (fs.existsSync(configPath)) {
+        return true;
+    }
+
+    onLog(`⚠️ Fichier ${configPath} manquant, régénération...\n`, 'stdout');
+
+    try {
+        await runCommand('dpkg-reconfigure', ['-f', 'noninteractive', packageName], onLog);
+
+        if (fs.existsSync(configPath)) {
+            onLog(`   ✅ Configuration régénérée\n`, 'stdout');
+            return true;
+        }
+    } catch (err: any) {
+        onLog(`   ⚠️ dpkg-reconfigure a échoué: ${err.message}\n`, 'stderr');
+    }
+
+    return false;
+}
+
+/**
  * **isRunningInContainer()** - Détecte si on tourne dans un conteneur
  *
  * Vérifie via plusieurs méthodes si on est dans un conteneur LXC ou Docker.

@@ -1058,6 +1058,18 @@ watch(() => props.installationResult, (result) => {
 // Variable pour stocker la clé DKIM publique reçue
 const dkimPublicKey = ref<string>('');
 
+// Ref pour la console des logs (autoscroll)
+const logsContainer = ref<HTMLElement | null>(null);
+
+// Watcher pour l'autoscroll des logs
+watch(() => props.installationLogs?.length, () => {
+  nextTick(() => {
+    if (logsContainer.value) {
+      logsContainer.value.scrollTop = logsContainer.value.scrollHeight;
+    }
+  });
+});
+
 // Watch for hostname auto-generation
 watch(() => config.value.domain.primaryDomain, (newDomain) => {
   if (newDomain && !config.value.domain.hostname) {
