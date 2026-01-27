@@ -2,7 +2,7 @@
 
 **Date** : 2026-01-27
 **Proposé par** : User + Claude
-**Status** : draft
+**Status** : validated - Phase 1 done (v0.1.62), Phase 2 backlog
 
 ## Résumé
 

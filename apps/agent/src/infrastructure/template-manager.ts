@@ -24,6 +24,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// ESM-compatible __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 /**
  * Variables disponibles pour les templates
  */
@@ -106,19 +110,8 @@ export class TemplateManager {
      */
     constructor(templatesDir?: string) {
         // Déterminer le répertoire des templates
-        // En ESM, __dirname n'existe pas, on utilise import.meta.url
-        if (templatesDir) {
-            this.templatesDir = templatesDir;
-        } else {
-            // Essayer de trouver le répertoire templates relatif au fichier actuel
-            try {
-                const currentFile = fileURLToPath(import.meta.url);
-                this.templatesDir = path.join(path.dirname(currentFile), 'templates');
-            } catch {
-                // Fallback pour CommonJS ou si import.meta.url n'est pas disponible
-                this.templatesDir = path.join(__dirname, 'templates');
-            }
-        }
+        // __dirname est défini au niveau du module via fileURLToPath(import.meta.url)
+        this.templatesDir = templatesDir || path.join(__dirname, 'templates');
     }
 
     /**
