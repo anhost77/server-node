@@ -650,9 +650,40 @@ export class InfrastructureManager {
                 await runCommand('apt-get', [removeCmd, '-y', 'opendkim', 'opendkim-tools'], this.onLog);
                 break;
             case 'clamav':
-                await runCommand('systemctl', ['stop', 'clamav-daemon'], this.onLog);
-                await runCommand('systemctl', ['stop', 'clamav-freshclam'], this.onLog);
-                await runCommand('apt-get', [removeCmd, '-y', 'clamav', 'clamav-daemon', 'clamav-freshclam'], this.onLog);
+                // Arrêter les services (ignorer les erreurs si déjà arrêtés)
+                try {
+                    await runCommand('systemctl', ['stop', 'clamav-daemon'], this.onLog);
+                } catch { /* Service peut ne pas exister */ }
+                try {
+                    await runCommand('systemctl', ['stop', 'clamav-freshclam'], this.onLog);
+                } catch { /* Service peut ne pas exister */ }
+
+                // Supprimer TOUS les packages ClamAV (y compris les dépendances)
+                await runCommand('apt-get', [removeCmd, '-y',
+                    'clamav', 'clamav-daemon', 'clamav-freshclam',
+                    'clamav-base', 'clamdscan', 'libclamav11'
+                ], this.onLog);
+
+                // Nettoyer les fichiers de données pour éviter les problèmes de réinstallation
+                const clamavDataDir = '/var/lib/clamav';
+                if (fs.existsSync(clamavDataDir)) {
+                    // Supprimer mirrors.dat (contient l'état du rate-limiting)
+                    const mirrorsFile = `${clamavDataDir}/mirrors.dat`;
+                    if (fs.existsSync(mirrorsFile)) {
+                        this.onLog(`🧹 Suppression du fichier mirrors.dat (reset rate-limiting)\n`, 'stdout');
+                        try { fs.unlinkSync(mirrorsFile); } catch { }
+                    }
+
+                    // En mode purge, supprimer aussi les définitions de virus
+                    if (removeCmd === 'purge') {
+                        this.onLog(`🧹 Suppression des définitions de virus...\n`, 'stdout');
+                        try { await runCommandSilent('rm', ['-rf', clamavDataDir]); } catch { }
+                    }
+                }
+
+                // Nettoyer les fichiers de socket et PID
+                try { await runCommandSilent('rm', ['-rf', '/var/run/clamav']); } catch { }
+                try { await runCommandSilent('rm', ['-rf', '/var/log/clamav']); } catch { }
                 break;
             case 'spf-policyd':
                 await runCommand('apt-get', [removeCmd, '-y', 'postfix-policyd-spf-python'], this.onLog);

@@ -170,48 +170,166 @@ export async function installOpendkim(onLog: LogFn): Promise<string> {
 
 /**
  * **installClamav()** - Installe l'antivirus ClamAV
+ *
+ * Cette fonction gère intelligemment les cas suivants :
+ * - Réinstallation après une désinstallation (nettoie les fichiers corrompus)
+ * - Rate-limiting du CDN ClamAV (erreur 429)
+ * - Absence de définitions de virus (main.cvd, daily.cvd)
+ * - Service rspamd masqué ou absent
  */
 export async function installClamav(onLog: LogFn): Promise<string> {
     onLog(`📥 Installing ClamAV antivirus...\n`, 'stdout');
 
+    // ============================================
+    // ÉTAPE 1 : Nettoyage pré-installation
+    // ============================================
+    // Supprime les fichiers qui peuvent causer des problèmes lors de réinstallation
+    const clamavDataDir = '/var/lib/clamav';
+    const mirrorsFile = `${clamavDataDir}/mirrors.dat`;
+
+    // Supprimer le fichier mirrors.dat qui contient l'état du rate-limiting
+    // Cela permet de "reset" le cool-down si l'utilisateur a attendu
+    if (fs.existsSync(mirrorsFile)) {
+        onLog(`🧹 Nettoyage du fichier mirrors.dat (reset rate-limiting)...\n`, 'stdout');
+        try {
+            fs.unlinkSync(mirrorsFile);
+        } catch {
+            // Ignorer si on ne peut pas supprimer
+        }
+    }
+
+    // ============================================
+    // ÉTAPE 2 : Installation des packages
+    // ============================================
     await runCommand('apt-get', ['update'], onLog);
     await runCommand('apt-get', ['install', '-y', 'clamav', 'clamav-daemon', 'clamav-freshclam'], onLog);
 
-    // Stop freshclam to update signatures manually first
+    // ============================================
+    // ÉTAPE 3 : Mise à jour des définitions de virus
+    // ============================================
+    // Stop freshclam (le service) pour pouvoir lancer freshclam manuellement
     try {
-        await runCommand('systemctl', ['stop', 'clamav-freshclam'], onLog);
+        await runCommandSilent('systemctl', ['stop', 'clamav-freshclam']);
     } catch { }
 
-    // Update virus definitions
-    onLog(`🦠 Updating virus definitions...\n`, 'stdout');
+    onLog(`🦠 Mise à jour des définitions de virus...\n`, 'stdout');
+
+    let freshclamSuccess = false;
+    let rateLimited = false;
+
     try {
+        // Lancer freshclam et capturer la sortie
         await runCommand('freshclam', [], onLog);
-    } catch {
-        onLog(`⚠️ First freshclam run may fail, this is normal\n`, 'stderr');
+        freshclamSuccess = true;
+    } catch (err: any) {
+        // Vérifier si c'est un rate-limiting (erreur 429)
+        const errorMsg = err.message || '';
+        if (errorMsg.includes('429') || errorMsg.includes('rate limit') || errorMsg.includes('cool-down')) {
+            rateLimited = true;
+            onLog(`⚠️ Rate-limiting ClamAV CDN détecté.\n`, 'stderr');
+            onLog(`   Le serveur ClamAV limite les téléchargements trop fréquents.\n`, 'stderr');
+            onLog(`   Les définitions seront téléchargées automatiquement plus tard.\n`, 'stderr');
+        } else {
+            onLog(`⚠️ Échec de freshclam: ${errorMsg}\n`, 'stderr');
+        }
     }
 
-    // Configure ClamAV daemon using template
+    // ============================================
+    // ÉTAPE 4 : Vérification des définitions
+    // ============================================
+    // ClamAV daemon ne peut pas démarrer sans au moins main.cvd ou daily.cvd
+    const mainCvd = `${clamavDataDir}/main.cvd`;
+    const dailyCvd = `${clamavDataDir}/daily.cvd`;
+    const hasDefinitions = fs.existsSync(mainCvd) || fs.existsSync(dailyCvd);
+
+    if (!hasDefinitions) {
+        onLog(`⚠️ Aucune définition de virus disponible.\n`, 'stderr');
+        if (rateLimited) {
+            onLog(`   Le daemon ClamAV ne pourra pas démarrer tant que les définitions\n`, 'stderr');
+            onLog(`   ne seront pas téléchargées. Réessayez dans quelques heures.\n`, 'stderr');
+        }
+    }
+
+    // ============================================
+    // ÉTAPE 5 : Configuration du daemon
+    // ============================================
     writeConfig('clamav/clamd.conf', '/etc/clamav/clamd.conf', {});
 
-    // Enable and start services
+    // Créer le répertoire de socket s'il n'existe pas
+    const socketDir = '/var/run/clamav';
+    if (!fs.existsSync(socketDir)) {
+        fs.mkdirSync(socketDir, { recursive: true });
+        await runCommandSilent('chown', ['clamav:clamav', socketDir]);
+    }
+
+    // ============================================
+    // ÉTAPE 6 : Activation des services
+    // ============================================
     await runCommand('systemctl', ['enable', 'clamav-freshclam'], onLog);
     await runCommand('systemctl', ['start', 'clamav-freshclam'], onLog);
-    await runCommand('systemctl', ['enable', 'clamav-daemon'], onLog);
-    await runCommand('systemctl', ['start', 'clamav-daemon'], onLog);
 
-    // Configure Rspamd to use ClamAV (if rspamd is installed) using template
+    await runCommand('systemctl', ['enable', 'clamav-daemon'], onLog);
+
+    // Tenter de démarrer le daemon uniquement si on a des définitions
+    let daemonStarted = false;
+    if (hasDefinitions) {
+        try {
+            await runCommand('systemctl', ['start', 'clamav-daemon'], onLog);
+
+            // Attendre un peu et vérifier si le daemon est vraiment démarré
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            const status = await runCommandSilent('systemctl', ['is-active', 'clamav-daemon']);
+            daemonStarted = status.trim() === 'active';
+        } catch {
+            daemonStarted = false;
+        }
+    } else {
+        onLog(`⏭️ Démarrage du daemon ClamAV différé (pas de définitions)\n`, 'stdout');
+    }
+
+    // ============================================
+    // ÉTAPE 7 : Intégration Rspamd (si disponible)
+    // ============================================
     const rspamdClamavDir = '/etc/rspamd/local.d';
     if (fs.existsSync(rspamdClamavDir)) {
         writeConfig('rspamd/antivirus.conf', `${rspamdClamavDir}/antivirus.conf`, {});
+
+        // Vérifier si rspamd est actif (pas masqué) avant de recharger
         try {
-            await runCommand('systemctl', ['reload', 'rspamd'], onLog);
-        } catch { }
+            const rspamdStatus = await runCommandSilent('systemctl', ['is-enabled', 'rspamd']);
+            if (rspamdStatus.trim() === 'enabled') {
+                await runCommand('systemctl', ['reload', 'rspamd'], onLog);
+            }
+        } catch {
+            // rspamd n'est pas disponible, on ignore silencieusement
+        }
     }
 
-    onLog(`✅ ClamAV installed and configured!\n`, 'stdout');
-    onLog(`📋 Virus definitions will be updated automatically via freshclam\n`, 'stdout');
+    // ============================================
+    // ÉTAPE 8 : Résumé de l'installation
+    // ============================================
+    onLog(`\n`, 'stdout');
+    if (daemonStarted) {
+        onLog(`✅ ClamAV installé et opérationnel!\n`, 'stdout');
+    } else if (hasDefinitions) {
+        onLog(`⚠️ ClamAV installé mais le daemon n'a pas démarré.\n`, 'stdout');
+        onLog(`   Vérifiez les logs: journalctl -u clamav-daemon\n`, 'stdout');
+    } else if (rateLimited) {
+        onLog(`⚠️ ClamAV installé mais en attente de définitions (rate-limiting).\n`, 'stdout');
+        onLog(`   Le daemon démarrera automatiquement après téléchargement.\n`, 'stdout');
+    } else {
+        onLog(`⚠️ ClamAV installé mais sans définitions de virus.\n`, 'stdout');
+    }
+    onLog(`📋 Les définitions seront mises à jour automatiquement via freshclam.\n`, 'stdout');
 
-    return 'installed';
+    // Retourner un statut approprié
+    if (daemonStarted) {
+        return 'installed';
+    } else if (hasDefinitions) {
+        return 'installed (daemon not running)';
+    } else {
+        return 'installed (no definitions)';
+    }
 }
 
 /**
