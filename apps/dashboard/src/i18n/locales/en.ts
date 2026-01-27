@@ -937,11 +937,6 @@ export default {
                 button: 'Launch wizard',
                 recommended: 'Recommended'
             },
-        },
-        manual: {
-            title: 'Manual configuration',
-            subtitle: 'individual services'
-        },
             architecture: {
                 title: 'Choose your architecture',
                 description: 'Select the architecture that best fits your needs.',
@@ -1004,6 +999,10 @@ export default {
                 reminder: 'Don\'t forget:',
                 reminderDesc: 'Configure the DNS records at your registrar before sending emails.'
             }
+        },
+        manual: {
+            title: 'Manual configuration',
+            subtitle: 'individual services'
         }
     }
 };

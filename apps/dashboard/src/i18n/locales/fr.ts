@@ -937,11 +937,6 @@ export default {
                 button: 'Lancer l\'assistant',
                 recommended: 'Recommandé'
             },
-        },
-        manual: {
-            title: 'Configuration manuelle',
-            subtitle: 'services individuels'
-        },
             architecture: {
                 title: 'Choisissez votre architecture',
                 description: 'Sélectionnez l\'architecture qui correspond le mieux à vos besoins.',
@@ -1004,6 +999,10 @@ export default {
                 reminder: 'N\'oubliez pas :',
                 reminderDesc: 'Configurez les enregistrements DNS chez votre registrar avant d\'envoyer des emails.'
             }
+        },
+        manual: {
+            title: 'Configuration manuelle',
+            subtitle: 'services individuels'
         }
     }
 };
