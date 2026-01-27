@@ -37,52 +37,74 @@ const __dirname = path.dirname(__filename);
 
 // Re-export types for external use
 export type {
-    RuntimeType,
-    DatabaseType,
-    ServiceType,
-    RuntimeInfo,
-    DatabaseInfo,
-    ServiceInfo,
-    SystemInfo,
-    ServerStatus,
-    DbSecurityOptions,
-    LogFn,
-    InstallResult,
-    DatabaseConfigResult,
-    UpdateResult,
-    OperationResult
+  RuntimeType,
+  DatabaseType,
+  ServiceType,
+  RuntimeInfo,
+  DatabaseInfo,
+  ServiceInfo,
+  SystemInfo,
+  ServerStatus,
+  DbSecurityOptions,
+  LogFn,
+  InstallResult,
+  DatabaseConfigResult,
+  UpdateResult,
+  OperationResult,
 } from './types.js';
 
 export { PROTECTED_RUNTIMES, PROTECTED_SERVICES } from './types.js';
 
 import type {
-    RuntimeType,
-    DatabaseType,
-    ServiceType,
-    ServerStatus,
-    DbSecurityOptions,
-    LogFn,
-    InstallResult,
-    DatabaseConfigResult,
-    UpdateResult,
-    OperationResult
+  RuntimeType,
+  DatabaseType,
+  ServiceType,
+  ServerStatus,
+  DbSecurityOptions,
+  LogFn,
+  InstallResult,
+  DatabaseConfigResult,
+  UpdateResult,
+  OperationResult,
 } from './types.js';
 
 import { PROTECTED_RUNTIMES, PROTECTED_SERVICES } from './types.js';
 
 // Import helpers
-import { runCommand, runCommandSilent, getCommandVersion, nuclearCleanup, NUCLEAR_CLEANUP_CONFIG } from './helpers.js';
+import {
+  runCommand,
+  runCommandSilent,
+  getCommandVersion,
+  nuclearCleanup,
+  NUCLEAR_CLEANUP_CONFIG,
+} from './helpers.js';
 
 // Import detection functions
-import { detectRuntimes, detectDatabases, detectServices, getSystemInfo } from './detection/index.js';
+import {
+  detectRuntimes,
+  detectDatabases,
+  detectServices,
+  getSystemInfo,
+} from './detection/index.js';
 
 // Import installers
 import { runtimeInstallers, runtimeUpdaters, uninstallRuntime } from './installers/runtimes.js';
-import { databaseConfigurators, removeDatabase, reconfigureDatabase } from './installers/databases.js';
+import {
+  databaseConfigurators,
+  removeDatabase,
+  reconfigureDatabase,
+} from './installers/databases.js';
 import { serviceInstallers } from './installers/services/index.js';
 
 // Import mail installers directly (for configureMailStack with custom domain)
-import { installPostfix, installDovecot, installRspamd, installOpendkim, installClamav, installSpfPolicyd } from './installers/services/mail.js';
+import {
+  installPostfix,
+  installDovecot,
+  installRspamd,
+  installOpendkim,
+  installClamav,
+  installSpfPolicyd,
+} from './installers/services/mail.js';
 
 // ============================================
 // CONSTANTS
@@ -96,38 +118,38 @@ const INFRASTRUCTURE_LOG_FILE = path.join(LOG_DIR, 'infrastructure.log');
 // ============================================
 
 const SERVICE_NAMES: Record<ServiceType, string> = {
-    nginx: 'nginx',
-    haproxy: 'haproxy',
-    keepalived: 'keepalived',
-    certbot: 'certbot.timer',
-    fail2ban: 'fail2ban',
-    ufw: 'ufw',
-    wireguard: 'wg-quick@wg0',
-    pm2: 'pm2-root',
-    netdata: 'netdata',
-    loki: 'loki',
-    bind9: 'named',
-    postfix: 'postfix',
-    dovecot: 'dovecot',
-    rspamd: 'rspamd',
-    opendkim: 'opendkim',
-    clamav: 'clamav-daemon',
-    'spf-policyd': '', // SPF policy runs via Postfix, not standalone
-    rsync: '',
-    rclone: '',
-    restic: '',
-    ssh: 'ssh',
-    cron: 'cron',
-    vsftpd: 'vsftpd',
-    proftpd: 'proftpd',
-    nfs: 'nfs-kernel-server'
+  nginx: 'nginx',
+  haproxy: 'haproxy',
+  keepalived: 'keepalived',
+  certbot: 'certbot.timer',
+  fail2ban: 'fail2ban',
+  ufw: 'ufw',
+  wireguard: 'wg-quick@wg0',
+  pm2: 'pm2-root',
+  netdata: 'netdata',
+  loki: 'loki',
+  bind9: 'named',
+  postfix: 'postfix',
+  dovecot: 'dovecot',
+  rspamd: 'rspamd',
+  opendkim: 'opendkim',
+  clamav: 'clamav-daemon',
+  'spf-policyd': '', // SPF policy runs via Postfix, not standalone
+  rsync: '',
+  rclone: '',
+  restic: '',
+  ssh: 'ssh',
+  cron: 'cron',
+  vsftpd: 'vsftpd',
+  proftpd: 'proftpd',
+  nfs: 'nfs-kernel-server',
 };
 
 const DATABASE_SERVICE_NAMES: Record<DatabaseType, string> = {
-    postgresql: 'postgresql',
-    mysql: 'mysql',
-    redis: 'redis-server',
-    mongodb: 'mongod'
+  postgresql: 'postgresql',
+  mysql: 'mysql',
+  redis: 'redis-server',
+  mongodb: 'mongod',
 };
 
 // ============================================
@@ -155,814 +177,1069 @@ const DATABASE_SERVICE_NAMES: Record<DatabaseType, string> = {
  * requêtes fréquentes (une nouvelle instance est créée à chaque message WebSocket).
  */
 export class InfrastructureManager {
-    private onLog: LogFn;
-    private currentService: string | null = null;
+  private onLog: LogFn;
+  private currentService: string | null = null;
 
-    // Cache STATIQUE pour éviter les détections répétées (TTL: 5 secondes)
-    private static statusCache: ServerStatus | null = null;
-    private static statusCacheTimestamp: number = 0;
-    private static readonly STATUS_CACHE_TTL_MS = 5000;
+  // Cache STATIQUE pour éviter les détections répétées (TTL: 5 secondes)
+  private static statusCache: ServerStatus | null = null;
+  private static statusCacheTimestamp: number = 0;
+  private static readonly STATUS_CACHE_TTL_MS = 5000;
 
-    constructor(onLog: LogFn) {
-        // Ensure log directory exists
-        if (!fs.existsSync(LOG_DIR)) {
-            fs.mkdirSync(LOG_DIR, { recursive: true });
-        }
-
-        // Wrap onLog to also write to service-specific file
-        this.onLog = (message: string, stream: 'stdout' | 'stderr') => {
-            // Write to service-specific file if we have a current service
-            if (this.currentService) {
-                const timestamp = new Date().toISOString();
-                const logLine = `[${timestamp}] [${stream}] ${message}`;
-                const logFile = path.join(LOG_DIR, `${this.currentService}.log`);
-                fs.appendFileSync(logFile, logLine);
-            }
-
-            // Also write to global infrastructure log
-            const timestamp = new Date().toISOString();
-            const logLine = `[${timestamp}] [${stream}] ${message}`;
-            fs.appendFileSync(INFRASTRUCTURE_LOG_FILE, logLine);
-
-            // Call original callback
-            onLog(message, stream);
-        };
+  constructor(onLog: LogFn) {
+    // Ensure log directory exists
+    if (!fs.existsSync(LOG_DIR)) {
+      fs.mkdirSync(LOG_DIR, { recursive: true });
     }
 
-    /**
-     * Set the current service being installed/updated (for log file naming)
-     */
-    setCurrentService(service: string | null): void {
-        this.currentService = service;
+    // Wrap onLog to also write to service-specific file
+    this.onLog = (message: string, stream: 'stdout' | 'stderr') => {
+      // Write to service-specific file if we have a current service
+      if (this.currentService) {
+        const timestamp = new Date().toISOString();
+        const logLine = `[${timestamp}] [${stream}] ${message}`;
+        const logFile = path.join(LOG_DIR, `${this.currentService}.log`);
+        fs.appendFileSync(logFile, logLine);
+      }
+
+      // Also write to global infrastructure log
+      const timestamp = new Date().toISOString();
+      const logLine = `[${timestamp}] [${stream}] ${message}`;
+      fs.appendFileSync(INFRASTRUCTURE_LOG_FILE, logLine);
+
+      // Call original callback
+      onLog(message, stream);
+    };
+  }
+
+  /**
+   * Set the current service being installed/updated (for log file naming)
+   */
+  setCurrentService(service: string | null): void {
+    this.currentService = service;
+  }
+
+  /**
+   * Get the path to the infrastructure log file
+   */
+  static getLogFilePath(): string {
+    return INFRASTRUCTURE_LOG_FILE;
+  }
+
+  /**
+   * Get the path to a service-specific log file
+   */
+  static getServiceLogFilePath(service: string): string {
+    return path.join(LOG_DIR, `${service}.log`);
+  }
+
+  /**
+   * Read the infrastructure logs from the file
+   * @param lines Number of lines to read from the end (default: all)
+   */
+  static readLogs(lines?: number): string {
+    if (!fs.existsSync(INFRASTRUCTURE_LOG_FILE)) {
+      return '';
     }
 
-    /**
-     * Get the path to the infrastructure log file
-     */
-    static getLogFilePath(): string {
-        return INFRASTRUCTURE_LOG_FILE;
+    const content = fs.readFileSync(INFRASTRUCTURE_LOG_FILE, 'utf-8');
+
+    if (!lines) {
+      return content;
     }
 
-    /**
-     * Get the path to a service-specific log file
-     */
-    static getServiceLogFilePath(service: string): string {
-        return path.join(LOG_DIR, `${service}.log`);
+    // Return last N lines
+    const allLines = content.split('\n');
+    return allLines.slice(-lines).join('\n');
+  }
+
+  /**
+   * Read logs for a specific service
+   */
+  static readServiceLogs(service: string, lines?: number): string {
+    const logFile = path.join(LOG_DIR, `${service}.log`);
+    if (!fs.existsSync(logFile)) {
+      return '';
     }
 
-    /**
-     * Read the infrastructure logs from the file
-     * @param lines Number of lines to read from the end (default: all)
-     */
-    static readLogs(lines?: number): string {
-        if (!fs.existsSync(INFRASTRUCTURE_LOG_FILE)) {
-            return '';
-        }
+    const content = fs.readFileSync(logFile, 'utf-8');
 
-        const content = fs.readFileSync(INFRASTRUCTURE_LOG_FILE, 'utf-8');
-
-        if (!lines) {
-            return content;
-        }
-
-        // Return last N lines
-        const allLines = content.split('\n');
-        return allLines.slice(-lines).join('\n');
+    if (!lines) {
+      return content;
     }
 
-    /**
-     * Read logs for a specific service
-     */
-    static readServiceLogs(service: string, lines?: number): string {
-        const logFile = path.join(LOG_DIR, `${service}.log`);
-        if (!fs.existsSync(logFile)) {
-            return '';
-        }
+    const allLines = content.split('\n');
+    return allLines.slice(-lines).join('\n');
+  }
 
-        const content = fs.readFileSync(logFile, 'utf-8');
+  /**
+   * Clear the infrastructure logs
+   */
+  static clearLogs(): void {
+    if (fs.existsSync(INFRASTRUCTURE_LOG_FILE)) {
+      fs.writeFileSync(INFRASTRUCTURE_LOG_FILE, '');
+    }
+  }
 
-        if (!lines) {
-            return content;
-        }
+  /**
+   * Clear logs for a specific service
+   */
+  static clearServiceLogs(service: string): void {
+    const logFile = path.join(LOG_DIR, `${service}.log`);
+    if (fs.existsSync(logFile)) {
+      fs.writeFileSync(logFile, '');
+    }
+  }
 
-        const allLines = content.split('\n');
-        return allLines.slice(-lines).join('\n');
+  /**
+   * Check if logs exist for a specific service
+   */
+  static hasServiceLogs(service: string): boolean {
+    const logFile = path.join(LOG_DIR, `${service}.log`);
+    if (!fs.existsSync(logFile)) {
+      return false;
+    }
+    const stats = fs.statSync(logFile);
+    return stats.size > 0;
+  }
+
+  // ============================================
+  // PUBLIC API - STATUS
+  // ============================================
+
+  /**
+   * **getServerStatus()** - Retourne l'état complet du serveur
+   *
+   * Utilise un cache de 5 secondes pour éviter les détections répétées.
+   *
+   * @param forceRefresh - Force une nouvelle détection même si le cache est valide
+   */
+  async getServerStatus(forceRefresh = false): Promise<ServerStatus> {
+    const now = Date.now();
+    const cacheAge = now - InfrastructureManager.statusCacheTimestamp;
+
+    // Retourne le cache si valide et pas de forceRefresh
+    if (
+      !forceRefresh &&
+      InfrastructureManager.statusCache &&
+      cacheAge < InfrastructureManager.STATUS_CACHE_TTL_MS
+    ) {
+      return InfrastructureManager.statusCache;
     }
 
-    /**
-     * Clear the infrastructure logs
-     */
-    static clearLogs(): void {
-        if (fs.existsSync(INFRASTRUCTURE_LOG_FILE)) {
-            fs.writeFileSync(INFRASTRUCTURE_LOG_FILE, '');
-        }
+    // Effectue la détection complète
+    const status: ServerStatus = {
+      runtimes: await detectRuntimes(),
+      databases: await detectDatabases(),
+      services: await detectServices(),
+      system: await getSystemInfo(),
+    };
+
+    // Met à jour le cache statique
+    InfrastructureManager.statusCache = status;
+    InfrastructureManager.statusCacheTimestamp = now;
+
+    return status;
+  }
+
+  /**
+   * Invalide le cache du status serveur
+   */
+  invalidateStatusCache(): void {
+    InfrastructureManager.statusCache = null;
+    InfrastructureManager.statusCacheTimestamp = 0;
+  }
+
+  // ============================================
+  // PUBLIC API - RUNTIMES
+  // ============================================
+
+  /**
+   * **installRuntime()** - Installe un runtime
+   */
+  async installRuntime(type: RuntimeType): Promise<InstallResult> {
+    if (type === 'nodejs') {
+      return { success: false, error: 'Node.js is already installed (required by the agent)' };
     }
 
-    /**
-     * Clear logs for a specific service
-     */
-    static clearServiceLogs(service: string): void {
-        const logFile = path.join(LOG_DIR, `${service}.log`);
-        if (fs.existsSync(logFile)) {
-            fs.writeFileSync(logFile, '');
-        }
+    this.setCurrentService(type);
+    this.onLog(`\n📦 Installing ${type}...\n`, 'stdout');
+
+    try {
+      const installer = runtimeInstallers[type];
+      if (!installer) {
+        throw new Error(`Unknown runtime: ${type}`);
+      }
+
+      const version = await installer(this.onLog);
+      this.onLog(`\n✅ ${type} ${version} installed successfully\n`, 'stdout');
+      this.setCurrentService(null);
+      this.invalidateStatusCache();
+      return { success: true, version };
+    } catch (err: any) {
+      this.onLog(`\n❌ Failed to install ${type}: ${err.message}\n`, 'stderr');
+      this.setCurrentService(null);
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * **updateRuntime()** - Met à jour un runtime
+   */
+  async updateRuntime(type: RuntimeType): Promise<UpdateResult> {
+    this.setCurrentService(type);
+    this.onLog(`\n🔄 Updating ${type}...\n`, 'stdout');
+
+    try {
+      // Get current version
+      const checks: Record<RuntimeType, { cmd: string; args: string[] }> = {
+        nodejs: { cmd: 'node', args: ['--version'] },
+        python: { cmd: 'python3', args: ['--version'] },
+        php: { cmd: 'php', args: ['--version'] },
+        go: { cmd: 'go', args: ['version'] },
+        docker: { cmd: 'docker', args: ['--version'] },
+        rust: { cmd: 'rustc', args: ['--version'] },
+        ruby: { cmd: 'ruby', args: ['--version'] },
+      };
+      const check = checks[type];
+      const oldVersion = (await getCommandVersion(check.cmd, check.args)) || 'unknown';
+
+      const updater = runtimeUpdaters[type];
+      if (!updater) {
+        throw new Error(`Unknown runtime: ${type}`);
+      }
+
+      const newVersion = await updater(this.onLog);
+
+      this.onLog(`\n✅ ${type} updated: ${oldVersion} → ${newVersion}\n`, 'stdout');
+      this.setCurrentService(null);
+      this.invalidateStatusCache();
+      return { success: true, oldVersion, newVersion };
+    } catch (err: any) {
+      this.onLog(`\n❌ Failed to update ${type}: ${err.message}\n`, 'stderr');
+      this.setCurrentService(null);
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * **uninstallRuntime()** - Désinstalle un runtime
+   */
+  async uninstallRuntime(type: RuntimeType, purge: boolean): Promise<OperationResult> {
+    // Check if runtime is protected
+    if (PROTECTED_RUNTIMES.includes(type)) {
+      return {
+        success: false,
+        error: `Cannot remove ${type}: required by the server agent. Removing this runtime would make the server inaccessible.`,
+      };
     }
 
-    /**
-     * Check if logs exist for a specific service
-     */
-    static hasServiceLogs(service: string): boolean {
-        const logFile = path.join(LOG_DIR, `${service}.log`);
-        if (!fs.existsSync(logFile)) {
-            return false;
-        }
-        const stats = fs.statSync(logFile);
-        return stats.size > 0;
+    this.setCurrentService(type);
+    this.onLog(`\n🗑️ Removing ${type}${purge ? ' (with purge)' : ''}...\n`, 'stdout');
+
+    try {
+      await uninstallRuntime(type, purge, this.onLog);
+      this.onLog(`\n✅ ${type} removed successfully\n`, 'stdout');
+      this.setCurrentService(null);
+      this.invalidateStatusCache();
+      return { success: true };
+    } catch (err: any) {
+      this.onLog(`\n❌ Failed to remove ${type}: ${err.message}\n`, 'stderr');
+      this.setCurrentService(null);
+      return { success: false, error: err.message };
+    }
+  }
+
+  // ============================================
+  // PUBLIC API - DATABASES
+  // ============================================
+
+  /**
+   * **configureDatabase()** - Configure une base de données
+   *
+   * Retourne la connection string via le résultat (JAMAIS loggée !)
+   */
+  async configureDatabase(
+    type: DatabaseType,
+    dbName: string,
+    securityOptions?: DbSecurityOptions,
+  ): Promise<DatabaseConfigResult> {
+    this.setCurrentService(type);
+    this.onLog(`\n🗄️ Configuring ${type} database: ${dbName}...\n`, 'stdout');
+
+    // Default to secure options if not provided
+    const opts: DbSecurityOptions = securityOptions || {
+      setRootPassword: true,
+      removeAnonymousUsers: true,
+      disableRemoteRoot: true,
+      removeTestDb: true,
+      configureHba: true,
+      enableProtectedMode: true,
+      bindLocalhost: true,
+    };
+
+    try {
+      if (type === 'mongodb') {
+        throw new Error('MongoDB configuration not implemented yet');
+      }
+
+      const configurator = databaseConfigurators[type];
+      if (!configurator) {
+        throw new Error(`Unknown database: ${type}`);
+      }
+
+      const connectionString = await configurator(dbName, opts, this.onLog);
+      this.onLog(`\n✅ ${type} configured successfully\n`, 'stdout');
+      this.setCurrentService(null);
+      this.invalidateStatusCache();
+      return { success: true, connectionString };
+    } catch (err: any) {
+      this.onLog(`\n❌ Failed to configure ${type}: ${err.message}\n`, 'stderr');
+      this.setCurrentService(null);
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * **removeDatabase()** - Supprime une base de données
+   */
+  async removeDatabase(
+    type: DatabaseType,
+    purge: boolean,
+    removeData: boolean,
+  ): Promise<OperationResult> {
+    this.setCurrentService(type);
+    this.onLog(
+      `\n🗑️ Removing ${type}${purge ? ' (with purge)' : ''}${removeData ? ' [INCLUDING DATA]' : ''}...\n`,
+      'stdout',
+    );
+
+    try {
+      await removeDatabase(type, purge, removeData, this.onLog);
+      this.onLog(`\n✅ ${type} removed successfully\n`, 'stdout');
+      this.setCurrentService(null);
+      this.invalidateStatusCache();
+      return { success: true };
+    } catch (err: any) {
+      this.onLog(`\n❌ Failed to remove ${type}: ${err.message}\n`, 'stderr');
+      this.setCurrentService(null);
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * **reconfigureDatabase()** - Reconfigure une base de données
+   */
+  async reconfigureDatabase(
+    type: DatabaseType,
+    dbName: string,
+    resetPassword: boolean,
+  ): Promise<DatabaseConfigResult> {
+    this.setCurrentService(type);
+    const action = resetPassword ? 'Resetting password' : 'Creating new database';
+    this.onLog(`\n🔄 ${action} for ${type}: ${dbName}...\n`, 'stdout');
+
+    try {
+      const connectionString = await reconfigureDatabase(type, dbName, resetPassword, this.onLog);
+      this.onLog(`\n✅ ${type} reconfigured successfully\n`, 'stdout');
+      this.setCurrentService(null);
+      this.invalidateStatusCache();
+      return { success: true, connectionString };
+    } catch (err: any) {
+      this.onLog(`\n❌ Failed to reconfigure ${type}: ${err.message}\n`, 'stderr');
+      this.setCurrentService(null);
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * **startDatabase()** - Démarre une base de données
+   */
+  async startDatabase(type: DatabaseType): Promise<OperationResult> {
+    this.onLog(`\n▶️ Starting ${type}...\n`, 'stdout');
+
+    try {
+      const serviceName = DATABASE_SERVICE_NAMES[type] || type;
+      await runCommand('systemctl', ['start', serviceName], this.onLog);
+      this.onLog(`\n✅ ${type} started successfully\n`, 'stdout');
+      this.invalidateStatusCache();
+      return { success: true };
+    } catch (err: any) {
+      this.onLog(`\n❌ Failed to start ${type}: ${err.message}\n`, 'stderr');
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * **stopDatabase()** - Arrête une base de données
+   */
+  async stopDatabase(type: DatabaseType): Promise<OperationResult> {
+    this.onLog(`\n⏹️ Stopping ${type}...\n`, 'stdout');
+
+    try {
+      const serviceName = DATABASE_SERVICE_NAMES[type] || type;
+      await runCommand('systemctl', ['stop', serviceName], this.onLog);
+      this.onLog(`\n✅ ${type} stopped successfully\n`, 'stdout');
+      this.invalidateStatusCache();
+      return { success: true };
+    } catch (err: any) {
+      this.onLog(`\n❌ Failed to stop ${type}: ${err.message}\n`, 'stderr');
+      return { success: false, error: err.message };
+    }
+  }
+
+  // ============================================
+  // PUBLIC API - SERVICES
+  // ============================================
+
+  /**
+   * **installService()** - Installe un service
+   */
+  async installService(type: ServiceType): Promise<InstallResult> {
+    this.setCurrentService(type);
+    this.onLog(`\n📦 Installing ${type}...\n`, 'stdout');
+
+    try {
+      const installer = serviceInstallers[type];
+      if (!installer) {
+        throw new Error(`Unknown service: ${type}`);
+      }
+
+      const version = await installer(this.onLog);
+      this.onLog(`\n✅ ${type} ${version} installed successfully\n`, 'stdout');
+      this.setCurrentService(null);
+      this.invalidateStatusCache();
+      return { success: true, version };
+    } catch (err: any) {
+      this.onLog(`\n❌ Failed to install ${type}: ${err.message}\n`, 'stderr');
+      this.setCurrentService(null);
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * **removeService()** - Supprime un service
+   */
+  async removeService(type: ServiceType, purge: boolean = false): Promise<OperationResult> {
+    // Check if service is protected
+    if (PROTECTED_SERVICES.includes(type)) {
+      this.onLog(`\n⛔ Cannot remove ${type} - it's a protected system service\n`, 'stderr');
+      return {
+        success: false,
+        error: `${type} is a protected system service and cannot be removed`,
+      };
     }
 
-    // ============================================
-    // PUBLIC API - STATUS
-    // ============================================
+    this.setCurrentService(type);
+    this.onLog(`\n🗑️ Removing ${type}${purge ? ' (with purge)' : ''}...\n`, 'stdout');
 
-    /**
-     * **getServerStatus()** - Retourne l'état complet du serveur
-     *
-     * Utilise un cache de 5 secondes pour éviter les détections répétées.
-     *
-     * @param forceRefresh - Force une nouvelle détection même si le cache est valide
-     */
-    async getServerStatus(forceRefresh = false): Promise<ServerStatus> {
-        const now = Date.now();
-        const cacheAge = now - InfrastructureManager.statusCacheTimestamp;
+    try {
+      const removeCmd = purge ? 'purge' : 'remove';
+      await this.doRemoveService(type, removeCmd);
 
-        // Retourne le cache si valide et pas de forceRefresh
-        if (!forceRefresh && InfrastructureManager.statusCache && cacheAge < InfrastructureManager.STATUS_CACHE_TTL_MS) {
-            return InfrastructureManager.statusCache;
-        }
-
-        // Effectue la détection complète
-        const status: ServerStatus = {
-            runtimes: await detectRuntimes(),
-            databases: await detectDatabases(),
-            services: await detectServices(),
-            system: await getSystemInfo()
-        };
-
-        // Met à jour le cache statique
-        InfrastructureManager.statusCache = status;
-        InfrastructureManager.statusCacheTimestamp = now;
-
-        return status;
+      await runCommand('apt-get', ['autoremove', '-y'], this.onLog);
+      this.onLog(`\n✅ ${type} removed successfully\n`, 'stdout');
+      this.setCurrentService(null);
+      this.invalidateStatusCache();
+      return { success: true };
+    } catch (err: any) {
+      this.onLog(`\n❌ Failed to remove ${type}: ${err.message}\n`, 'stderr');
+      this.setCurrentService(null);
+      return { success: false, error: err.message };
     }
+  }
 
-    /**
-     * Invalide le cache du status serveur
-     */
-    invalidateStatusCache(): void {
-        InfrastructureManager.statusCache = null;
-        InfrastructureManager.statusCacheTimestamp = 0;
-    }
+  private async doRemoveService(type: ServiceType, removeCmd: string): Promise<void> {
+    // Vérifier si on a une configuration de nettoyage NUCLÉAIRE pour ce service
+    const cleanupConfig = NUCLEAR_CLEANUP_CONFIG[type];
 
-    // ============================================
-    // PUBLIC API - RUNTIMES
-    // ============================================
-
-    /**
-     * **installRuntime()** - Installe un runtime
-     */
-    async installRuntime(type: RuntimeType): Promise<InstallResult> {
-        if (type === 'nodejs') {
-            return { success: false, error: 'Node.js is already installed (required by the agent)' };
-        }
-
-        this.setCurrentService(type);
-        this.onLog(`\n📦 Installing ${type}...\n`, 'stdout');
-
+    // Cas spéciaux pour certains services (avant le cleanup général)
+    switch (type) {
+      case 'ufw':
         try {
-            const installer = runtimeInstallers[type];
-            if (!installer) {
-                throw new Error(`Unknown runtime: ${type}`);
-            }
-
-            const version = await installer(this.onLog);
-            this.onLog(`\n✅ ${type} ${version} installed successfully\n`, 'stdout');
-            this.setCurrentService(null);
-            this.invalidateStatusCache();
-            return { success: true, version };
-        } catch (err: any) {
-            this.onLog(`\n❌ Failed to install ${type}: ${err.message}\n`, 'stderr');
-            this.setCurrentService(null);
-            return { success: false, error: err.message };
-        }
+          await runCommand('ufw', ['disable'], this.onLog);
+        } catch {}
+        break;
+      case 'pm2':
+        await runCommand('npm', ['uninstall', '-g', 'pm2'], this.onLog);
+        return; // PM2 n'utilise pas apt
+      case 'rclone':
+        await runCommandSilent('rm', ['-f', '/usr/bin/rclone']);
+        await runCommandSilent('rm', ['-f', '/usr/local/share/man/man1/rclone.1']);
+        await runCommandSilent('rm', ['-f', '/usr/share/man/man1/rclone.1.gz']);
+        await runCommandSilent('rm', ['-rf', '/root/.config/rclone']);
+        this.onLog(`🗑️ Rclone binary and config removed\n`, 'stdout');
+        return; // Rclone n'utilise pas apt
+      case 'ssh':
+      case 'cron':
+        throw new Error(`${type} is a protected system service`);
     }
 
-    /**
-     * **updateRuntime()** - Met à jour un runtime
-     */
-    async updateRuntime(type: RuntimeType): Promise<UpdateResult> {
-        this.setCurrentService(type);
-        this.onLog(`\n🔄 Updating ${type}...\n`, 'stdout');
-
-        try {
-            // Get current version
-            const checks: Record<RuntimeType, { cmd: string; args: string[] }> = {
-                nodejs: { cmd: 'node', args: ['--version'] },
-                python: { cmd: 'python3', args: ['--version'] },
-                php: { cmd: 'php', args: ['--version'] },
-                go: { cmd: 'go', args: ['version'] },
-                docker: { cmd: 'docker', args: ['--version'] },
-                rust: { cmd: 'rustc', args: ['--version'] },
-                ruby: { cmd: 'ruby', args: ['--version'] }
-            };
-            const check = checks[type];
-            const oldVersion = await getCommandVersion(check.cmd, check.args) || 'unknown';
-
-            const updater = runtimeUpdaters[type];
-            if (!updater) {
-                throw new Error(`Unknown runtime: ${type}`);
-            }
-
-            const newVersion = await updater(this.onLog);
-
-            this.onLog(`\n✅ ${type} updated: ${oldVersion} → ${newVersion}\n`, 'stdout');
-            this.setCurrentService(null);
-            this.invalidateStatusCache();
-            return { success: true, oldVersion, newVersion };
-        } catch (err: any) {
-            this.onLog(`\n❌ Failed to update ${type}: ${err.message}\n`, 'stderr');
-            this.setCurrentService(null);
-            return { success: false, error: err.message };
-        }
+    // Désinstallation via le système de cleanup centralisé
+    if (cleanupConfig) {
+      // Utiliser le nettoyage NUCLÉAIRE centralisé
+      await nuclearCleanup(type, this.onLog);
+    } else {
+      // Services sans configuration spéciale - désinstallation simple
+      switch (type) {
+        case 'haproxy':
+          await runCommand('apt-get', [removeCmd, '-y', 'haproxy'], this.onLog);
+          break;
+        case 'keepalived':
+          await runCommand('apt-get', [removeCmd, '-y', 'keepalived'], this.onLog);
+          break;
+        case 'certbot':
+          await runCommand(
+            'apt-get',
+            [removeCmd, '-y', 'certbot', 'python3-certbot-nginx'],
+            this.onLog,
+          );
+          break;
+        case 'fail2ban':
+          await runCommand('apt-get', [removeCmd, '-y', 'fail2ban'], this.onLog);
+          break;
+        case 'ufw':
+          await runCommand('apt-get', [removeCmd, '-y', 'ufw'], this.onLog);
+          break;
+        case 'wireguard':
+          await runCommand(
+            'apt-get',
+            [removeCmd, '-y', 'wireguard', 'wireguard-tools'],
+            this.onLog,
+          );
+          break;
+        case 'loki':
+          await runCommand('apt-get', [removeCmd, '-y', 'loki'], this.onLog);
+          break;
+        case 'spf-policyd':
+          await runCommand('apt-get', [removeCmd, '-y', 'postfix-policyd-spf-python'], this.onLog);
+          // Recharger Postfix pour appliquer la suppression du policy daemon
+          try {
+            await runCommand('systemctl', ['reload', 'postfix'], this.onLog);
+          } catch {
+            /* Postfix peut ne pas être installé */
+          }
+          break;
+        case 'rsync':
+          await runCommand('apt-get', [removeCmd, '-y', 'rsync'], this.onLog);
+          break;
+        case 'restic':
+          await runCommand('apt-get', [removeCmd, '-y', 'restic'], this.onLog);
+          break;
+        case 'nfs':
+          await runCommand(
+            'apt-get',
+            [removeCmd, '-y', 'nfs-kernel-server', 'nfs-common', 'nfs-utils'],
+            this.onLog,
+          );
+          break;
+        default:
+          throw new Error(`Unknown service: ${type}`);
+      }
     }
-
-    /**
-     * **uninstallRuntime()** - Désinstalle un runtime
-     */
-    async uninstallRuntime(type: RuntimeType, purge: boolean): Promise<OperationResult> {
-        // Check if runtime is protected
-        if (PROTECTED_RUNTIMES.includes(type)) {
-            return {
-                success: false,
-                error: `Cannot remove ${type}: required by the server agent. Removing this runtime would make the server inaccessible.`
-            };
-        }
-
-        this.setCurrentService(type);
-        this.onLog(`\n🗑️ Removing ${type}${purge ? ' (with purge)' : ''}...\n`, 'stdout');
-
-        try {
-            await uninstallRuntime(type, purge, this.onLog);
-            this.onLog(`\n✅ ${type} removed successfully\n`, 'stdout');
-            this.setCurrentService(null);
-            this.invalidateStatusCache();
-            return { success: true };
-        } catch (err: any) {
-            this.onLog(`\n❌ Failed to remove ${type}: ${err.message}\n`, 'stderr');
-            this.setCurrentService(null);
-            return { success: false, error: err.message };
-        }
-    }
-
-    // ============================================
-    // PUBLIC API - DATABASES
-    // ============================================
-
-    /**
-     * **configureDatabase()** - Configure une base de données
-     *
-     * Retourne la connection string via le résultat (JAMAIS loggée !)
-     */
-    async configureDatabase(type: DatabaseType, dbName: string, securityOptions?: DbSecurityOptions): Promise<DatabaseConfigResult> {
-        this.setCurrentService(type);
-        this.onLog(`\n🗄️ Configuring ${type} database: ${dbName}...\n`, 'stdout');
-
-        // Default to secure options if not provided
-        const opts: DbSecurityOptions = securityOptions || {
-            setRootPassword: true,
-            removeAnonymousUsers: true,
-            disableRemoteRoot: true,
-            removeTestDb: true,
-            configureHba: true,
-            enableProtectedMode: true,
-            bindLocalhost: true
-        };
-
-        try {
-            if (type === 'mongodb') {
-                throw new Error('MongoDB configuration not implemented yet');
-            }
-
-            const configurator = databaseConfigurators[type];
-            if (!configurator) {
-                throw new Error(`Unknown database: ${type}`);
-            }
-
-            const connectionString = await configurator(dbName, opts, this.onLog);
-            this.onLog(`\n✅ ${type} configured successfully\n`, 'stdout');
-            this.setCurrentService(null);
-            this.invalidateStatusCache();
-            return { success: true, connectionString };
-        } catch (err: any) {
-            this.onLog(`\n❌ Failed to configure ${type}: ${err.message}\n`, 'stderr');
-            this.setCurrentService(null);
-            return { success: false, error: err.message };
-        }
-    }
-
-    /**
-     * **removeDatabase()** - Supprime une base de données
-     */
-    async removeDatabase(type: DatabaseType, purge: boolean, removeData: boolean): Promise<OperationResult> {
-        this.setCurrentService(type);
-        this.onLog(`\n🗑️ Removing ${type}${purge ? ' (with purge)' : ''}${removeData ? ' [INCLUDING DATA]' : ''}...\n`, 'stdout');
-
-        try {
-            await removeDatabase(type, purge, removeData, this.onLog);
-            this.onLog(`\n✅ ${type} removed successfully\n`, 'stdout');
-            this.setCurrentService(null);
-            this.invalidateStatusCache();
-            return { success: true };
-        } catch (err: any) {
-            this.onLog(`\n❌ Failed to remove ${type}: ${err.message}\n`, 'stderr');
-            this.setCurrentService(null);
-            return { success: false, error: err.message };
-        }
-    }
-
-    /**
-     * **reconfigureDatabase()** - Reconfigure une base de données
-     */
-    async reconfigureDatabase(type: DatabaseType, dbName: string, resetPassword: boolean): Promise<DatabaseConfigResult> {
-        this.setCurrentService(type);
-        const action = resetPassword ? 'Resetting password' : 'Creating new database';
-        this.onLog(`\n🔄 ${action} for ${type}: ${dbName}...\n`, 'stdout');
-
-        try {
-            const connectionString = await reconfigureDatabase(type, dbName, resetPassword, this.onLog);
-            this.onLog(`\n✅ ${type} reconfigured successfully\n`, 'stdout');
-            this.setCurrentService(null);
-            this.invalidateStatusCache();
-            return { success: true, connectionString };
-        } catch (err: any) {
-            this.onLog(`\n❌ Failed to reconfigure ${type}: ${err.message}\n`, 'stderr');
-            this.setCurrentService(null);
-            return { success: false, error: err.message };
-        }
-    }
-
-    /**
-     * **startDatabase()** - Démarre une base de données
-     */
-    async startDatabase(type: DatabaseType): Promise<OperationResult> {
-        this.onLog(`\n▶️ Starting ${type}...\n`, 'stdout');
-
-        try {
-            const serviceName = DATABASE_SERVICE_NAMES[type] || type;
-            await runCommand('systemctl', ['start', serviceName], this.onLog);
-            this.onLog(`\n✅ ${type} started successfully\n`, 'stdout');
-            this.invalidateStatusCache();
-            return { success: true };
-        } catch (err: any) {
-            this.onLog(`\n❌ Failed to start ${type}: ${err.message}\n`, 'stderr');
-            return { success: false, error: err.message };
-        }
-    }
-
-    /**
-     * **stopDatabase()** - Arrête une base de données
-     */
-    async stopDatabase(type: DatabaseType): Promise<OperationResult> {
-        this.onLog(`\n⏹️ Stopping ${type}...\n`, 'stdout');
-
-        try {
-            const serviceName = DATABASE_SERVICE_NAMES[type] || type;
-            await runCommand('systemctl', ['stop', serviceName], this.onLog);
-            this.onLog(`\n✅ ${type} stopped successfully\n`, 'stdout');
-            this.invalidateStatusCache();
-            return { success: true };
-        } catch (err: any) {
-            this.onLog(`\n❌ Failed to stop ${type}: ${err.message}\n`, 'stderr');
-            return { success: false, error: err.message };
-        }
-    }
-
-    // ============================================
-    // PUBLIC API - SERVICES
-    // ============================================
-
-    /**
-     * **installService()** - Installe un service
-     */
-    async installService(type: ServiceType): Promise<InstallResult> {
-        this.setCurrentService(type);
-        this.onLog(`\n📦 Installing ${type}...\n`, 'stdout');
-
-        try {
-            const installer = serviceInstallers[type];
-            if (!installer) {
-                throw new Error(`Unknown service: ${type}`);
-            }
-
-            const version = await installer(this.onLog);
-            this.onLog(`\n✅ ${type} ${version} installed successfully\n`, 'stdout');
-            this.setCurrentService(null);
-            this.invalidateStatusCache();
-            return { success: true, version };
-        } catch (err: any) {
-            this.onLog(`\n❌ Failed to install ${type}: ${err.message}\n`, 'stderr');
-            this.setCurrentService(null);
-            return { success: false, error: err.message };
-        }
-    }
-
-    /**
-     * **removeService()** - Supprime un service
-     */
-    async removeService(type: ServiceType, purge: boolean = false): Promise<OperationResult> {
-        // Check if service is protected
-        if (PROTECTED_SERVICES.includes(type)) {
-            this.onLog(`\n⛔ Cannot remove ${type} - it's a protected system service\n`, 'stderr');
-            return { success: false, error: `${type} is a protected system service and cannot be removed` };
-        }
-
-        this.setCurrentService(type);
-        this.onLog(`\n🗑️ Removing ${type}${purge ? ' (with purge)' : ''}...\n`, 'stdout');
-
-        try {
-            const removeCmd = purge ? 'purge' : 'remove';
-            await this.doRemoveService(type, removeCmd);
-
-            await runCommand('apt-get', ['autoremove', '-y'], this.onLog);
-            this.onLog(`\n✅ ${type} removed successfully\n`, 'stdout');
-            this.setCurrentService(null);
-            this.invalidateStatusCache();
-            return { success: true };
-        } catch (err: any) {
-            this.onLog(`\n❌ Failed to remove ${type}: ${err.message}\n`, 'stderr');
-            this.setCurrentService(null);
-            return { success: false, error: err.message };
-        }
-    }
-
-    private async doRemoveService(type: ServiceType, removeCmd: string): Promise<void> {
-        // Vérifier si on a une configuration de nettoyage NUCLÉAIRE pour ce service
-        const cleanupConfig = NUCLEAR_CLEANUP_CONFIG[type];
-
-        // Cas spéciaux pour certains services (avant le cleanup général)
-        switch (type) {
-            case 'ufw':
-                try { await runCommand('ufw', ['disable'], this.onLog); } catch { }
-                break;
-            case 'pm2':
-                await runCommand('npm', ['uninstall', '-g', 'pm2'], this.onLog);
-                return; // PM2 n'utilise pas apt
-            case 'rclone':
-                await runCommandSilent('rm', ['-f', '/usr/bin/rclone']);
-                await runCommandSilent('rm', ['-f', '/usr/local/share/man/man1/rclone.1']);
-                await runCommandSilent('rm', ['-f', '/usr/share/man/man1/rclone.1.gz']);
-                await runCommandSilent('rm', ['-rf', '/root/.config/rclone']);
-                this.onLog(`🗑️ Rclone binary and config removed\n`, 'stdout');
-                return; // Rclone n'utilise pas apt
-            case 'ssh':
-            case 'cron':
-                throw new Error(`${type} is a protected system service`);
-        }
-
-        // Désinstallation via le système de cleanup centralisé
-        if (cleanupConfig) {
-            // Utiliser le nettoyage NUCLÉAIRE centralisé
-            await nuclearCleanup(type, this.onLog);
-        } else {
-            // Services sans configuration spéciale - désinstallation simple
-            switch (type) {
-                case 'haproxy':
-                    await runCommand('apt-get', [removeCmd, '-y', 'haproxy'], this.onLog);
-                    break;
-                case 'keepalived':
-                    await runCommand('apt-get', [removeCmd, '-y', 'keepalived'], this.onLog);
-                    break;
-                case 'certbot':
-                    await runCommand('apt-get', [removeCmd, '-y', 'certbot', 'python3-certbot-nginx'], this.onLog);
-                    break;
-                case 'fail2ban':
-                    await runCommand('apt-get', [removeCmd, '-y', 'fail2ban'], this.onLog);
-                    break;
-                case 'ufw':
-                    await runCommand('apt-get', [removeCmd, '-y', 'ufw'], this.onLog);
-                    break;
-                case 'wireguard':
-                    await runCommand('apt-get', [removeCmd, '-y', 'wireguard', 'wireguard-tools'], this.onLog);
-                    break;
-                case 'loki':
-                    await runCommand('apt-get', [removeCmd, '-y', 'loki'], this.onLog);
-                    break;
-                case 'spf-policyd':
-                    await runCommand('apt-get', [removeCmd, '-y', 'postfix-policyd-spf-python'], this.onLog);
-                    // Recharger Postfix pour appliquer la suppression du policy daemon
-                    try {
-                        await runCommand('systemctl', ['reload', 'postfix'], this.onLog);
-                    } catch { /* Postfix peut ne pas être installé */ }
-                    break;
-                case 'rsync':
-                    await runCommand('apt-get', [removeCmd, '-y', 'rsync'], this.onLog);
-                    break;
-                case 'restic':
-                    await runCommand('apt-get', [removeCmd, '-y', 'restic'], this.onLog);
-                    break;
-                case 'nfs':
-                    await runCommand('apt-get', [removeCmd, '-y', 'nfs-kernel-server', 'nfs-common', 'nfs-utils'], this.onLog);
-                    break;
-                default:
-                    throw new Error(`Unknown service: ${type}`);
-            }
-        }
-    }
-
-    /**
-     * **startService()** - Démarre un service
-     */
-    async startService(type: ServiceType): Promise<OperationResult> {
-        this.onLog(`\n▶️ Starting ${type}...\n`, 'stdout');
-
-        try {
-            // Vérifier si ce service a un nom systemd (chaîne vide = pas de service)
-            const serviceName = SERVICE_NAMES[type];
-            if (!serviceName) {
-                throw new Error(`${type} is a tool or runs via another service - it cannot be started directly`);
-            }
-            await runCommand('systemctl', ['start', serviceName], this.onLog);
-            this.onLog(`\n✅ ${type} started successfully\n`, 'stdout');
-            this.invalidateStatusCache();
-            return { success: true };
-        } catch (err: any) {
-            this.onLog(`\n❌ Failed to start ${type}: ${err.message}\n`, 'stderr');
-            return { success: false, error: err.message };
-        }
-    }
-
-    /**
-     * **stopService()** - Arrête un service
-     */
-    async stopService(type: ServiceType): Promise<OperationResult> {
-        this.onLog(`\n⏹️ Stopping ${type}...\n`, 'stdout');
-
-        try {
-            // Vérifier si ce service a un nom systemd (chaîne vide = pas de service)
-            const serviceName = SERVICE_NAMES[type];
-            if (!serviceName) {
-                throw new Error(`${type} is a tool or runs via another service - it cannot be stopped directly`);
-            }
-            await runCommand('systemctl', ['stop', serviceName], this.onLog);
-            this.onLog(`\n✅ ${type} stopped successfully\n`, 'stdout');
-            this.invalidateStatusCache();
-            return { success: true };
-        } catch (err: any) {
-            this.onLog(`\n❌ Failed to stop ${type}: ${err.message}\n`, 'stderr');
-            return { success: false, error: err.message };
-        }
-    }
-
-    /**
-     * **configureMailStack()** - Configure une stack mail complète
-     *
-     * Cette fonction installe et configure tous les services mail nécessaires
-     * pour un serveur de messagerie fonctionnel : Postfix, Dovecot, Rspamd,
-     * OpenDKIM, ClamAV et SPF-policyd.
-     *
-     * @param config - Configuration de la stack mail
-     * @param config.domain - Domaine principal (ex: example.com)
-     * @param config.hostname - Hostname du serveur mail (ex: mail.example.com)
-     * @param config.services - Services à installer
-     * @param config.security - Options de sécurité (TLS, DKIM, SPF, DMARC)
-     */
-    async configureMailStack(config: {
-        domain: string;
-        hostname: string;
-        services: string[];
-        security: {
-            tls: string;
-            dkimKeySize: number;
-            spf: boolean;
-            dmarc: boolean;
-        };
-    }): Promise<{ success: boolean; dkimPublicKey?: string; error?: string }> {
-        this.onLog(`\n📧 Configuring Mail Stack for ${config.domain}...\n`, 'stdout');
-
-        const mailServices: ServiceType[] = ['postfix', 'dovecot', 'rspamd', 'opendkim', 'clamav', 'spf-policyd'];
-        const servicesToInstall = config.services.filter(s => mailServices.includes(s as ServiceType));
-
-        // Configuration pour les installateurs mail
-        const mailConfig = { domain: config.domain, hostname: config.hostname };
-
-        try {
-            // Étape 1: Installer les services avec le bon domaine
-            this.onLog(`\n📦 Step 1/4: Installing mail services...\n`, 'stdout');
-            for (const service of servicesToInstall) {
-                this.onLog(`\n  → Installing ${service}...\n`, 'stdout');
-                try {
-                    // Utiliser les installateurs mail spécifiques avec le domaine configuré
-                    switch (service) {
-                        case 'postfix':
-                            await installPostfix(this.onLog, mailConfig);
-                            break;
-                        case 'dovecot':
-                            await installDovecot(this.onLog);
-                            break;
-                        case 'rspamd':
-                            await installRspamd(this.onLog);
-                            break;
-                        case 'opendkim':
-                            await installOpendkim(this.onLog, mailConfig);
-                            break;
-                        case 'clamav':
-                            await installClamav(this.onLog);
-                            break;
-                        case 'spf-policyd':
-                            await installSpfPolicyd(this.onLog);
-                            break;
-                        default:
-                            throw new Error(`Unknown mail service: ${service}`);
-                    }
-                    this.onLog(`\n✅ ${service} installed successfully\n`, 'stdout');
-                } catch (err: any) {
-                    throw new Error(`Failed to install ${service}: ${err.message}`);
-                }
-            }
-
-            // Étape 2: Générer les clés DKIM si OpenDKIM est installé
-            let dkimPublicKey: string | undefined;
-            if (servicesToInstall.includes('opendkim')) {
-                this.onLog(`\n🔑 Step 2/4: Generating DKIM keys...\n`, 'stdout');
-                dkimPublicKey = await this.generateDkimKeys(config.domain, config.security.dkimKeySize);
-            } else {
-                this.onLog(`\n⏭️ Step 2/4: Skipping DKIM (not selected)\n`, 'stdout');
-            }
-
-            // Étape 3: Appliquer les configurations
-            this.onLog(`\n⚙️ Step 3/4: Applying configurations...\n`, 'stdout');
-            await this.applyMailTemplates(config);
-
-            // Étape 4: Redémarrer les services
-            this.onLog(`\n🔄 Step 4/4: Restarting services...\n`, 'stdout');
-            for (const service of servicesToInstall) {
-                if (SERVICE_NAMES[service as ServiceType]) {
-                    this.onLog(`  → Restarting ${service}...\n`, 'stdout');
-                    await runCommandSilent('systemctl', ['restart', SERVICE_NAMES[service as ServiceType]]);
-                }
-            }
-
-            // Sauvegarder la configuration
-            await this.saveMailConfig(config, dkimPublicKey);
-
-            this.onLog(`\n✅ Mail stack configured successfully!\n`, 'stdout');
-            this.invalidateStatusCache();
-
-            return { success: true, dkimPublicKey };
-        } catch (err: any) {
-            this.onLog(`\n❌ Mail stack configuration failed: ${err.message}\n`, 'stderr');
-            return { success: false, error: err.message };
-        }
-    }
-
-    /**
-     * **generateDkimKeys()** - Génère les clés DKIM pour un domaine
-     */
-    private async generateDkimKeys(domain: string, keySize: number = 2048): Promise<string> {
-        const keysDir = `/etc/opendkim/keys/${domain}`;
-
-        // Créer le répertoire des clés
-        await runCommandSilent('mkdir', ['-p', keysDir]);
-
-        // Générer la clé privée (RSA pour compatibilité DKIM)
-        await runCommand('opendkim-genkey', [
-            '-b', keySize.toString(),
-            '-d', domain,
-            '-D', keysDir,
-            '-s', 'default',
-            '-v'
-        ], this.onLog);
-
-        // Lire la clé publique
-        const publicKeyPath = path.join(keysDir, 'default.txt');
-        const publicKeyContent = fs.readFileSync(publicKeyPath, 'utf-8');
-
-        // Changer les permissions
-        await runCommandSilent('chown', ['-R', 'opendkim:opendkim', keysDir]);
-        await runCommandSilent('chmod', ['600', path.join(keysDir, 'default.private')]);
-
-        this.onLog(`  ✅ DKIM keys generated for ${domain}\n`, 'stdout');
-
-        // Extraire juste la clé publique du fichier
-        const keyMatch = publicKeyContent.match(/p=([^"]+)/);
-        return keyMatch ? keyMatch[1].replace(/\s+/g, '') : publicKeyContent;
-    }
-
-    /**
-     * **applyMailTemplates()** - Applique les templates de configuration mail
-     */
-    private async applyMailTemplates(config: {
-        domain: string;
-        hostname: string;
-        services: string[];
-        security: { tls: string; dkimKeySize: number; spf: boolean; dmarc: boolean };
-    }): Promise<void> {
-        const templatesDir = path.join(__dirname, 'templates');
-        const variables = {
-            domain: config.domain,
-            hostname: config.hostname,
-            keys_dir: `/etc/opendkim/keys/${config.domain}`
-        };
-
-        // Postfix main.cf
-        if (config.services.includes('postfix')) {
-            const postfixTemplate = fs.readFileSync(path.join(templatesDir, 'postfix', 'main.cf.conf'), 'utf-8');
-            const postfixConfig = this.applyTemplateVariables(postfixTemplate, variables);
-            fs.writeFileSync('/etc/postfix/main.cf', postfixConfig);
-            this.onLog(`  ✅ Postfix main.cf configured\n`, 'stdout');
-        }
-
-        // Dovecot local.conf
-        if (config.services.includes('dovecot')) {
-            const dovecotTemplate = fs.readFileSync(path.join(templatesDir, 'dovecot', 'local.conf'), 'utf-8');
-            const dovecotConfig = this.applyTemplateVariables(dovecotTemplate, variables);
-            fs.writeFileSync('/etc/dovecot/local.conf', dovecotConfig);
-            this.onLog(`  ✅ Dovecot local.conf configured\n`, 'stdout');
-        }
-
-        // OpenDKIM configs
-        if (config.services.includes('opendkim')) {
-            const opendkimDir = path.join(templatesDir, 'opendkim');
-
-            // opendkim.conf
-            const mainConf = fs.readFileSync(path.join(opendkimDir, 'opendkim.conf'), 'utf-8');
-            fs.writeFileSync('/etc/opendkim.conf', this.applyTemplateVariables(mainConf, variables));
-
-            // KeyTable
-            const keyTable = fs.readFileSync(path.join(opendkimDir, 'KeyTable.conf'), 'utf-8');
-            fs.writeFileSync('/etc/opendkim/KeyTable', this.applyTemplateVariables(keyTable, variables));
-
-            // SigningTable
-            const signingTable = fs.readFileSync(path.join(opendkimDir, 'SigningTable.conf'), 'utf-8');
-            fs.writeFileSync('/etc/opendkim/SigningTable', this.applyTemplateVariables(signingTable, variables));
-
-            // TrustedHosts
-            const trustedHosts = fs.readFileSync(path.join(opendkimDir, 'TrustedHosts.conf'), 'utf-8');
-            fs.writeFileSync('/etc/opendkim/TrustedHosts', this.applyTemplateVariables(trustedHosts, variables));
-
-            this.onLog(`  ✅ OpenDKIM configured\n`, 'stdout');
-        }
-
-        // Rspamd antivirus config (pour ClamAV)
-        if (config.services.includes('rspamd') && config.services.includes('clamav')) {
-            const rspamdTemplate = fs.readFileSync(path.join(templatesDir, 'rspamd', 'antivirus.conf'), 'utf-8');
-            const rspamdConfig = this.applyTemplateVariables(rspamdTemplate, variables);
-            await runCommandSilent('mkdir', ['-p', '/etc/rspamd/local.d']);
-            fs.writeFileSync('/etc/rspamd/local.d/antivirus.conf', rspamdConfig);
-            this.onLog(`  ✅ Rspamd antivirus integration configured\n`, 'stdout');
-        }
-
-        // ClamAV config
-        if (config.services.includes('clamav')) {
-            const clamavTemplate = fs.readFileSync(path.join(templatesDir, 'clamav', 'clamd.conf'), 'utf-8');
-            const clamavConfig = this.applyTemplateVariables(clamavTemplate, variables);
-            fs.writeFileSync('/etc/clamav/clamd.conf', clamavConfig);
-            this.onLog(`  ✅ ClamAV configured\n`, 'stdout');
-        }
-    }
-
-    /**
-     * **applyTemplateVariables()** - Remplace les variables {{ var }} dans un template
-     */
-    private applyTemplateVariables(template: string, variables: Record<string, string>): string {
-        let result = template;
-        for (const [key, value] of Object.entries(variables)) {
-            // Remplace {{ key }} et {{ key | default:value }}
-            const regex = new RegExp(`\\{\\{\\s*${key}\\s*(\\|\\s*default:\\s*[^}]+)?\\s*\\}\\}`, 'g');
-            result = result.replace(regex, value);
-        }
-        // Remplace les variables non définies par leur valeur par défaut
-        result = result.replace(/\{\{\s*\w+\s*\|\s*default:\s*([^}]+)\s*\}\}/g, '$1');
-        return result;
-    }
-
-    /**
-     * **saveMailConfig()** - Sauvegarde la configuration mail pour référence future
-     */
-    private async saveMailConfig(config: any, dkimPublicKey?: string): Promise<void> {
-        const configDir = '/opt/serverflow/config';
-        await runCommandSilent('mkdir', ['-p', configDir]);
-
-        const mailConfig = {
-            ...config,
-            dkimPublicKey,
-            configuredAt: new Date().toISOString()
-        };
-
-        fs.writeFileSync(
-            path.join(configDir, 'mail.json'),
-            JSON.stringify(mailConfig, null, 2)
+  }
+
+  /**
+   * **startService()** - Démarre un service
+   */
+  async startService(type: ServiceType): Promise<OperationResult> {
+    this.onLog(`\n▶️ Starting ${type}...\n`, 'stdout');
+
+    try {
+      // Vérifier si ce service a un nom systemd (chaîne vide = pas de service)
+      const serviceName = SERVICE_NAMES[type];
+      if (!serviceName) {
+        throw new Error(
+          `${type} is a tool or runs via another service - it cannot be started directly`,
         );
-
-        this.onLog(`  ✅ Mail configuration saved to ${configDir}/mail.json\n`, 'stdout');
+      }
+      await runCommand('systemctl', ['start', serviceName], this.onLog);
+      this.onLog(`\n✅ ${type} started successfully\n`, 'stdout');
+      this.invalidateStatusCache();
+      return { success: true };
+    } catch (err: any) {
+      this.onLog(`\n❌ Failed to start ${type}: ${err.message}\n`, 'stderr');
+      return { success: false, error: err.message };
     }
+  }
+
+  /**
+   * **stopService()** - Arrête un service
+   */
+  async stopService(type: ServiceType): Promise<OperationResult> {
+    this.onLog(`\n⏹️ Stopping ${type}...\n`, 'stdout');
+
+    try {
+      // Vérifier si ce service a un nom systemd (chaîne vide = pas de service)
+      const serviceName = SERVICE_NAMES[type];
+      if (!serviceName) {
+        throw new Error(
+          `${type} is a tool or runs via another service - it cannot be stopped directly`,
+        );
+      }
+      await runCommand('systemctl', ['stop', serviceName], this.onLog);
+      this.onLog(`\n✅ ${type} stopped successfully\n`, 'stdout');
+      this.invalidateStatusCache();
+      return { success: true };
+    } catch (err: any) {
+      this.onLog(`\n❌ Failed to stop ${type}: ${err.message}\n`, 'stderr');
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * **configureMailStack()** - Configure une stack mail complète
+   *
+   * Cette fonction installe et configure tous les services mail nécessaires
+   * pour un serveur de messagerie fonctionnel : Postfix, Dovecot, Rspamd,
+   * OpenDKIM, ClamAV et SPF-policyd.
+   *
+   * @param config - Configuration de la stack mail
+   * @param config.domain - Domaine principal (ex: example.com)
+   * @param config.hostname - Hostname du serveur mail (ex: mail.example.com)
+   * @param config.additionalDomains - Domaines supplémentaires à configurer
+   * @param config.services - Services à installer
+   * @param config.security - Options de sécurité (TLS, DKIM, SPF, DMARC)
+   */
+  async configureMailStack(config: {
+    domain: string;
+    hostname: string;
+    additionalDomains?: string[];
+    services: string[];
+    security: {
+      // Nouvelle structure TLS
+      tls:
+        | string
+        | {
+            provider: 'letsencrypt' | 'existing' | 'none';
+            certPath?: string;
+            keyPath?: string;
+          };
+      // Nouvelle structure DKIM
+      dkim?: {
+        enabled: boolean;
+        selector: string;
+        keySize: number;
+      };
+      // Ancienne structure (rétrocompatibilité)
+      dkimKeySize?: number;
+      // Nouvelle structure SPF/DMARC
+      spf?: boolean | { enabled: boolean; policy: string };
+      dmarc?: boolean | { enabled: boolean; policy: string; rua?: string };
+    };
+  }): Promise<{ success: boolean; dkimPublicKey?: string; error?: string }> {
+    this.onLog(`\n📧 Configuring Mail Stack for ${config.domain}...\n`, 'stdout');
+
+    // Normaliser la configuration de sécurité (rétrocompatibilité)
+    const tlsConfig =
+      typeof config.security.tls === 'string'
+        ? { provider: config.security.tls as 'letsencrypt' | 'existing' | 'none' }
+        : config.security.tls;
+
+    const dkimConfig = config.security.dkim || {
+      enabled: true,
+      selector: 'default',
+      keySize: config.security.dkimKeySize || 2048,
+    };
+
+    const allDomains = [config.domain, ...(config.additionalDomains || [])];
+
+    const mailServices: ServiceType[] = [
+      'postfix',
+      'dovecot',
+      'rspamd',
+      'opendkim',
+      'clamav',
+      'spf-policyd',
+    ];
+    const servicesToInstall = config.services.filter((s) =>
+      mailServices.includes(s as ServiceType),
+    );
+
+    // Configuration pour les installateurs mail
+    const mailConfig = {
+      domain: config.domain,
+      hostname: config.hostname,
+      additionalDomains: config.additionalDomains || [],
+      dkimSelector: dkimConfig.selector,
+      tlsProvider: tlsConfig.provider,
+      tlsCertPath: tlsConfig.certPath,
+      tlsKeyPath: tlsConfig.keyPath,
+    };
+
+    try {
+      // Étape 1: Installer les services avec le bon domaine
+      this.onLog(`\n📦 Step 1/4: Installing mail services...\n`, 'stdout');
+      for (const service of servicesToInstall) {
+        this.onLog(`\n  → Installing ${service}...\n`, 'stdout');
+        try {
+          // Utiliser les installateurs mail spécifiques avec le domaine configuré
+          switch (service) {
+            case 'postfix':
+              await installPostfix(this.onLog, mailConfig);
+              break;
+            case 'dovecot':
+              await installDovecot(this.onLog);
+              break;
+            case 'rspamd':
+              await installRspamd(this.onLog);
+              break;
+            case 'opendkim':
+              await installOpendkim(this.onLog, mailConfig);
+              break;
+            case 'clamav':
+              await installClamav(this.onLog);
+              break;
+            case 'spf-policyd':
+              await installSpfPolicyd(this.onLog);
+              break;
+            default:
+              throw new Error(`Unknown mail service: ${service}`);
+          }
+          this.onLog(`\n✅ ${service} installed successfully\n`, 'stdout');
+        } catch (err: any) {
+          throw new Error(`Failed to install ${service}: ${err.message}`);
+        }
+      }
+
+      // Étape 2: Générer les clés DKIM si OpenDKIM est installé
+      let dkimPublicKey: string | undefined;
+      if (servicesToInstall.includes('opendkim') && dkimConfig.enabled) {
+        this.onLog(`\n🔑 Step 2/4: Generating DKIM keys...\n`, 'stdout');
+        // Générer les clés pour tous les domaines
+        for (const domain of allDomains) {
+          const key = await this.generateDkimKeys(domain, dkimConfig.keySize, dkimConfig.selector);
+          if (domain === config.domain) {
+            dkimPublicKey = key;
+          }
+        }
+      } else {
+        this.onLog(`\n⏭️ Step 2/4: Skipping DKIM (not selected)\n`, 'stdout');
+      }
+
+      // Étape 2.5: Configurer TLS si Let's Encrypt est demandé
+      if (tlsConfig.provider === 'letsencrypt') {
+        this.onLog(`\n🔒 Step 2.5/4: Configuring Let's Encrypt TLS...\n`, 'stdout');
+        await this.setupLetsEncrypt(config.hostname, allDomains);
+      }
+
+      // Étape 3: Appliquer les configurations
+      this.onLog(`\n⚙️ Step 3/4: Applying configurations...\n`, 'stdout');
+      await this.applyMailTemplates({
+        ...mailConfig,
+        services: servicesToInstall,
+      });
+
+      // Étape 4: Redémarrer les services
+      this.onLog(`\n🔄 Step 4/4: Restarting services...\n`, 'stdout');
+      for (const service of servicesToInstall) {
+        if (SERVICE_NAMES[service as ServiceType]) {
+          this.onLog(`  → Restarting ${service}...\n`, 'stdout');
+          await runCommandSilent('systemctl', ['restart', SERVICE_NAMES[service as ServiceType]]);
+        }
+      }
+
+      // Sauvegarder la configuration
+      await this.saveMailConfig(config, dkimPublicKey);
+
+      this.onLog(`\n✅ Mail stack configured successfully!\n`, 'stdout');
+      this.invalidateStatusCache();
+
+      return { success: true, dkimPublicKey };
+    } catch (err: any) {
+      this.onLog(`\n❌ Mail stack configuration failed: ${err.message}\n`, 'stderr');
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * **generateDkimKeys()** - Génère les clés DKIM pour un domaine
+   *
+   * @param domain - Le domaine pour lequel générer les clés
+   * @param keySize - Taille de la clé RSA (2048 ou 4096)
+   * @param selector - Le selector DKIM (ex: default, mail, 2024)
+   */
+  private async generateDkimKeys(
+    domain: string,
+    keySize: number = 2048,
+    selector: string = 'default',
+  ): Promise<string> {
+    const keysDir = `/etc/opendkim/keys/${domain}`;
+
+    // Créer le répertoire des clés
+    await runCommandSilent('mkdir', ['-p', keysDir]);
+
+    // Générer la clé privée (RSA pour compatibilité DKIM)
+    await runCommand(
+      'opendkim-genkey',
+      ['-b', keySize.toString(), '-d', domain, '-D', keysDir, '-s', selector, '-v'],
+      this.onLog,
+    );
+
+    // Lire la clé publique
+    const publicKeyPath = path.join(keysDir, `${selector}.txt`);
+    const publicKeyContent = fs.readFileSync(publicKeyPath, 'utf-8');
+
+    // Changer les permissions
+    await runCommandSilent('chown', ['-R', 'opendkim:opendkim', keysDir]);
+    await runCommandSilent('chmod', ['600', path.join(keysDir, `${selector}.private`)]);
+
+    this.onLog(`  ✅ DKIM keys generated for ${domain} (selector: ${selector})\n`, 'stdout');
+
+    // Extraire juste la clé publique du fichier
+    const keyMatch = publicKeyContent.match(/p=([^"]+)/);
+    return keyMatch ? keyMatch[1].replace(/\s+/g, '') : publicKeyContent;
+  }
+
+  /**
+   * **setupLetsEncrypt()** - Configure les certificats Let's Encrypt pour le mail
+   *
+   * Cette fonction installe certbot si nécessaire et génère les certificats
+   * TLS pour le serveur mail. Elle configure aussi le renouvellement automatique.
+   *
+   * @param hostname - Le hostname du serveur mail (ex: mail.example.com)
+   * @param domains - Tous les domaines à inclure dans le certificat
+   */
+  private async setupLetsEncrypt(hostname: string, domains: string[]): Promise<void> {
+    // Installer certbot si pas présent
+    try {
+      await runCommandSilent('which', ['certbot']);
+      this.onLog(`  ✅ Certbot already installed\n`, 'stdout');
+    } catch {
+      this.onLog(`  📥 Installing Certbot...\n`, 'stdout');
+      await runCommand('apt-get', ['update'], this.onLog);
+      await runCommand('apt-get', ['install', '-y', 'certbot'], this.onLog);
+    }
+
+    // Construire la liste des domaines pour le certificat
+    // Le hostname mail est le principal, puis on ajoute les domaines pour webmail, etc.
+    const certDomains = [hostname];
+    for (const domain of domains) {
+      // Ajouter des sous-domaines utiles pour le mail
+      if (!certDomains.includes(`mail.${domain}`)) {
+        certDomains.push(`mail.${domain}`);
+      }
+    }
+
+    this.onLog(
+      `  🔐 Requesting Let's Encrypt certificate for: ${certDomains.join(', ')}...\n`,
+      'stdout',
+    );
+
+    // Vérifier si le certificat existe déjà
+    const certPath = `/etc/letsencrypt/live/${hostname}/fullchain.pem`;
+    if (fs.existsSync(certPath)) {
+      this.onLog(`  ✅ Certificate already exists, attempting renewal...\n`, 'stdout');
+      try {
+        await runCommand('certbot', ['renew', '--quiet'], this.onLog);
+        this.onLog(`  ✅ Certificate renewed if needed\n`, 'stdout');
+        return;
+      } catch (err: any) {
+        this.onLog(
+          `  ⚠️ Renewal failed, will try to get new certificate: ${err.message}\n`,
+          'stderr',
+        );
+      }
+    }
+
+    // Générer le certificat en mode standalone (arrête temporairement les services)
+    // On utilise le mode standalone car le serveur mail n'a pas forcément de serveur web
+    try {
+      // Arrêter les services qui pourraient utiliser le port 80
+      await runCommandSilent('systemctl', ['stop', 'nginx']).catch(() => {});
+      await runCommandSilent('systemctl', ['stop', 'apache2']).catch(() => {});
+
+      // Construire la commande certbot
+      const certbotArgs = [
+        'certonly',
+        '--standalone',
+        '--non-interactive',
+        '--agree-tos',
+        '--email',
+        `postmaster@${domains[0]}`,
+        '--cert-name',
+        hostname,
+      ];
+
+      // Ajouter chaque domaine
+      for (const d of certDomains) {
+        certbotArgs.push('-d', d);
+      }
+
+      await runCommand('certbot', certbotArgs, this.onLog);
+      this.onLog(`  ✅ Let's Encrypt certificate generated successfully\n`, 'stdout');
+
+      // Redémarrer les services web si présents
+      await runCommandSilent('systemctl', ['start', 'nginx']).catch(() => {});
+      await runCommandSilent('systemctl', ['start', 'apache2']).catch(() => {});
+    } catch (err: any) {
+      this.onLog(`  ⚠️ Let's Encrypt failed: ${err.message}\n`, 'stderr');
+      this.onLog(
+        `  ℹ️ Falling back to self-signed certificates. You can run certbot manually later.\n`,
+        'stdout',
+      );
+      // On ne fait pas échouer l'installation, on continue avec les certs par défaut
+    }
+  }
+
+  /**
+   * **applyMailTemplates()** - Applique les templates de configuration mail
+   *
+   * Cette fonction configure tous les services mail avec les templates.
+   * Elle gère :
+   * - Les domaines additionnels (DKIM, SigningTable, etc.)
+   * - Le selector DKIM personnalisé
+   * - La configuration TLS (Let's Encrypt, certificats existants, ou snake-oil)
+   */
+  private async applyMailTemplates(config: {
+    domain: string;
+    hostname: string;
+    additionalDomains?: string[];
+    dkimSelector?: string;
+    tlsProvider?: 'letsencrypt' | 'existing' | 'none';
+    tlsCertPath?: string;
+    tlsKeyPath?: string;
+    services: string[];
+  }): Promise<void> {
+    const templatesDir = path.join(__dirname, 'templates');
+    const selector = config.dkimSelector || 'default';
+    const allDomains = [config.domain, ...(config.additionalDomains || [])];
+
+    // Déterminer les chemins TLS
+    let tlsCert = '/etc/ssl/certs/ssl-cert-snakeoil.pem';
+    let tlsKey = '/etc/ssl/private/ssl-cert-snakeoil.key';
+
+    if (config.tlsProvider === 'letsencrypt') {
+      // Let's Encrypt utilise des chemins standardisés
+      tlsCert = `/etc/letsencrypt/live/${config.hostname}/fullchain.pem`;
+      tlsKey = `/etc/letsencrypt/live/${config.hostname}/privkey.pem`;
+    } else if (config.tlsProvider === 'existing' && config.tlsCertPath && config.tlsKeyPath) {
+      tlsCert = config.tlsCertPath;
+      tlsKey = config.tlsKeyPath;
+    }
+
+    const variables: Record<string, string> = {
+      domain: config.domain,
+      hostname: config.hostname,
+      selector: selector,
+      keys_dir: `/etc/opendkim/keys/${config.domain}`,
+      tls_cert: tlsCert,
+      tls_key: tlsKey,
+      ssl_cert: tlsCert,
+      ssl_key: tlsKey,
+    };
+
+    // Postfix main.cf
+    if (config.services.includes('postfix')) {
+      const postfixTemplate = fs.readFileSync(
+        path.join(templatesDir, 'postfix', 'main.cf.conf'),
+        'utf-8',
+      );
+      const postfixConfig = this.applyTemplateVariables(postfixTemplate, variables);
+      fs.writeFileSync('/etc/postfix/main.cf', postfixConfig);
+      this.onLog(`  ✅ Postfix main.cf configured\n`, 'stdout');
+    }
+
+    // Dovecot local.conf
+    if (config.services.includes('dovecot')) {
+      const dovecotTemplate = fs.readFileSync(
+        path.join(templatesDir, 'dovecot', 'local.conf'),
+        'utf-8',
+      );
+      const dovecotConfig = this.applyTemplateVariables(dovecotTemplate, variables);
+      fs.writeFileSync('/etc/dovecot/local.conf', dovecotConfig);
+      this.onLog(`  ✅ Dovecot local.conf configured\n`, 'stdout');
+    }
+
+    // OpenDKIM configs - avec support des domaines additionnels
+    if (config.services.includes('opendkim')) {
+      const opendkimDir = path.join(templatesDir, 'opendkim');
+
+      // opendkim.conf
+      const mainConf = fs.readFileSync(path.join(opendkimDir, 'opendkim.conf'), 'utf-8');
+      fs.writeFileSync('/etc/opendkim.conf', this.applyTemplateVariables(mainConf, variables));
+
+      // KeyTable - génère une ligne par domaine
+      let keyTableContent = '# OpenDKIM Key Table - Generated by ServerFlow\n';
+      for (const domain of allDomains) {
+        const keysDir = `/etc/opendkim/keys/${domain}`;
+        keyTableContent += `${selector}._domainkey.${domain} ${domain}:${selector}:${keysDir}/${selector}.private\n`;
+      }
+      fs.writeFileSync('/etc/opendkim/KeyTable', keyTableContent);
+
+      // SigningTable - génère une ligne par domaine
+      let signingTableContent = '# OpenDKIM Signing Table - Generated by ServerFlow\n';
+      for (const domain of allDomains) {
+        signingTableContent += `*@${domain} ${selector}._domainkey.${domain}\n`;
+      }
+      fs.writeFileSync('/etc/opendkim/SigningTable', signingTableContent);
+
+      // TrustedHosts - ajoute tous les domaines
+      let trustedHostsContent = '# OpenDKIM Trusted Hosts - Generated by ServerFlow\n';
+      trustedHostsContent += '127.0.0.1\n';
+      trustedHostsContent += 'localhost\n';
+      trustedHostsContent += `${config.hostname}\n`;
+      for (const domain of allDomains) {
+        trustedHostsContent += `*.${domain}\n`;
+      }
+      fs.writeFileSync('/etc/opendkim/TrustedHosts', trustedHostsContent);
+
+      this.onLog(`  ✅ OpenDKIM configured for ${allDomains.length} domain(s)\n`, 'stdout');
+    }
+
+    // Rspamd antivirus config (pour ClamAV)
+    if (config.services.includes('rspamd') && config.services.includes('clamav')) {
+      const rspamdTemplate = fs.readFileSync(
+        path.join(templatesDir, 'rspamd', 'antivirus.conf'),
+        'utf-8',
+      );
+      const rspamdConfig = this.applyTemplateVariables(rspamdTemplate, variables);
+      await runCommandSilent('mkdir', ['-p', '/etc/rspamd/local.d']);
+      fs.writeFileSync('/etc/rspamd/local.d/antivirus.conf', rspamdConfig);
+      this.onLog(`  ✅ Rspamd antivirus integration configured\n`, 'stdout');
+    }
+
+    // ClamAV config
+    if (config.services.includes('clamav')) {
+      const clamavTemplate = fs.readFileSync(
+        path.join(templatesDir, 'clamav', 'clamd.conf'),
+        'utf-8',
+      );
+      const clamavConfig = this.applyTemplateVariables(clamavTemplate, variables);
+      fs.writeFileSync('/etc/clamav/clamd.conf', clamavConfig);
+      this.onLog(`  ✅ ClamAV configured\n`, 'stdout');
+    }
+  }
+
+  /**
+   * **applyTemplateVariables()** - Remplace les variables {{ var }} dans un template
+   */
+  private applyTemplateVariables(template: string, variables: Record<string, string>): string {
+    let result = template;
+    for (const [key, value] of Object.entries(variables)) {
+      // Remplace {{ key }} et {{ key | default:value }}
+      const regex = new RegExp(`\\{\\{\\s*${key}\\s*(\\|\\s*default:\\s*[^}]+)?\\s*\\}\\}`, 'g');
+      result = result.replace(regex, value);
+    }
+    // Remplace les variables non définies par leur valeur par défaut
+    result = result.replace(/\{\{\s*\w+\s*\|\s*default:\s*([^}]+)\s*\}\}/g, '$1');
+    return result;
+  }
+
+  /**
+   * **saveMailConfig()** - Sauvegarde la configuration mail pour référence future
+   */
+  private async saveMailConfig(config: any, dkimPublicKey?: string): Promise<void> {
+    const configDir = '/opt/serverflow/config';
+    await runCommandSilent('mkdir', ['-p', configDir]);
+
+    const mailConfig = {
+      ...config,
+      dkimPublicKey,
+      configuredAt: new Date().toISOString(),
+    };
+
+    fs.writeFileSync(path.join(configDir, 'mail.json'), JSON.stringify(mailConfig, null, 2));
+
+    this.onLog(`  ✅ Mail configuration saved to ${configDir}/mail.json\n`, 'stdout');
+  }
 }

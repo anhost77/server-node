@@ -16,9 +16,13 @@
 -->
 <template>
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div
+      class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+    >
       <!-- Header -->
-      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-orange-500 to-orange-600">
+      <div
+        class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-orange-500 to-orange-600"
+      >
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
             <Mail class="w-5 h-5 text-white" />
@@ -44,8 +48,8 @@
                   currentStep > index
                     ? 'bg-green-500 text-white'
                     : currentStep === index
-                    ? 'bg-orange-500 text-white'
-                    : 'bg-slate-200 text-slate-500'
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-slate-200 text-slate-500',
                 ]"
               >
                 <Check v-if="currentStep > index" class="w-4 h-4" />
@@ -54,7 +58,7 @@
               <span
                 :class="[
                   'text-sm font-medium hidden sm:block',
-                  currentStep >= index ? 'text-slate-900' : 'text-slate-400'
+                  currentStep >= index ? 'text-slate-900' : 'text-slate-400',
                 ]"
               >
                 {{ step.title }}
@@ -62,10 +66,7 @@
             </div>
             <div
               v-if="index < steps.length - 1"
-              :class="[
-                'flex-1 h-0.5 mx-2',
-                currentStep > index ? 'bg-green-500' : 'bg-slate-200'
-              ]"
+              :class="['flex-1 h-0.5 mx-2', currentStep > index ? 'bg-green-500' : 'bg-slate-200']"
             />
           </template>
         </div>
@@ -76,7 +77,9 @@
         <!-- Step 1: Architecture -->
         <div v-if="currentStep === 0" class="space-y-6">
           <div>
-            <h3 class="text-lg font-semibold text-slate-900 mb-2">{{ t('mail.wizard.architecture.title') }}</h3>
+            <h3 class="text-lg font-semibold text-slate-900 mb-2">
+              {{ t('mail.wizard.architecture.title') }}
+            </h3>
             <p class="text-sm text-slate-600">{{ t('mail.wizard.architecture.description') }}</p>
           </div>
 
@@ -87,26 +90,31 @@
                 'relative flex items-start gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all',
                 config.architecture === 'single'
                   ? 'border-orange-500 bg-orange-50'
-                  : 'border-slate-200 hover:border-slate-300'
+                  : 'border-slate-200 hover:border-slate-300',
               ]"
             >
-              <input
-                type="radio"
-                v-model="config.architecture"
-                value="single"
-                class="sr-only"
-              />
-              <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <input type="radio" v-model="config.architecture" value="single" class="sr-only" />
+              <div
+                class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0"
+              >
                 <Server class="w-6 h-6 text-blue-600" />
               </div>
               <div class="flex-1">
                 <div class="flex items-center gap-2">
-                  <h4 class="font-semibold text-slate-900">{{ t('mail.wizard.architecture.single.title') }}</h4>
-                  <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">{{ t('mail.wizard.recommended') }}</span>
+                  <h4 class="font-semibold text-slate-900">
+                    {{ t('mail.wizard.architecture.single.title') }}
+                  </h4>
+                  <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">{{
+                    t('mail.wizard.recommended')
+                  }}</span>
                 </div>
-                <p class="text-sm text-slate-600 mt-1">{{ t('mail.wizard.architecture.single.description') }}</p>
+                <p class="text-sm text-slate-600 mt-1">
+                  {{ t('mail.wizard.architecture.single.description') }}
+                </p>
                 <div class="flex flex-wrap gap-2 mt-2">
-                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">1 serveur</span>
+                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded"
+                    >1 serveur</span
+                  >
                   <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">Simple</span>
                   <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">PME</span>
                 </div>
@@ -122,7 +130,7 @@
                 'relative flex items-start gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all',
                 config.architecture === 'distributed'
                   ? 'border-orange-500 bg-orange-50'
-                  : 'border-slate-200 hover:border-slate-300'
+                  : 'border-slate-200 hover:border-slate-300',
               ]"
             >
               <input
@@ -131,16 +139,28 @@
                 value="distributed"
                 class="sr-only"
               />
-              <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <div
+                class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0"
+              >
                 <Network class="w-6 h-6 text-purple-600" />
               </div>
               <div class="flex-1">
-                <h4 class="font-semibold text-slate-900">{{ t('mail.wizard.architecture.distributed.title') }}</h4>
-                <p class="text-sm text-slate-600 mt-1">{{ t('mail.wizard.architecture.distributed.description') }}</p>
+                <h4 class="font-semibold text-slate-900">
+                  {{ t('mail.wizard.architecture.distributed.title') }}
+                </h4>
+                <p class="text-sm text-slate-600 mt-1">
+                  {{ t('mail.wizard.architecture.distributed.description') }}
+                </p>
                 <div class="flex flex-wrap gap-2 mt-2">
-                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">2-5 serveurs</span>
-                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">Scalable</span>
-                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">Entreprise</span>
+                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded"
+                    >2-5 serveurs</span
+                  >
+                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded"
+                    >Scalable</span
+                  >
+                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded"
+                    >Entreprise</span
+                  >
                 </div>
               </div>
               <div v-if="config.architecture === 'distributed'" class="absolute top-4 right-4">
@@ -154,7 +174,7 @@
                 'relative flex items-start gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all opacity-60',
                 config.architecture === 'ha-cluster'
                   ? 'border-orange-500 bg-orange-50'
-                  : 'border-slate-200'
+                  : 'border-slate-200',
               ]"
             >
               <input
@@ -164,19 +184,33 @@
                 class="sr-only"
                 disabled
               />
-              <div class="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <div
+                class="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0"
+              >
                 <Database class="w-6 h-6 text-emerald-600" />
               </div>
               <div class="flex-1">
                 <div class="flex items-center gap-2">
-                  <h4 class="font-semibold text-slate-900">{{ t('mail.wizard.architecture.ha.title') }}</h4>
-                  <span class="px-2 py-0.5 bg-slate-200 text-slate-600 text-xs rounded-full">{{ t('mail.wizard.comingSoon') }}</span>
+                  <h4 class="font-semibold text-slate-900">
+                    {{ t('mail.wizard.architecture.ha.title') }}
+                  </h4>
+                  <span class="px-2 py-0.5 bg-slate-200 text-slate-600 text-xs rounded-full">{{
+                    t('mail.wizard.comingSoon')
+                  }}</span>
                 </div>
-                <p class="text-sm text-slate-600 mt-1">{{ t('mail.wizard.architecture.ha.description') }}</p>
+                <p class="text-sm text-slate-600 mt-1">
+                  {{ t('mail.wizard.architecture.ha.description') }}
+                </p>
                 <div class="flex flex-wrap gap-2 mt-2">
-                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">3+ serveurs</span>
-                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">Réplication</span>
-                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">Critique</span>
+                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded"
+                    >3+ serveurs</span
+                  >
+                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded"
+                    >Réplication</span
+                  >
+                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded"
+                    >Critique</span
+                  >
                 </div>
               </div>
             </label>
@@ -186,14 +220,18 @@
         <!-- Step 2: Server Assignment -->
         <div v-if="currentStep === 1" class="space-y-6">
           <div>
-            <h3 class="text-lg font-semibold text-slate-900 mb-2">{{ t('mail.wizard.servers.title') }}</h3>
+            <h3 class="text-lg font-semibold text-slate-900 mb-2">
+              {{ t('mail.wizard.servers.title') }}
+            </h3>
             <p class="text-sm text-slate-600">{{ t('mail.wizard.servers.description') }}</p>
           </div>
 
           <!-- Single Server Mode -->
           <div v-if="config.architecture === 'single'" class="space-y-4">
             <label class="block">
-              <span class="text-sm font-medium text-slate-700">{{ t('mail.wizard.servers.selectServer') }}</span>
+              <span class="text-sm font-medium text-slate-700">{{
+                t('mail.wizard.servers.selectServer')
+              }}</span>
               <select
                 v-model="config.servers[0].serverId"
                 class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
@@ -206,9 +244,15 @@
             </label>
 
             <div v-if="config.servers[0].serverId" class="p-4 bg-blue-50 rounded-xl">
-              <h4 class="font-medium text-blue-900 mb-2">{{ t('mail.wizard.servers.servicesInstalled') }}</h4>
+              <h4 class="font-medium text-blue-900 mb-2">
+                {{ t('mail.wizard.servers.servicesInstalled') }}
+              </h4>
               <div class="grid grid-cols-2 gap-2">
-                <div v-for="service in singleServerServices" :key="service.type" class="flex items-center gap-2">
+                <div
+                  v-for="service in singleServerServices"
+                  :key="service.type"
+                  class="flex items-center gap-2"
+                >
                   <CheckCircle2 class="w-4 h-4 text-green-500" />
                   <span class="text-sm text-slate-700">{{ service.name }}</span>
                 </div>
@@ -283,7 +327,11 @@
                 </option>
               </select>
               <label class="flex items-center gap-2 mt-2 text-sm text-slate-600">
-                <input type="checkbox" v-model="distributedConfig.sameAsInbound" class="rounded text-orange-500" />
+                <input
+                  type="checkbox"
+                  v-model="distributedConfig.sameAsInbound"
+                  class="rounded text-orange-500"
+                />
                 Utiliser le même serveur que MX Inbound
               </label>
             </div>
@@ -293,13 +341,17 @@
         <!-- Step 3: Domain Configuration -->
         <div v-if="currentStep === 2" class="space-y-6">
           <div>
-            <h3 class="text-lg font-semibold text-slate-900 mb-2">{{ t('mail.wizard.domain.title') }}</h3>
+            <h3 class="text-lg font-semibold text-slate-900 mb-2">
+              {{ t('mail.wizard.domain.title') }}
+            </h3>
             <p class="text-sm text-slate-600">{{ t('mail.wizard.domain.description') }}</p>
           </div>
 
           <div class="space-y-4">
             <label class="block">
-              <span class="text-sm font-medium text-slate-700">{{ t('mail.wizard.domain.primary') }} *</span>
+              <span class="text-sm font-medium text-slate-700"
+                >{{ t('mail.wizard.domain.primary') }} *</span
+              >
               <input
                 v-model="config.domain.primaryDomain"
                 type="text"
@@ -310,7 +362,9 @@
             </label>
 
             <label class="block">
-              <span class="text-sm font-medium text-slate-700">{{ t('mail.wizard.domain.hostname') }} *</span>
+              <span class="text-sm font-medium text-slate-700"
+                >{{ t('mail.wizard.domain.hostname') }} *</span
+              >
               <input
                 v-model="config.domain.hostname"
                 type="text"
@@ -323,7 +377,9 @@
             <!-- Additional Domains -->
             <div>
               <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium text-slate-700">{{ t('mail.wizard.domain.additional') }}</span>
+                <span class="text-sm font-medium text-slate-700">{{
+                  t('mail.wizard.domain.additional')
+                }}</span>
                 <button
                   @click="addDomain"
                   class="text-sm text-orange-600 hover:text-orange-700 flex items-center gap-1"
@@ -332,14 +388,21 @@
                   {{ t('mail.wizard.domain.addDomain') }}
                 </button>
               </div>
-              <div v-for="(domain, index) in config.domain.additionalDomains" :key="index" class="flex gap-2 mb-2">
+              <div
+                v-for="(domain, index) in config.domain.additionalDomains"
+                :key="index"
+                class="flex gap-2 mb-2"
+              >
                 <input
                   v-model="config.domain.additionalDomains[index]"
                   type="text"
                   placeholder="autre-domaine.com"
                   class="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                 />
-                <button @click="removeDomain(index)" class="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                <button
+                  @click="removeDomain(index)"
+                  class="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                >
                   <Trash2 class="w-4 h-4" />
                 </button>
               </div>
@@ -350,7 +413,9 @@
         <!-- Step 4: Security Configuration -->
         <div v-if="currentStep === 3" class="space-y-6">
           <div>
-            <h3 class="text-lg font-semibold text-slate-900 mb-2">{{ t('mail.wizard.security.title') }}</h3>
+            <h3 class="text-lg font-semibold text-slate-900 mb-2">
+              {{ t('mail.wizard.security.title') }}
+            </h3>
             <p class="text-sm text-slate-600">{{ t('mail.wizard.security.description') }}</p>
           </div>
 
@@ -368,10 +433,15 @@
                   'p-3 border-2 rounded-lg cursor-pointer transition-all text-center',
                   config.security.tls.provider === option.value
                     ? 'border-orange-500 bg-orange-50'
-                    : 'border-slate-200 hover:border-slate-300'
+                    : 'border-slate-200 hover:border-slate-300',
                 ]"
               >
-                <input type="radio" v-model="config.security.tls.provider" :value="option.value" class="sr-only" />
+                <input
+                  type="radio"
+                  v-model="config.security.tls.provider"
+                  :value="option.value"
+                  class="sr-only"
+                />
                 <span class="text-sm font-medium">{{ option.label }}</span>
               </label>
             </div>
@@ -385,8 +455,14 @@
                 <h4 class="font-medium text-slate-900">DKIM (Signature des emails)</h4>
               </div>
               <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" v-model="config.security.dkim.enabled" class="sr-only peer" />
-                <div class="w-11 h-6 bg-slate-200 peer-focus:ring-2 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                <input
+                  type="checkbox"
+                  v-model="config.security.dkim.enabled"
+                  class="sr-only peer"
+                />
+                <div
+                  class="w-11 h-6 bg-slate-200 peer-focus:ring-2 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"
+                ></div>
               </label>
             </div>
             <div v-if="config.security.dkim.enabled" class="grid grid-cols-2 gap-4">
@@ -401,7 +477,10 @@
               </label>
               <label class="block">
                 <span class="text-sm text-slate-600">Taille de clé</span>
-                <select v-model="config.security.dkim.keySize" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                <select
+                  v-model="config.security.dkim.keySize"
+                  class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                >
                   <option :value="2048">2048 bits (recommandé)</option>
                   <option :value="4096">4096 bits</option>
                 </select>
@@ -423,10 +502,15 @@
                   'p-3 border-2 rounded-lg cursor-pointer transition-all',
                   config.security.spf.policy === policy.value
                     ? 'border-orange-500 bg-orange-50'
-                    : 'border-slate-200 hover:border-slate-300'
+                    : 'border-slate-200 hover:border-slate-300',
                 ]"
               >
-                <input type="radio" v-model="config.security.spf.policy" :value="policy.value" class="sr-only" />
+                <input
+                  type="radio"
+                  v-model="config.security.spf.policy"
+                  :value="policy.value"
+                  class="sr-only"
+                />
                 <span class="text-sm font-medium block">{{ policy.label }}</span>
                 <span class="text-xs text-slate-500">{{ policy.hint }}</span>
               </label>
@@ -437,7 +521,9 @@
           <div class="p-4 border border-slate-200 rounded-xl space-y-4">
             <div class="flex items-center gap-3">
               <ShieldCheck class="w-5 h-5 text-emerald-600" />
-              <h4 class="font-medium text-slate-900">DMARC (Domain-based Message Authentication)</h4>
+              <h4 class="font-medium text-slate-900">
+                DMARC (Domain-based Message Authentication)
+              </h4>
             </div>
             <div class="grid grid-cols-3 gap-2">
               <label
@@ -447,10 +533,15 @@
                   'p-3 border-2 rounded-lg cursor-pointer transition-all',
                   config.security.dmarc.policy === policy.value
                     ? 'border-orange-500 bg-orange-50'
-                    : 'border-slate-200 hover:border-slate-300'
+                    : 'border-slate-200 hover:border-slate-300',
                 ]"
               >
-                <input type="radio" v-model="config.security.dmarc.policy" :value="policy.value" class="sr-only" />
+                <input
+                  type="radio"
+                  v-model="config.security.dmarc.policy"
+                  :value="policy.value"
+                  class="sr-only"
+                />
                 <span class="text-sm font-medium block">{{ policy.label }}</span>
                 <span class="text-xs text-slate-500">{{ policy.hint }}</span>
               </label>
@@ -470,7 +561,9 @@
         <!-- Step 5: Services Selection -->
         <div v-if="currentStep === 4" class="space-y-6">
           <div>
-            <h3 class="text-lg font-semibold text-slate-900 mb-2">{{ t('mail.wizard.services.title') }}</h3>
+            <h3 class="text-lg font-semibold text-slate-900 mb-2">
+              {{ t('mail.wizard.services.title') }}
+            </h3>
             <p class="text-sm text-slate-600">{{ t('mail.wizard.services.description') }}</p>
           </div>
 
@@ -494,10 +587,15 @@
                     'p-3 border-2 rounded-lg cursor-pointer transition-all text-center',
                     config.services.antispam === 'rspamd'
                       ? 'border-orange-500 bg-orange-50'
-                      : 'border-slate-200 hover:border-slate-300'
+                      : 'border-slate-200 hover:border-slate-300',
                   ]"
                 >
-                  <input type="radio" v-model="config.services.antispam" value="rspamd" class="sr-only" />
+                  <input
+                    type="radio"
+                    v-model="config.services.antispam"
+                    value="rspamd"
+                    class="sr-only"
+                  />
                   <span class="text-sm font-medium">Rspamd</span>
                   <span class="block text-xs text-green-600">Recommandé</span>
                 </label>
@@ -506,10 +604,15 @@
                     'p-3 border-2 rounded-lg cursor-pointer transition-all text-center',
                     config.services.antispam === 'none'
                       ? 'border-orange-500 bg-orange-50'
-                      : 'border-slate-200 hover:border-slate-300'
+                      : 'border-slate-200 hover:border-slate-300',
                   ]"
                 >
-                  <input type="radio" v-model="config.services.antispam" value="none" class="sr-only" />
+                  <input
+                    type="radio"
+                    v-model="config.services.antispam"
+                    value="none"
+                    class="sr-only"
+                  />
                   <span class="text-sm font-medium">Aucun</span>
                 </label>
               </div>
@@ -529,7 +632,9 @@
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" v-model="config.services.antivirus" class="sr-only peer" />
-                  <div class="w-11 h-6 bg-slate-200 peer-focus:ring-2 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                  <div
+                    class="w-11 h-6 bg-slate-200 peer-focus:ring-2 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"
+                  ></div>
                 </label>
               </div>
             </div>
@@ -546,7 +651,9 @@
                     <p class="text-xs text-slate-500">Interface web pour les emails</p>
                   </div>
                 </div>
-                <span class="px-2 py-1 bg-slate-200 text-slate-600 text-xs rounded-full">Bientôt</span>
+                <span class="px-2 py-1 bg-slate-200 text-slate-600 text-xs rounded-full"
+                  >Bientôt</span
+                >
               </div>
             </div>
           </div>
@@ -555,7 +662,9 @@
         <!-- Step 6: DNS Records -->
         <div v-if="currentStep === 5" class="space-y-6">
           <div>
-            <h3 class="text-lg font-semibold text-slate-900 mb-2">{{ t('mail.wizard.dns.title') }}</h3>
+            <h3 class="text-lg font-semibold text-slate-900 mb-2">
+              {{ t('mail.wizard.dns.title') }}
+            </h3>
             <p class="text-sm text-slate-600">{{ t('mail.wizard.dns.description') }}</p>
           </div>
 
@@ -570,10 +679,16 @@
           </div>
 
           <div class="space-y-3">
-            <div v-for="record in dnsRecords" :key="record.type + record.name" class="p-4 bg-slate-50 rounded-xl">
+            <div
+              v-for="record in dnsRecords"
+              :key="record.type + record.name"
+              class="p-4 bg-slate-50 rounded-xl"
+            >
               <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center gap-2">
-                  <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-mono rounded">{{ record.type }}</span>
+                  <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-mono rounded">{{
+                    record.type
+                  }}</span>
                   <span class="text-sm font-medium text-slate-900">{{ record.name }}</span>
                 </div>
                 <button
@@ -583,7 +698,9 @@
                   <Copy class="w-4 h-4" />
                 </button>
               </div>
-              <code class="block text-xs bg-slate-900 text-green-400 p-2 rounded overflow-x-auto">{{ record.value }}</code>
+              <code class="block text-xs bg-slate-900 text-green-400 p-2 rounded overflow-x-auto">{{
+                record.value
+              }}</code>
               <p class="text-xs text-slate-500 mt-2">{{ record.description }}</p>
             </div>
           </div>
@@ -600,7 +717,9 @@
         <!-- Step 7: Installation -->
         <div v-if="currentStep === 6" class="space-y-6">
           <div>
-            <h3 class="text-lg font-semibold text-slate-900 mb-2">{{ t('mail.wizard.install.title') }}</h3>
+            <h3 class="text-lg font-semibold text-slate-900 mb-2">
+              {{ t('mail.wizard.install.title') }}
+            </h3>
             <p class="text-sm text-slate-600">{{ t('mail.wizard.install.description') }}</p>
           </div>
 
@@ -611,7 +730,9 @@
               <div class="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span class="text-slate-500">Architecture :</span>
-                  <span class="ml-2 font-medium">{{ config.architecture === 'single' ? 'Monolithique' : 'Distribuée' }}</span>
+                  <span class="ml-2 font-medium">{{
+                    config.architecture === 'single' ? 'Monolithique' : 'Distribuée'
+                  }}</span>
                 </div>
                 <div>
                   <span class="text-slate-500">Domaine :</span>
@@ -630,9 +751,15 @@
 
             <!-- Services to install -->
             <div class="p-4 border border-slate-200 rounded-xl">
-              <h4 class="font-medium text-slate-900 mb-3">{{ t('mail.wizard.install.services') }}</h4>
+              <h4 class="font-medium text-slate-900 mb-3">
+                {{ t('mail.wizard.install.services') }}
+              </h4>
               <div class="grid grid-cols-2 gap-2">
-                <div v-for="service in servicesToInstall" :key="service" class="flex items-center gap-2 text-sm">
+                <div
+                  v-for="service in servicesToInstall"
+                  :key="service"
+                  class="flex items-center gap-2 text-sm"
+                >
                   <div class="w-2 h-2 bg-orange-500 rounded-full"></div>
                   <span>{{ service }}</span>
                 </div>
@@ -647,18 +774,30 @@
               <div
                 :class="[
                   'w-8 h-8 rounded-full flex items-center justify-center',
-                  step.status === 'complete' ? 'bg-green-100' :
-                  step.status === 'running' ? 'bg-orange-100' :
-                  step.status === 'error' ? 'bg-red-100' : 'bg-slate-100'
+                  step.status === 'complete'
+                    ? 'bg-green-100'
+                    : step.status === 'running'
+                      ? 'bg-orange-100'
+                      : step.status === 'error'
+                        ? 'bg-red-100'
+                        : 'bg-slate-100',
                 ]"
               >
                 <Check v-if="step.status === 'complete'" class="w-4 h-4 text-green-600" />
-                <Loader2 v-else-if="step.status === 'running'" class="w-4 h-4 text-orange-600 animate-spin" />
+                <Loader2
+                  v-else-if="step.status === 'running'"
+                  class="w-4 h-4 text-orange-600 animate-spin"
+                />
                 <X v-else-if="step.status === 'error'" class="w-4 h-4 text-red-600" />
                 <div v-else class="w-2 h-2 bg-slate-300 rounded-full"></div>
               </div>
               <div class="flex-1">
-                <span :class="['text-sm font-medium', step.status === 'running' ? 'text-orange-600' : 'text-slate-700']">
+                <span
+                  :class="[
+                    'text-sm font-medium',
+                    step.status === 'running' ? 'text-orange-600' : 'text-slate-700',
+                  ]"
+                >
                   {{ step.name }}
                 </span>
                 <p v-if="step.message" class="text-xs text-slate-500">{{ step.message }}</p>
@@ -669,7 +808,9 @@
             <div class="mt-4">
               <div class="flex items-center justify-between mb-2">
                 <span class="text-sm font-medium text-slate-700">Console</span>
-                <span class="text-xs text-slate-500">{{ installationLogs?.length || 0 }} lignes</span>
+                <span class="text-xs text-slate-500"
+                  >{{ installationLogs?.length || 0 }} lignes</span
+                >
               </div>
               <div
                 ref="logsContainer"
@@ -680,9 +821,11 @@
                   :key="i"
                   :class="[
                     'whitespace-pre-wrap',
-                    log.stream === 'stderr' ? 'text-red-400' : 'text-green-400'
+                    log.stream === 'stderr' ? 'text-red-400' : 'text-green-400',
                   ]"
-                >{{ log.message }}</div>
+                >
+                  {{ log.message }}
+                </div>
                 <div v-if="!installationLogs?.length" class="text-slate-500 italic">
                   En attente des logs...
                 </div>
@@ -692,14 +835,19 @@
 
           <!-- Installation Complete -->
           <div v-if="installComplete" class="text-center py-8">
-            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div
+              class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"
+            >
               <CheckCircle2 class="w-8 h-8 text-green-600" />
             </div>
-            <h4 class="text-lg font-semibold text-slate-900 mb-2">{{ t('mail.wizard.install.complete') }}</h4>
+            <h4 class="text-lg font-semibold text-slate-900 mb-2">
+              {{ t('mail.wizard.install.complete') }}
+            </h4>
             <p class="text-sm text-slate-600 mb-4">{{ t('mail.wizard.install.completeDesc') }}</p>
             <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-left">
               <p class="text-sm text-amber-800">
-                <strong>{{ t('mail.wizard.install.reminder') }}</strong> {{ t('mail.wizard.install.reminderDesc') }}
+                <strong>{{ t('mail.wizard.install.reminder') }}</strong>
+                {{ t('mail.wizard.install.reminderDesc') }}
               </p>
             </div>
           </div>
@@ -707,7 +855,9 @@
       </div>
 
       <!-- Footer -->
-      <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+      <div
+        class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between"
+      >
         <button
           v-if="currentStep > 0 && !installing"
           @click="previousStep"
@@ -753,10 +903,31 @@
 import { ref, computed, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
-  Mail, X, Check, CheckCircle2, Server, Network, Database,
-  ArrowDownToLine, ArrowUpFromLine, HardDrive, Plus, Trash2,
-  Lock, Key, Shield, ShieldCheck, ShieldAlert, Bug, Globe,
-  AlertTriangle, Copy, ChevronLeft, ChevronRight, Play, Loader2
+  Mail,
+  X,
+  Check,
+  CheckCircle2,
+  Server,
+  Network,
+  Database,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  HardDrive,
+  Plus,
+  Trash2,
+  Lock,
+  Key,
+  Shield,
+  ShieldCheck,
+  ShieldAlert,
+  Bug,
+  Globe,
+  AlertTriangle,
+  Copy,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Loader2,
 } from 'lucide-vue-next';
 
 const { t } = useI18n();
@@ -792,7 +963,7 @@ const steps = [
   { id: 'security', title: 'Sécurité' },
   { id: 'services', title: 'Services' },
   { id: 'dns', title: 'DNS' },
-  { id: 'install', title: 'Installation' }
+  { id: 'install', title: 'Installation' },
 ];
 
 // Configuration
@@ -802,32 +973,32 @@ const config = ref({
   domain: {
     primaryDomain: '',
     hostname: '',
-    additionalDomains: [] as string[]
+    additionalDomains: [] as string[],
   },
   security: {
     tls: {
-      provider: 'letsencrypt' as 'letsencrypt' | 'custom' | 'selfsigned'
+      provider: 'letsencrypt' as 'letsencrypt' | 'custom' | 'selfsigned',
     },
     dkim: {
       enabled: true,
       selector: 'default',
-      keySize: 2048 as 1024 | 2048 | 4096
+      keySize: 2048 as 1024 | 2048 | 4096,
     },
     spf: {
-      policy: 'softfail' as 'strict' | 'softfail' | 'neutral'
+      policy: 'softfail' as 'strict' | 'softfail' | 'neutral',
     },
     dmarc: {
       policy: 'none' as 'none' | 'quarantine' | 'reject',
       rua: '',
-      percentage: 100
-    }
+      percentage: 100,
+    },
   },
   services: {
     antispam: 'rspamd' as 'rspamd' | 'none',
     antivirus: true,
     webmail: 'none' as 'roundcube' | 'none',
-    adminPanel: 'none' as 'postfixadmin' | 'none'
-  }
+    adminPanel: 'none' as 'postfixadmin' | 'none',
+  },
 });
 
 // Distributed mode config
@@ -835,18 +1006,20 @@ const distributedConfig = ref({
   mxInbound: '',
   mailStorage: '',
   mxOutbound: '',
-  sameAsInbound: false
+  sameAsInbound: false,
 });
 
 // Installation state
 const installing = ref(false);
 const installComplete = ref(false);
-const installationSteps = ref<Array<{
-  id: string;
-  name: string;
-  status: 'pending' | 'running' | 'complete' | 'error';
-  message?: string;
-}>>([]);
+const installationSteps = ref<
+  Array<{
+    id: string;
+    name: string;
+    status: 'pending' | 'running' | 'complete' | 'error';
+    message?: string;
+  }>
+>([]);
 
 // Debug: log servers reçus
 console.log('[MailServerWizard] props.servers:', props.servers);
@@ -854,7 +1027,7 @@ console.log('[MailServerWizard] props.servers:', props.servers);
 // Computed
 const availableServers = computed(() => {
   console.log('[MailServerWizard] computing availableServers from:', props.servers);
-  const filtered = props.servers.filter(s => s.online);
+  const filtered = props.servers.filter((s) => s.online);
   console.log('[MailServerWizard] filtered (online only):', filtered);
   return filtered;
 });
@@ -865,25 +1038,25 @@ const singleServerServices = [
   { type: 'rspamd', name: 'Rspamd (Antispam)' },
   { type: 'opendkim', name: 'OpenDKIM (DKIM)' },
   { type: 'clamav', name: 'ClamAV (Antivirus)' },
-  { type: 'spf-policyd', name: 'SPF Policy' }
+  { type: 'spf-policyd', name: 'SPF Policy' },
 ];
 
 const tlsOptions = [
   { value: 'letsencrypt', label: "Let's Encrypt" },
   { value: 'selfsigned', label: 'Auto-signé' },
-  { value: 'custom', label: 'Personnalisé' }
+  { value: 'custom', label: 'Personnalisé' },
 ];
 
 const spfPolicies = [
   { value: 'strict', label: '-all (Strict)', hint: 'Rejette si non autorisé' },
   { value: 'softfail', label: '~all (Softfail)', hint: 'Marque comme suspect' },
-  { value: 'neutral', label: '?all (Neutre)', hint: 'Pas de politique' }
+  { value: 'neutral', label: '?all (Neutre)', hint: 'Pas de politique' },
 ];
 
 const dmarcPolicies = [
   { value: 'none', label: 'none', hint: 'Surveillance seulement' },
   { value: 'quarantine', label: 'quarantine', hint: 'Mise en spam' },
-  { value: 'reject', label: 'reject', hint: 'Rejet total' }
+  { value: 'reject', label: 'reject', hint: 'Rejet total' },
 ];
 
 const servicesToInstall = computed(() => {
@@ -896,28 +1069,32 @@ const servicesToInstall = computed(() => {
 const dnsRecords = computed(() => {
   const domain = config.value.domain.primaryDomain || 'example.com';
   const hostname = config.value.domain.hostname || `mail.${domain}`;
-  const spfPolicy = config.value.security.spf.policy === 'strict' ? '-all'
-    : config.value.security.spf.policy === 'softfail' ? '~all' : '?all';
+  const spfPolicy =
+    config.value.security.spf.policy === 'strict'
+      ? '-all'
+      : config.value.security.spf.policy === 'softfail'
+        ? '~all'
+        : '?all';
 
   const records = [
     {
       type: 'MX',
       name: domain,
       value: `10 ${hostname}.`,
-      description: 'Enregistrement MX principal - pointe vers votre serveur mail'
+      description: 'Enregistrement MX principal - pointe vers votre serveur mail',
     },
     {
       type: 'A',
       name: hostname,
       value: 'VOTRE_IP_SERVEUR',
-      description: 'Adresse IP de votre serveur mail'
+      description: 'Adresse IP de votre serveur mail',
     },
     {
       type: 'TXT',
       name: domain,
       value: `v=spf1 mx a ${spfPolicy}`,
-      description: 'SPF - Autorise les serveurs MX et A à envoyer des emails'
-    }
+      description: 'SPF - Autorise les serveurs MX et A à envoyer des emails',
+    },
   ];
 
   if (config.value.security.dkim.enabled) {
@@ -925,7 +1102,7 @@ const dnsRecords = computed(() => {
       type: 'TXT',
       name: `${config.value.security.dkim.selector}._domainkey.${domain}`,
       value: 'v=DKIM1; k=rsa; p=VOTRE_CLE_PUBLIQUE',
-      description: 'DKIM - Clé publique générée lors de l\'installation'
+      description: "DKIM - Clé publique générée lors de l'installation",
     });
   }
 
@@ -933,7 +1110,7 @@ const dnsRecords = computed(() => {
     type: 'TXT',
     name: `_dmarc.${domain}`,
     value: `v=DMARC1; p=${config.value.security.dmarc.policy}; ${config.value.security.dmarc.rua ? `rua=mailto:${config.value.security.dmarc.rua}` : ''}`,
-    description: 'DMARC - Politique de gestion des emails non conformes'
+    description: 'DMARC - Politique de gestion des emails non conformes',
   });
 
   return records;
@@ -981,7 +1158,7 @@ function copyToClipboard(text: string) {
 }
 
 function copyAllDnsRecords() {
-  const text = dnsRecords.value.map(r => `${r.type}\t${r.name}\t${r.value}`).join('\n');
+  const text = dnsRecords.value.map((r) => `${r.type}\t${r.name}\t${r.value}`).join('\n');
   navigator.clipboard.writeText(text);
 }
 
@@ -993,7 +1170,7 @@ async function startInstallation() {
     { id: 'install', name: 'Installation des services', status: 'running' },
     { id: 'dkim', name: 'Génération des clés DKIM', status: 'pending' },
     { id: 'config', name: 'Configuration des services', status: 'pending' },
-    { id: 'restart', name: 'Redémarrage des services', status: 'pending' }
+    { id: 'restart', name: 'Redémarrage des services', status: 'pending' },
   ];
 
   // Construire la liste des services à installer
@@ -1006,9 +1183,10 @@ async function startInstallation() {
   }
 
   // Récupérer l'ID du serveur cible
-  const serverId = config.value.architecture === 'single'
-    ? config.value.servers[0]?.serverId
-    : distributedConfig.value.mxInbound; // Pour l'instant on utilise le serveur MX inbound
+  const serverId =
+    config.value.architecture === 'single'
+      ? config.value.servers[0]?.serverId
+      : distributedConfig.value.mxInbound; // Pour l'instant on utilise le serveur MX inbound
 
   if (!serverId) {
     installationSteps.value[0].status = 'error';
@@ -1021,39 +1199,63 @@ async function startInstallation() {
   emit('configureMailStack', serverId, {
     domain: config.value.domain.primaryDomain,
     hostname: config.value.domain.hostname,
+    additionalDomains: config.value.domain.additionalDomains.filter((d) => d.trim() !== ''),
     services: servicesToInstall,
     security: {
-      tls: config.value.security.tls.provider,
-      dkimKeySize: config.value.security.dkim.keySize,
-      spf: config.value.security.spf.policy !== 'neutral',
-      dmarc: config.value.security.dmarc.policy !== 'none'
-    }
+      tls: {
+        provider: config.value.security.tls.provider,
+        // Pour 'existing', les chemins seront demandés à l'utilisateur plus tard
+        certPath:
+          config.value.security.tls.provider === 'existing' ? '/etc/ssl/certs/mail.pem' : undefined,
+        keyPath:
+          config.value.security.tls.provider === 'existing'
+            ? '/etc/ssl/private/mail.key'
+            : undefined,
+      },
+      dkim: {
+        enabled: config.value.security.dkim.enabled,
+        selector: config.value.security.dkim.selector || 'default',
+        keySize: config.value.security.dkim.keySize,
+      },
+      spf: {
+        enabled: config.value.security.spf.policy !== 'neutral',
+        policy: config.value.security.spf.policy,
+      },
+      dmarc: {
+        enabled: config.value.security.dmarc.policy !== 'none',
+        policy: config.value.security.dmarc.policy,
+        rua: config.value.security.dmarc.rua,
+      },
+    },
   });
 }
 
 // Watcher pour les résultats de l'installation
-watch(() => props.installationResult, (result) => {
-  if (result) {
-    if (result.success) {
-      // Marquer toutes les étapes comme complètes
-      installationSteps.value.forEach(step => step.status = 'complete');
-      installComplete.value = true;
-      // Stocker la clé DKIM publique pour l'affichage DNS
-      if (result.dkimPublicKey) {
-        dkimPublicKey.value = result.dkimPublicKey;
+watch(
+  () => props.installationResult,
+  (result) => {
+    if (result) {
+      if (result.success) {
+        // Marquer toutes les étapes comme complètes
+        installationSteps.value.forEach((step) => (step.status = 'complete'));
+        installComplete.value = true;
+        // Stocker la clé DKIM publique pour l'affichage DNS
+        if (result.dkimPublicKey) {
+          dkimPublicKey.value = result.dkimPublicKey;
+        }
+        emit('complete', config.value);
+      } else {
+        // Marquer la dernière étape en cours comme erreur
+        const runningStep = installationSteps.value.find((s) => s.status === 'running');
+        if (runningStep) {
+          runningStep.status = 'error';
+          runningStep.message = result.error;
+        }
+        installing.value = false;
       }
-      emit('complete', config.value);
-    } else {
-      // Marquer la dernière étape en cours comme erreur
-      const runningStep = installationSteps.value.find(s => s.status === 'running');
-      if (runningStep) {
-        runningStep.status = 'error';
-        runningStep.message = result.error;
-      }
-      installing.value = false;
     }
-  }
-});
+  },
+);
 
 // Variable pour stocker la clé DKIM publique reçue
 const dkimPublicKey = ref<string>('');
@@ -1062,58 +1264,67 @@ const dkimPublicKey = ref<string>('');
 const logsContainer = ref<HTMLElement | null>(null);
 
 // Watcher pour l'autoscroll des logs et la mise à jour des étapes
-watch(() => props.installationLogs?.length, () => {
-  nextTick(() => {
-    if (logsContainer.value) {
-      logsContainer.value.scrollTop = logsContainer.value.scrollHeight;
-    }
-  });
+watch(
+  () => props.installationLogs?.length,
+  () => {
+    nextTick(() => {
+      if (logsContainer.value) {
+        logsContainer.value.scrollTop = logsContainer.value.scrollHeight;
+      }
+    });
 
-  // Parser les logs pour mettre à jour les étapes en temps réel
-  if (props.installationLogs && props.installationLogs.length > 0) {
-    const lastLogs = props.installationLogs.slice(-5); // Derniers 5 logs
+    // Parser les logs pour mettre à jour les étapes en temps réel
+    if (props.installationLogs && props.installationLogs.length > 0) {
+      const lastLogs = props.installationLogs.slice(-5); // Derniers 5 logs
 
-    for (const log of lastLogs) {
-      const msg = log.message;
+      for (const log of lastLogs) {
+        const msg = log.message;
 
-      // Détecter les étapes "Step X/4" dans les logs
-      if (msg.includes('Step 1/4') || msg.includes('Installing mail services')) {
-        updateStepStatus('install', 'running');
-      } else if (msg.includes('Step 2/4') || msg.includes('Generating DKIM keys')) {
-        updateStepStatus('install', 'complete');
-        updateStepStatus('dkim', 'running');
-      } else if (msg.includes('Step 3/4') || msg.includes('Applying configurations')) {
-        updateStepStatus('dkim', 'complete');
-        updateStepStatus('config', 'running');
-      } else if (msg.includes('Step 4/4') || msg.includes('Restarting services')) {
-        updateStepStatus('config', 'complete');
-        updateStepStatus('restart', 'running');
-      } else if (msg.includes('Mail stack configured successfully') || msg.includes('✅ Mail stack')) {
-        updateStepStatus('restart', 'complete');
-      } else if (msg.includes('❌') || msg.includes('failed') || msg.includes('error')) {
-        // Marquer l'étape en cours comme erreur
-        const runningStep = installationSteps.value.find(s => s.status === 'running');
-        if (runningStep) {
-          runningStep.status = 'error';
-          runningStep.message = msg.substring(0, 100);
+        // Détecter les étapes "Step X/4" dans les logs
+        if (msg.includes('Step 1/4') || msg.includes('Installing mail services')) {
+          updateStepStatus('install', 'running');
+        } else if (msg.includes('Step 2/4') || msg.includes('Generating DKIM keys')) {
+          updateStepStatus('install', 'complete');
+          updateStepStatus('dkim', 'running');
+        } else if (msg.includes('Step 3/4') || msg.includes('Applying configurations')) {
+          updateStepStatus('dkim', 'complete');
+          updateStepStatus('config', 'running');
+        } else if (msg.includes('Step 4/4') || msg.includes('Restarting services')) {
+          updateStepStatus('config', 'complete');
+          updateStepStatus('restart', 'running');
+        } else if (
+          msg.includes('Mail stack configured successfully') ||
+          msg.includes('✅ Mail stack')
+        ) {
+          updateStepStatus('restart', 'complete');
+        } else if (msg.includes('❌') || msg.includes('failed') || msg.includes('error')) {
+          // Marquer l'étape en cours comme erreur
+          const runningStep = installationSteps.value.find((s) => s.status === 'running');
+          if (runningStep) {
+            runningStep.status = 'error';
+            runningStep.message = msg.substring(0, 100);
+          }
         }
       }
     }
-  }
-});
+  },
+);
 
 // Fonction helper pour mettre à jour le statut d'une étape
 function updateStepStatus(stepId: string, status: 'pending' | 'running' | 'complete' | 'error') {
-  const step = installationSteps.value.find(s => s.id === stepId);
+  const step = installationSteps.value.find((s) => s.id === stepId);
   if (step && step.status !== 'complete' && step.status !== 'error') {
     step.status = status;
   }
 }
 
 // Watch for hostname auto-generation
-watch(() => config.value.domain.primaryDomain, (newDomain) => {
-  if (newDomain && !config.value.domain.hostname) {
-    config.value.domain.hostname = `mail.${newDomain}`;
-  }
-});
+watch(
+  () => config.value.domain.primaryDomain,
+  (newDomain) => {
+    if (newDomain && !config.value.domain.hostname) {
+      config.value.domain.hostname = `mail.${newDomain}`;
+    }
+  },
+);
 </script>
