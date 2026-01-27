@@ -177,47 +177,85 @@ export async function installOpendkim(onLog: LogFn): Promise<string> {
  * - Absence de définitions de virus (main.cvd, daily.cvd)
  * - Service rspamd masqué ou absent
  * - Fichiers système corrompus avec CRLF (Windows line endings)
+ * - Utilisateur/groupe clamav corrompu avec \r
  */
 export async function installClamav(onLog: LogFn): Promise<string> {
     onLog(`📥 Installing ClamAV antivirus...\n`, 'stdout');
 
     // ============================================
-    // ÉTAPE 0 : Nettoyage des fichiers système corrompus (CRLF)
+    // ÉTAPE 0 : Nettoyage COMPLET des corruptions CRLF
     // ============================================
-    // Parfois les fichiers /etc/passwd ou /etc/group contiennent des \r
-    // (caractères Windows) qui cassent les scripts post-installation de packages
+    // Les fichiers /etc/passwd, /etc/group peuvent contenir des \r (Windows)
+    // qui créent des utilisateurs avec des noms corrompus comme "clamav\r"
+    onLog(`🔧 Vérification et nettoyage des fichiers système...\n`, 'stdout');
+
     const systemFiles = ['/etc/passwd', '/etc/group', '/etc/shadow', '/etc/gshadow'];
+    let filesFixed = false;
+
     for (const filePath of systemFiles) {
         if (fs.existsSync(filePath)) {
             try {
                 const content = fs.readFileSync(filePath, 'utf-8');
                 if (content.includes('\r')) {
-                    onLog(`🔧 Correction des fins de ligne dans ${filePath}...\n`, 'stdout');
+                    onLog(`   🔧 Correction CRLF dans ${filePath}\n`, 'stdout');
                     const fixedContent = content.replace(/\r\n/g, '\n').replace(/\r/g, '');
-                    fs.writeFileSync(filePath, fixedContent, { mode: 0o644 });
+                    fs.writeFileSync(filePath, fixedContent);
+                    filesFixed = true;
                 }
-            } catch {
-                // Ignorer si on ne peut pas lire/écrire le fichier
+            } catch (err) {
+                onLog(`   ⚠️ Impossible de corriger ${filePath}\n`, 'stderr');
             }
         }
+    }
+
+    if (filesFixed) {
+        onLog(`   ✅ Fichiers système corrigés\n`, 'stdout');
+    }
+
+    // ============================================
+    // ÉTAPE 0b : Purge complète si installation cassée
+    // ============================================
+    // Si clamav-daemon est dans un état cassé, on purge tout et on recommence
+    try {
+        const dpkgStatus = await runCommandSilent('dpkg', ['-s', 'clamav-daemon']);
+        if (dpkgStatus.includes('half-installed') || dpkgStatus.includes('half-configured')) {
+            onLog(`🧹 Purge de l'installation cassée de ClamAV...\n`, 'stdout');
+
+            // Arrêter les services
+            try { await runCommandSilent('systemctl', ['stop', 'clamav-daemon']); } catch { }
+            try { await runCommandSilent('systemctl', ['stop', 'clamav-freshclam']); } catch { }
+
+            // Supprimer l'utilisateur/groupe clamav s'ils existent
+            try { await runCommandSilent('userdel', ['clamav']); } catch { }
+            try { await runCommandSilent('groupdel', ['clamav']); } catch { }
+
+            // Forcer la suppression des packages cassés
+            await runCommand('dpkg', ['--remove', '--force-remove-reinstreq', 'clamav-daemon'], onLog);
+            await runCommand('dpkg', ['--remove', '--force-remove-reinstreq', 'clamav-freshclam'], onLog);
+            await runCommand('dpkg', ['--remove', '--force-remove-reinstreq', 'clamav'], onLog);
+            await runCommand('dpkg', ['--remove', '--force-remove-reinstreq', 'clamav-base'], onLog);
+
+            // Nettoyer les fichiers résiduels
+            try { await runCommandSilent('rm', ['-rf', '/var/lib/clamav']); } catch { }
+            try { await runCommandSilent('rm', ['-rf', '/var/run/clamav']); } catch { }
+            try { await runCommandSilent('rm', ['-rf', '/var/log/clamav']); } catch { }
+            try { await runCommandSilent('rm', ['-rf', '/etc/clamav']); } catch { }
+
+            onLog(`   ✅ Purge terminée\n`, 'stdout');
+        }
+    } catch {
+        // Package pas installé, c'est OK
     }
 
     // ============================================
     // ÉTAPE 1 : Nettoyage pré-installation
     // ============================================
-    // Supprime les fichiers qui peuvent causer des problèmes lors de réinstallation
     const clamavDataDir = '/var/lib/clamav';
     const mirrorsFile = `${clamavDataDir}/mirrors.dat`;
 
-    // Supprimer le fichier mirrors.dat qui contient l'état du rate-limiting
-    // Cela permet de "reset" le cool-down si l'utilisateur a attendu
     if (fs.existsSync(mirrorsFile)) {
         onLog(`🧹 Nettoyage du fichier mirrors.dat (reset rate-limiting)...\n`, 'stdout');
-        try {
-            fs.unlinkSync(mirrorsFile);
-        } catch {
-            // Ignorer si on ne peut pas supprimer
-        }
+        try { fs.unlinkSync(mirrorsFile); } catch { }
     }
 
     // ============================================
@@ -228,25 +266,26 @@ export async function installClamav(onLog: LogFn): Promise<string> {
     try {
         await runCommand('apt-get', ['install', '-y', 'clamav', 'clamav-daemon', 'clamav-freshclam'], onLog);
     } catch (installErr: any) {
-        // Si l'installation échoue, tenter de reconfigurer les packages cassés
-        onLog(`⚠️ Installation initiale échouée, tentative de récupération...\n`, 'stderr');
+        onLog(`⚠️ Installation échouée, nettoyage agressif...\n`, 'stderr');
 
-        // Reconfigurer les packages en attente
+        // Nettoyage AGRESSIF : supprimer utilisateur/groupe corrompus
+        onLog(`   🔧 Suppression utilisateur/groupe clamav corrompus...\n`, 'stdout');
+        try { await runCommandSilent('userdel', ['-f', 'clamav']); } catch { }
+        try { await runCommandSilent('groupdel', ['clamav']); } catch { }
+
+        // Forcer dpkg à abandonner le package cassé
         try {
-            await runCommand('dpkg', ['--configure', '-a'], onLog);
+            await runCommand('dpkg', ['--remove', '--force-remove-reinstreq', 'clamav-daemon'], onLog);
         } catch { }
 
-        // Réparer les dépendances cassées
-        try {
-            await runCommand('apt-get', ['install', '-f', '-y'], onLog);
-        } catch { }
+        // Nettoyer apt
+        try { await runCommand('apt-get', ['clean'], onLog); } catch { }
 
         // Réessayer l'installation
         try {
             await runCommand('apt-get', ['install', '-y', 'clamav', 'clamav-daemon', 'clamav-freshclam'], onLog);
         } catch (retryErr: any) {
-            // Si ça échoue encore, propager l'erreur
-            throw new Error(`Installation ClamAV échouée après récupération: ${retryErr.message}`);
+            throw new Error(`Installation ClamAV échouée: ${retryErr.message}. Vérifiez /etc/passwd et /etc/group pour des caractères corrompus.`);
         }
     }
 
