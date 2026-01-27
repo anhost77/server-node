@@ -5,7 +5,8 @@
     "private": true,
     "scripts": {
         "dev": "tsx watch src/index.ts",
-        "build": "tsc",
+        "build": "tsc && npm run copy-templates",
+        "copy-templates": "node -e \"const fs=require('fs');const path=require('path');function copyDir(s,d){fs.mkdirSync(d,{recursive:true});fs.readdirSync(s,{withFileTypes:true}).forEach(e=>{const sp=path.join(s,e.name),dp=path.join(d,e.name);e.isDirectory()?copyDir(sp,dp):fs.copyFileSync(sp,dp)})};copyDir('src/infrastructure/templates','dist/infrastructure/templates')\"",
         "start": "node dist/index.js"
     },
     "dependencies": {
