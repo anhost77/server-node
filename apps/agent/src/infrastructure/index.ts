@@ -76,6 +76,9 @@ import { runtimeInstallers, runtimeUpdaters, uninstallRuntime } from './installe
 import { databaseConfigurators, removeDatabase, reconfigureDatabase } from './installers/databases.js';
 import { serviceInstallers } from './installers/services/index.js';
 
+// Import mail installers directly (for configureMailStack with custom domain)
+import { installPostfix, installDovecot, installRspamd, installOpendkim, installClamav, installSpfPolicyd } from './installers/services/mail.js';
+
 // ============================================
 // CONSTANTS
 // ============================================
@@ -948,14 +951,41 @@ export class InfrastructureManager {
         const mailServices: ServiceType[] = ['postfix', 'dovecot', 'rspamd', 'opendkim', 'clamav', 'spf-policyd'];
         const servicesToInstall = config.services.filter(s => mailServices.includes(s as ServiceType));
 
+        // Configuration pour les installateurs mail
+        const mailConfig = { domain: config.domain, hostname: config.hostname };
+
         try {
-            // Étape 1: Installer les services
+            // Étape 1: Installer les services avec le bon domaine
             this.onLog(`\n📦 Step 1/4: Installing mail services...\n`, 'stdout');
             for (const service of servicesToInstall) {
                 this.onLog(`\n  → Installing ${service}...\n`, 'stdout');
-                const result = await this.installService(service as ServiceType);
-                if (!result.success) {
-                    throw new Error(`Failed to install ${service}: ${result.error}`);
+                try {
+                    // Utiliser les installateurs mail spécifiques avec le domaine configuré
+                    switch (service) {
+                        case 'postfix':
+                            await installPostfix(this.onLog, mailConfig);
+                            break;
+                        case 'dovecot':
+                            await installDovecot(this.onLog);
+                            break;
+                        case 'rspamd':
+                            await installRspamd(this.onLog);
+                            break;
+                        case 'opendkim':
+                            await installOpendkim(this.onLog, mailConfig);
+                            break;
+                        case 'clamav':
+                            await installClamav(this.onLog);
+                            break;
+                        case 'spf-policyd':
+                            await installSpfPolicyd(this.onLog);
+                            break;
+                        default:
+                            throw new Error(`Unknown mail service: ${service}`);
+                    }
+                    this.onLog(`\n✅ ${service} installed successfully\n`, 'stdout');
+                } catch (err: any) {
+                    throw new Error(`Failed to install ${service}: ${err.message}`);
                 }
             }
 

@@ -25,12 +25,26 @@ import { writeConfig } from '../../template-manager.js';
  * Cette fonction gère intelligemment les cas suivants :
  * - Réinstallation après une désinstallation
  * - Fichiers de configuration manquants après un purge
+ *
+ * @param onLog - Fonction de logging
+ * @param mailConfig - Configuration mail optionnelle (domaine, hostname)
  */
-export async function installPostfix(onLog: LogFn): Promise<string> {
+export async function installPostfix(onLog: LogFn, mailConfig?: { domain: string; hostname: string }): Promise<string> {
     onLog(`📥 Installing Postfix MTA...\n`, 'stdout');
 
-    const hostname = os.hostname();
-    const domain = hostname.includes('.') ? hostname.split('.').slice(1).join('.') : hostname;
+    // Utiliser la config fournie ou déduire du hostname système
+    let hostname: string;
+    let domain: string;
+
+    if (mailConfig) {
+        hostname = mailConfig.hostname;
+        domain = mailConfig.domain;
+        onLog(`   📧 Using configured domain: ${domain}, hostname: ${hostname}\n`, 'stdout');
+    } else {
+        hostname = os.hostname();
+        domain = hostname.includes('.') ? hostname.split('.').slice(1).join('.') : hostname;
+    }
+
     const postfixPackages = ['postfix', 'postfix-policyd-spf-python', 'libsasl2-modules'];
 
     // Étape 0 : Nettoyage des installations précédentes
@@ -39,7 +53,7 @@ export async function installPostfix(onLog: LogFn): Promise<string> {
     // Pre-configure postfix to avoid interactive prompts
     const debconfSelections = `postfix postfix/main_mailer_type select Internet Site
 postfix postfix/mailname string ${hostname}
-postfix postfix/destinations string ${hostname}, localhost.localdomain, localhost
+postfix postfix/destinations string ${hostname}, ${domain}, localhost.localdomain, localhost
 `;
     fs.writeFileSync('/tmp/postfix-debconf', debconfSelections);
     await runCommand('bash', ['-c', 'debconf-set-selections < /tmp/postfix-debconf'], onLog);
@@ -57,7 +71,7 @@ postfix postfix/destinations string ${hostname}, localhost.localdomain, localhos
     await runCommand('systemctl', ['enable', 'postfix'], onLog);
     await runCommand('systemctl', ['restart', 'postfix'], onLog);
 
-    onLog(`✅ Postfix installed. Configure TLS certificates for production use.\n`, 'stdout');
+    onLog(`✅ Postfix installed for ${domain}. Configure TLS certificates for production use.\n`, 'stdout');
     const version = await getCommandVersion('postconf', ['mail_version']);
     return version?.replace('mail_version = ', '').trim() || 'installed';
 }
@@ -188,8 +202,11 @@ export async function installRspamd(onLog: LogFn): Promise<string> {
  * Cette fonction gère intelligemment les cas suivants :
  * - Réinstallation après une désinstallation
  * - Fichiers de configuration manquants après un purge
+ *
+ * @param onLog - Fonction de logging
+ * @param mailConfig - Configuration mail optionnelle (domaine, hostname)
  */
-export async function installOpendkim(onLog: LogFn): Promise<string> {
+export async function installOpendkim(onLog: LogFn, mailConfig?: { domain: string; hostname: string }): Promise<string> {
     onLog(`📥 Installing OpenDKIM...\n`, 'stdout');
 
     const opendkimPackages = ['opendkim', 'opendkim-tools'];
@@ -200,8 +217,18 @@ export async function installOpendkim(onLog: LogFn): Promise<string> {
     await runCommand('apt-get', ['update'], onLog);
     await runCommand('apt-get', ['install', '-y', ...opendkimPackages], onLog);
 
-    const hostname = os.hostname();
-    const domain = hostname.includes('.') ? hostname.split('.').slice(1).join('.') : hostname;
+    // Utiliser la config fournie ou déduire du hostname système
+    let hostname: string;
+    let domain: string;
+
+    if (mailConfig) {
+        hostname = mailConfig.hostname;
+        domain = mailConfig.domain;
+        onLog(`   📧 Using configured domain: ${domain}\n`, 'stdout');
+    } else {
+        hostname = os.hostname();
+        domain = hostname.includes('.') ? hostname.split('.').slice(1).join('.') : hostname;
+    }
 
     // Create directories
     const keysDir = `/etc/opendkim/keys/${domain}`;
