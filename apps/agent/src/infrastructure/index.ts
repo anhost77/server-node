@@ -855,6 +855,10 @@ export class InfrastructureManager {
                     break;
                 case 'spf-policyd':
                     await runCommand('apt-get', [removeCmd, '-y', 'postfix-policyd-spf-python'], this.onLog);
+                    // Recharger Postfix pour appliquer la suppression du policy daemon
+                    try {
+                        await runCommand('systemctl', ['reload', 'postfix'], this.onLog);
+                    } catch { /* Postfix peut ne pas être installé */ }
                     break;
                 case 'rsync':
                     await runCommand('apt-get', [removeCmd, '-y', 'rsync'], this.onLog);

@@ -151,14 +151,14 @@ const mailServices = [
   { type: 'rspamd', name: 'Rspamd', icon: 'RS', size: '~100MB', description: 'Antispam Filter', canRemove: true },
   { type: 'opendkim', name: 'OpenDKIM', icon: 'DK', size: '~10MB', description: 'DKIM Signing', canRemove: true },
   { type: 'clamav', name: 'ClamAV', icon: 'AV', size: '~500MB', description: 'Antivirus Scanner', canRemove: true, warning: '⚠️ Installation gourmande en ressources (RAM/CPU). Peut prendre 5-10 min.' },
-  { type: 'spf-policyd', name: 'SPF Policy', icon: 'SP', size: '~5MB', description: 'SPF Verification', canRemove: true }
+  { type: 'spf-policyd', name: 'SPF Policy', icon: 'SP', size: '~5MB', description: 'SPF Verification', canRemove: true, canStartStop: false }
 ]
 
-// Backup services
+// Backup services (tools, not services - cannot be started/stopped)
 const backupServices = [
-  { type: 'rsync', name: 'Rsync', icon: 'RS', size: '~5MB', description: 'File Sync', canRemove: true },
-  { type: 'rclone', name: 'Rclone', icon: 'RC', size: '~50MB', description: 'Cloud Storage Sync', canRemove: true },
-  { type: 'restic', name: 'Restic', icon: 'RT', size: '~30MB', description: 'Encrypted Backups', canRemove: true }
+  { type: 'rsync', name: 'Rsync', icon: 'RS', size: '~5MB', description: 'File Sync', canRemove: true, canStartStop: false },
+  { type: 'rclone', name: 'Rclone', icon: 'RC', size: '~50MB', description: 'Cloud Storage Sync', canRemove: true, canStartStop: false },
+  { type: 'restic', name: 'Restic', icon: 'RT', size: '~30MB', description: 'Encrypted Backups', canRemove: true, canStartStop: false }
 ]
 
 // System services (protected - cannot be removed)
@@ -1022,23 +1022,29 @@ function confirmReconfigureDatabase() {
               </button>
             </template>
             <template v-else>
-              <!-- Start/Stop button -->
-              <button
-                v-if="getService(svc.type)?.running"
-                class="flex-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-                :disabled="stoppingService !== null"
-                @click="emit('stopService', svc.type)"
-              >
-                {{ stoppingService === svc.type ? t('infrastructure.stopping') : t('infrastructure.stop') }}
-              </button>
-              <button
-                v-else
-                class="flex-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-                :disabled="startingService !== null"
-                @click="emit('startService', svc.type)"
-              >
-                {{ startingService === svc.type ? t('infrastructure.starting') : t('infrastructure.start') }}
-              </button>
+              <!-- Start/Stop button (only for services that can be started/stopped) -->
+              <template v-if="svc.canStartStop !== false">
+                <button
+                  v-if="getService(svc.type)?.running"
+                  class="flex-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                  :disabled="stoppingService !== null"
+                  @click="emit('stopService', svc.type)"
+                >
+                  {{ stoppingService === svc.type ? t('infrastructure.stopping') : t('infrastructure.stop') }}
+                </button>
+                <button
+                  v-else
+                  class="flex-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                  :disabled="startingService !== null"
+                  @click="emit('startService', svc.type)"
+                >
+                  {{ startingService === svc.type ? t('infrastructure.starting') : t('infrastructure.start') }}
+                </button>
+              </template>
+              <!-- Tool indicator (for services without start/stop) -->
+              <div v-else class="flex-1 px-3 py-1.5 bg-slate-100 text-slate-500 rounded-lg text-xs font-medium text-center">
+                {{ t('infrastructure.tool') || 'Outil' }}
+              </div>
               <!-- Logs button -->
               <button
                 class="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors"
