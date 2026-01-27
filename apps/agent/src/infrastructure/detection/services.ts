@@ -272,11 +272,13 @@ export async function detectServices(): Promise<ServiceInfo[]> {
         runningChecks.push(isServiceRunning('clamav-daemon').then(r => ({ index: 17, running: r })));
     }
 
-    // spf-policyd (index 18)
+    // spf-policyd (index 18) - SPF Policy daemon runs VIA Postfix, not standalone
+    // Son statut reflète le statut de Postfix car c'est Postfix qui l'exécute
     if (spfPolicydInstalled) {
         services[18].installed = true;
         services[18].version = 'installed';
-        runningChecks.push(isServiceRunning('postfix-policyd-spf-python').then(r => ({ index: 18, running: r })));
+        // Le statut de spf-policyd = le statut de postfix (il s'exécute via postfix)
+        runningChecks.push(isServiceRunning('postfix').then(r => ({ index: 18, running: r })));
     }
 
     // rsync (index 19) - pas un daemon, pas de running check

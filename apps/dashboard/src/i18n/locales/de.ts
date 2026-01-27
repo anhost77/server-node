@@ -216,7 +216,8 @@ export default {
         protectedService: 'Geschützter Systemdienst (kann nicht entfernt werden)',
         systemServices: 'Systemdienste',
         ftpServices: 'FTP-Dienste',
-        storageServices: 'Speicherdienste'
+        storageServices: 'Speicherdienste',
+        tool: 'Werkzeug'
     },
 
     // Applications
