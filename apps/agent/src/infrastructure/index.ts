@@ -878,9 +878,10 @@ export class InfrastructureManager {
         this.onLog(`\n▶️ Starting ${type}...\n`, 'stdout');
 
         try {
-            const serviceName = SERVICE_NAMES[type] || type;
+            // Vérifier si ce service a un nom systemd (chaîne vide = pas de service)
+            const serviceName = SERVICE_NAMES[type];
             if (!serviceName) {
-                throw new Error(`${type} is a tool, not a service - it cannot be started`);
+                throw new Error(`${type} is a tool or runs via another service - it cannot be started directly`);
             }
             await runCommand('systemctl', ['start', serviceName], this.onLog);
             this.onLog(`\n✅ ${type} started successfully\n`, 'stdout');
@@ -899,9 +900,10 @@ export class InfrastructureManager {
         this.onLog(`\n⏹️ Stopping ${type}...\n`, 'stdout');
 
         try {
-            const serviceName = SERVICE_NAMES[type] || type;
+            // Vérifier si ce service a un nom systemd (chaîne vide = pas de service)
+            const serviceName = SERVICE_NAMES[type];
             if (!serviceName) {
-                throw new Error(`${type} is a tool, not a service - it cannot be stopped`);
+                throw new Error(`${type} is a tool or runs via another service - it cannot be stopped directly`);
             }
             await runCommand('systemctl', ['stop', serviceName], this.onLog);
             this.onLog(`\n✅ ${type} stopped successfully\n`, 'stdout');
