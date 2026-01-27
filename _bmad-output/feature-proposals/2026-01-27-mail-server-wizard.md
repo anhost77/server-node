@@ -205,18 +205,19 @@ interface StorageConfig {
 
 ## Notes d'Implémentation
 
-### Phase 1 : MVP (Single Server)
+### Phase 1 : MVP (Single Server) ✅ DONE
 - Wizard pour architecture monolithique uniquement
 - Tous les services sur un serveur
 - Génération DNS automatique
 - Installation séquentielle des services
 
-### Phase 2 : Distributed
+### Phase 2 : Distributed 📋 PLANNED (Epic 8)
 - Support multi-serveurs
 - Communication interne sécurisée
 - Configuration des rôles
+- **Voir**: `_bmad-output/implementation-artifacts/8-distributed-mail-architecture.md`
 
-### Phase 3 : HA/Cluster
+### Phase 3 : HA/Cluster (Future)
 - Réplication Dovecot
 - Multiple MX avec failover
 - Shared storage

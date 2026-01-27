@@ -88,3 +88,11 @@ development_status:
   7-9-server-deletion: done  # Delete server from dashboard + agent shutdown + cascade delete
   7-10-mail-server-wizard: in-progress  # Mail stack configuration wizard with architecture selection
   epic-7-retrospective: optional
+
+  epic-8: backlog  # Distributed Mail Architecture
+  8-1-server-role-selection-ui: backlog  # UI for assigning mail roles to servers
+  8-2-internal-network-configuration: backlog  # Configure inter-server communication
+  8-3-multi-server-installation-orchestration: backlog  # Orchestrate installation across servers
+  8-4-cross-server-configuration-templates: backlog  # Templates with external server references
+  8-5-distributed-health-monitoring: backlog  # Health dashboard for distributed architecture
+  epic-8-retrospective: optional

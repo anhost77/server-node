@@ -253,3 +253,64 @@ NFR9: [Reliability] Decoupling: Client sites must remain online even if ServerFl
 **Given** my browser locale is `fr-FR`
 **When** I load the dashboard
 **Then** all text labels are displayed in French.
+
+## Epic 8: Distributed Mail Architecture
+
+**Goal:** Enable installation of mail components across multiple servers for scalability and resilience.
+**FRs Covered:** Mail scalability, enterprise deployment patterns.
+**Value:** Enables ServerFlow to serve enterprise customers and MSPs with complex mail infrastructure needs.
+
+### Story 8.1: Server Role Selection UI
+**As a** User,
+**I want** to assign mail roles (MX, Storage, Antispam) to different servers,
+**So that** I can build a distributed mail architecture.
+
+**Acceptance Criteria:**
+**Given** I have multiple servers connected
+**When** I use the mail wizard with "distributed" architecture
+**Then** I can drag & drop roles to servers
+**And** see a preview of the resulting topology.
+
+### Story 8.2: Internal Network Configuration
+**As a** User,
+**I want** to configure secure communication between my mail servers,
+**So that** internal traffic is protected.
+
+**Acceptance Criteria:**
+**Given** I have selected a distributed architecture
+**When** I configure the network settings
+**Then** I can choose between direct IP, VPN, or private network
+**And** firewall rules are automatically generated.
+
+### Story 8.3: Multi-Server Installation Orchestration
+**As a** System,
+**I want** to install mail components in the correct order across servers,
+**So that** dependencies are satisfied.
+
+**Acceptance Criteria:**
+**Given** a distributed mail configuration
+**When** the installation starts
+**Then** components are installed in dependency order (Antispam → Storage → MX)
+**And** each server receives configuration referencing other servers.
+
+### Story 8.4: Cross-Server Configuration Templates
+**As an** Agent,
+**I want** configuration templates that reference external servers,
+**So that** Postfix can reach Rspamd and Dovecot on other machines.
+
+**Acceptance Criteria:**
+**Given** a distributed installation
+**When** Postfix is configured
+**Then** milter points to Rspamd server IP
+**And** LMTP transport points to Dovecot server IP.
+
+### Story 8.5: Distributed Health Monitoring
+**As a** User,
+**I want** to see the health of each component in my distributed mail stack,
+**So that** I can quickly identify issues.
+
+**Acceptance Criteria:**
+**Given** a running distributed mail setup
+**When** I view the mail dashboard
+**Then** I see a topology view with status for each server/service
+**And** alerts if any component is down.
