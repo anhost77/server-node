@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import type { LogFn } from '../../types.js';
 import { runCommand, runCommandSilent, getCommandVersion } from '../../helpers.js';
+import { writeConfig } from '../../template-manager.js';
 
 /**
  * **installPostfix()** - Installe le serveur SMTP Postfix
@@ -39,47 +40,11 @@ postfix postfix/destinations string ${hostname}, localhost.localdomain, localhos
     await runCommand('apt-get', ['update'], onLog);
     await runCommand('apt-get', ['install', '-y', 'postfix', 'postfix-policyd-spf-python', 'libsasl2-modules'], onLog);
 
-    // Basic secure configuration
-    const mainCf = `
-# Basic settings
-myhostname = ${hostname}
-mydomain = ${domain}
-myorigin = $mydomain
-mydestination = $myhostname, localhost.$mydomain, localhost
-mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128
-
-# TLS parameters
-smtpd_tls_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem
-smtpd_tls_key_file=/etc/ssl/private/ssl-cert-snakeoil.key
-smtpd_tls_security_level=may
-smtp_tls_security_level=may
-
-# SASL authentication
-smtpd_sasl_type = dovecot
-smtpd_sasl_path = private/auth
-smtpd_sasl_auth_enable = yes
-
-# Restrictions
-smtpd_recipient_restrictions =
-    permit_mynetworks,
-    permit_sasl_authenticated,
-    reject_unauth_destination,
-    reject_rbl_client zen.spamhaus.org
-
-# Mailbox
-home_mailbox = Maildir/
-
-# Size limits
-message_size_limit = 52428800
-mailbox_size_limit = 0
-
-# Virtual domains (uncomment and configure as needed)
-# virtual_mailbox_domains = /etc/postfix/virtual_domains
-# virtual_mailbox_base = /var/mail/vhosts
-# virtual_mailbox_maps = hash:/etc/postfix/vmailbox
-# virtual_alias_maps = hash:/etc/postfix/virtual
-`;
-    fs.appendFileSync('/etc/postfix/main.cf', mainCf);
+    // Basic secure configuration using template
+    writeConfig('postfix/main.cf', '/etc/postfix/main.cf', {
+        hostname,
+        domain
+    }, { append: true });
 
     await runCommand('systemctl', ['enable', 'postfix'], onLog);
     await runCommand('systemctl', ['restart', 'postfix'], onLog);
@@ -98,45 +63,8 @@ export async function installDovecot(onLog: LogFn): Promise<string> {
     await runCommand('apt-get', ['update'], onLog);
     await runCommand('apt-get', ['install', '-y', 'dovecot-core', 'dovecot-imapd', 'dovecot-pop3d', 'dovecot-lmtpd', 'dovecot-sieve'], onLog);
 
-    // Configure Dovecot for Maildir format
-    const dovecotLocal = `
-# Mailbox location
-mail_location = maildir:~/Maildir
-
-# Authentication
-auth_mechanisms = plain login
-
-# SSL/TLS
-ssl = yes
-ssl_cert = </etc/ssl/certs/ssl-cert-snakeoil.pem
-ssl_key = </etc/ssl/private/ssl-cert-snakeoil.key
-
-# Protocols
-protocols = imap pop3 lmtp
-
-# LMTP socket for Postfix
-service lmtp {
-  unix_listener /var/spool/postfix/private/dovecot-lmtp {
-    mode = 0600
-    user = postfix
-    group = postfix
-  }
-}
-
-# Auth socket for Postfix SASL
-service auth {
-  unix_listener /var/spool/postfix/private/auth {
-    mode = 0660
-    user = postfix
-    group = postfix
-  }
-}
-
-# Logging
-log_path = /var/log/dovecot.log
-info_log_path = /var/log/dovecot-info.log
-`;
-    fs.writeFileSync('/etc/dovecot/local.conf', dovecotLocal);
+    // Configure Dovecot for Maildir format using template
+    writeConfig('dovecot/local.conf', '/etc/dovecot/local.conf', {});
 
     await runCommand('systemctl', ['enable', 'dovecot'], onLog);
     await runCommand('systemctl', ['restart', 'dovecot'], onLog);
@@ -164,15 +92,12 @@ export async function installRspamd(onLog: LogFn): Promise<string> {
     await runCommand('apt-get', ['update'], onLog);
     await runCommand('apt-get', ['install', '-y', 'rspamd', 'redis-server'], onLog);
 
-    // Basic configuration for Postfix integration
-    const milterConfig = `# Rspamd milter for Postfix
-milter = yes;
-bind_socket = "/var/spool/postfix/rspamd/rspamd.sock mode=0666 owner=_rspamd";
-`;
-    if (!fs.existsSync('/etc/rspamd/local.d')) {
-        fs.mkdirSync('/etc/rspamd/local.d', { recursive: true });
-    }
-    fs.writeFileSync('/etc/rspamd/local.d/worker-proxy.inc', milterConfig);
+    // Basic configuration for Postfix integration using template
+    writeConfig('rspamd/worker-proxy.inc', '/etc/rspamd/local.d/worker-proxy.inc', {
+        socket_path: '/var/spool/postfix/rspamd/rspamd.sock',
+        socket_mode: '0666',
+        socket_owner: '_rspamd'
+    }, { createDirs: true });
 
     // Create socket directory
     if (!fs.existsSync('/var/spool/postfix/rspamd')) {
@@ -219,46 +144,13 @@ export async function installOpendkim(onLog: LogFn): Promise<string> {
     await runCommand('chown', ['-R', 'opendkim:opendkim', '/etc/opendkim'], onLog);
     await runCommand('chmod', ['600', `${keysDir}/default.private`], onLog);
 
-    // Configure OpenDKIM
-    const opendkimConf = `
-AutoRestart             Yes
-AutoRestartRate         10/1h
-Syslog                  yes
-SyslogSuccess           Yes
-LogWhy                  Yes
+    // Configure OpenDKIM using templates
+    const templateVars = { hostname, domain, keys_dir: keysDir };
 
-Canonicalization        relaxed/simple
-
-ExternalIgnoreList      refile:/etc/opendkim/TrustedHosts
-InternalHosts           refile:/etc/opendkim/TrustedHosts
-KeyTable                refile:/etc/opendkim/KeyTable
-SigningTable            refile:/etc/opendkim/SigningTable
-
-Mode                    sv
-PidFile                 /var/run/opendkim/opendkim.pid
-SignatureAlgorithm      rsa-sha256
-
-UserID                  opendkim:opendkim
-
-Socket                  inet:12301@localhost
-`;
-    fs.writeFileSync('/etc/opendkim.conf', opendkimConf);
-
-    // Trusted hosts
-    const trustedHosts = `127.0.0.1
-localhost
-${hostname}
-*.${domain}
-`;
-    fs.writeFileSync('/etc/opendkim/TrustedHosts', trustedHosts);
-
-    // Key table
-    const keyTable = `default._domainkey.${domain} ${domain}:default:${keysDir}/default.private\n`;
-    fs.writeFileSync('/etc/opendkim/KeyTable', keyTable);
-
-    // Signing table
-    const signingTable = `*@${domain} default._domainkey.${domain}\n`;
-    fs.writeFileSync('/etc/opendkim/SigningTable', signingTable);
+    writeConfig('opendkim/opendkim.conf', '/etc/opendkim.conf', templateVars);
+    writeConfig('opendkim/TrustedHosts', '/etc/opendkim/TrustedHosts', templateVars);
+    writeConfig('opendkim/KeyTable', '/etc/opendkim/KeyTable', templateVars);
+    writeConfig('opendkim/SigningTable', '/etc/opendkim/SigningTable', templateVars);
 
     // Configure Postfix to use OpenDKIM
     await runCommand('postconf', ['-e', 'milter_protocol = 6'], onLog);
@@ -298,26 +190,8 @@ export async function installClamav(onLog: LogFn): Promise<string> {
         onLog(`⚠️ First freshclam run may fail, this is normal\n`, 'stderr');
     }
 
-    // Configure ClamAV daemon
-    const clamdConf = `
-# ClamAV Configuration for Mail Server
-LocalSocket /var/run/clamav/clamd.sock
-LocalSocketGroup clamav
-LocalSocketMode 666
-FixStaleSocket true
-User clamav
-ScanMail true
-ScanArchive true
-MaxFileSize 25M
-MaxScanSize 100M
-StreamMaxLength 25M
-LogFile /var/log/clamav/clamav.log
-LogTime true
-LogVerbose false
-PidFile /var/run/clamav/clamd.pid
-DatabaseDirectory /var/lib/clamav
-`;
-    fs.writeFileSync('/etc/clamav/clamd.conf', clamdConf);
+    // Configure ClamAV daemon using template
+    writeConfig('clamav/clamd.conf', '/etc/clamav/clamd.conf', {});
 
     // Enable and start services
     await runCommand('systemctl', ['enable', 'clamav-freshclam'], onLog);
@@ -325,21 +199,10 @@ DatabaseDirectory /var/lib/clamav
     await runCommand('systemctl', ['enable', 'clamav-daemon'], onLog);
     await runCommand('systemctl', ['start', 'clamav-daemon'], onLog);
 
-    // Configure Rspamd to use ClamAV (if rspamd is installed)
-    const rspamdClamavConf = `
-# ClamAV integration for Rspamd
-clamav {
-    scan_mime_parts = true;
-    servers = "/var/run/clamav/clamd.sock";
-    symbol = "CLAM_VIRUS";
-    patterns {
-        JUST_EICAR = "^Eicar-Test-Signature$";
-    }
-}
-`;
+    // Configure Rspamd to use ClamAV (if rspamd is installed) using template
     const rspamdClamavDir = '/etc/rspamd/local.d';
     if (fs.existsSync(rspamdClamavDir)) {
-        fs.writeFileSync(`${rspamdClamavDir}/antivirus.conf`, rspamdClamavConf);
+        writeConfig('rspamd/antivirus.conf', `${rspamdClamavDir}/antivirus.conf`, {});
         try {
             await runCommand('systemctl', ['reload', 'rspamd'], onLog);
         } catch { }
@@ -360,19 +223,14 @@ export async function installSpfPolicyd(onLog: LogFn): Promise<string> {
     await runCommand('apt-get', ['update'], onLog);
     await runCommand('apt-get', ['install', '-y', 'postfix-policyd-spf-python'], onLog);
 
-    // Configure Postfix to use SPF policy daemon
+    // Configure Postfix to use SPF policy daemon using template
     const masterCfPath = '/etc/postfix/master.cf';
     if (fs.existsSync(masterCfPath)) {
         const masterCf = fs.readFileSync(masterCfPath, 'utf-8');
 
         // Check if SPF policy is already configured
         if (!masterCf.includes('policyd-spf')) {
-            const spfService = `
-# SPF Policy Daemon
-policyd-spf  unix  -       n       n       -       0       spawn
-    user=policyd-spf argv=/usr/bin/policyd-spf
-`;
-            fs.appendFileSync(masterCfPath, spfService);
+            writeConfig('postfix/master.cf.spf', masterCfPath, {}, { append: true });
             onLog(`✅ Added SPF policy daemon to master.cf\n`, 'stdout');
         }
     }

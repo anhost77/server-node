@@ -16,6 +16,7 @@
 import fs from 'node:fs';
 import type { LogFn } from '../../types.js';
 import { runCommand, runCommandSilent, getCommandVersion } from '../../helpers.js';
+import { writeConfig } from '../../template-manager.js';
 
 /**
  * **installNginx()** - Installe nginx
@@ -71,19 +72,15 @@ export async function installFail2ban(onLog: LogFn): Promise<string> {
     await runCommand('systemctl', ['enable', 'fail2ban'], onLog);
     await runCommand('systemctl', ['start', 'fail2ban'], onLog);
 
-    // Create a basic local configuration
-    const localConfig = `[DEFAULT]
-bantime = 1h
-findtime = 10m
-maxretry = 5
+    // Create a basic local configuration using template
+    writeConfig('fail2ban/jail.local', '/etc/fail2ban/jail.local', {
+        bantime: '1h',
+        findtime: '10m',
+        maxretry: 5,
+        ssh_port: 'ssh',
+        ssh_maxretry: 3
+    });
 
-[sshd]
-enabled = true
-port = ssh
-logpath = /var/log/auth.log
-maxretry = 3
-`;
-    fs.writeFileSync('/etc/fail2ban/jail.local', localConfig);
     await runCommand('systemctl', ['restart', 'fail2ban'], onLog);
     onLog(`✅ Fail2ban configured with SSH protection enabled\n`, 'stdout');
     return await getCommandVersion('fail2ban-client', ['--version']) || 'installed';

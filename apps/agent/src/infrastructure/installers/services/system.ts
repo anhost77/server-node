@@ -12,9 +12,9 @@
  * - installBind9() : Installe le serveur DNS BIND9
  */
 
-import fs from 'node:fs';
 import type { LogFn } from '../../types.js';
 import { runCommand, runCommandSilent, getCommandVersion, isRunningInContainer, sleep } from '../../helpers.js';
+import { writeConfig } from '../../template-manager.js';
 
 /**
  * **configureSsh()** - Configure le service SSH
@@ -126,32 +126,8 @@ export async function installBind9(onLog: LogFn): Promise<string> {
     await runCommand('apt-get', ['update'], onLog);
     await runCommand('apt-get', ['install', '-y', 'bind9', 'bind9utils', 'bind9-doc', 'dnsutils'], onLog);
 
-    // Create basic configuration
-    const namedConfOptions = `options {
-    directory "/var/cache/bind";
-
-    // Forward queries to public DNS if not authoritative
-    forwarders {
-        8.8.8.8;
-        8.8.4.4;
-        1.1.1.1;
-    };
-
-    dnssec-validation auto;
-
-    // Listen on local interfaces
-    listen-on { any; };
-    listen-on-v6 { any; };
-
-    // Allow queries from local network
-    allow-query { localhost; localnets; };
-
-    // Disable recursion for external queries (security)
-    recursion yes;
-    allow-recursion { localhost; localnets; };
-};
-`;
-    fs.writeFileSync('/etc/bind/named.conf.options', namedConfOptions);
+    // Create basic configuration using template
+    writeConfig('bind9/named.conf.options', '/etc/bind/named.conf.options', {});
 
     await runCommand('systemctl', ['enable', 'named'], onLog);
     await runCommand('systemctl', ['start', 'named'], onLog);
