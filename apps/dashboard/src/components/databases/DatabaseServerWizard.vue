@@ -405,59 +405,6 @@
             <p class="text-sm text-slate-600">{{ t('database.wizard.advanced.description') }}</p>
           </div>
 
-          <!-- Backup Accordion -->
-          <div class="border border-slate-200 rounded-xl overflow-hidden">
-            <button
-              @click="toggleAccordion('backup')"
-              class="w-full px-4 py-3 bg-slate-50 flex items-center justify-between text-left"
-            >
-              <div class="flex items-center gap-3">
-                <HardDrive class="w-5 h-5 text-slate-600" />
-                <span class="font-medium text-slate-900">{{ t('database.wizard.advanced.backup.title') }}</span>
-                <span v-if="config.advanced.backup.enabled" class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
-                  {{ t('common.enabled') }}
-                </span>
-              </div>
-              <ChevronDown :class="['w-5 h-5 text-slate-400 transition-transform', { 'rotate-180': accordionOpen.backup }]" />
-            </button>
-            <div v-show="accordionOpen.backup" class="p-4 space-y-4">
-              <label class="flex items-center gap-2">
-                <input type="checkbox" v-model="config.advanced.backup.enabled" class="rounded text-blue-500" />
-                <span class="text-sm text-slate-700">{{ t('database.wizard.advanced.backup.enable') }}</span>
-              </label>
-              <div v-if="config.advanced.backup.enabled" class="space-y-4 ml-6">
-                <div class="grid grid-cols-2 gap-4">
-                  <label class="block">
-                    <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.backup.schedule') }}</span>
-                    <select v-model="config.advanced.backup.schedule" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-                      <option value="daily">{{ t('database.wizard.advanced.backup.daily') }}</option>
-                      <option value="weekly">{{ t('database.wizard.advanced.backup.weekly') }}</option>
-                    </select>
-                  </label>
-                  <label class="block">
-                    <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.backup.retention') }}</span>
-                    <select v-model="config.advanced.backup.retentionDays" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-                      <option :value="7">7 {{ t('common.days') }}</option>
-                      <option :value="14">14 {{ t('common.days') }}</option>
-                      <option :value="30">30 {{ t('common.days') }}</option>
-                    </select>
-                  </label>
-                </div>
-
-                <!-- Outils de backup additionnels -->
-                <div class="pt-4 border-t border-slate-200">
-                  <BackupToolsSelector
-                    v-model="config.advanced.backup.toolsToInstall"
-                    :tools-status="backupToolsStatus"
-                    :show-header="true"
-                    :show-all-installed-message="true"
-                    :show-cloud-sync-info="true"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
           <!-- Performance Accordion -->
           <div class="border border-slate-200 rounded-xl overflow-hidden">
             <button
@@ -716,10 +663,6 @@
                 <span class="text-xs text-slate-500 uppercase">{{ t('database.wizard.summary.usage') }}</span>
                 <p class="font-medium text-slate-900">{{ getRedisUsageLabel() }}</p>
               </div>
-              <div>
-                <span class="text-xs text-slate-500 uppercase">{{ t('database.wizard.summary.backup') }}</span>
-                <p class="font-medium text-slate-900">{{ config.advanced.backup.enabled ? t('common.enabled') : t('common.disabled') }}</p>
-              </div>
             </div>
           </div>
 
@@ -893,7 +836,6 @@ import {
   XCircle,
   Lock,
   ShieldCheck,
-  HardDrive,
   Gauge,
   Network,
   ChevronDown,
@@ -904,7 +846,6 @@ import {
   Copy,
   AlertTriangle,
 } from 'lucide-vue-next';
-import { BackupToolsSelector } from '../shared';
 
 const { t } = useI18n();
 
@@ -922,12 +863,6 @@ const props = defineProps<{
     alias?: string;
     online: boolean;
   }>;
-  /** Statut des outils de backup sur le serveur sélectionné */
-  backupToolsStatus?: {
-    rsync: boolean;
-    rclone: boolean;
-    restic: boolean;
-  };
   /** RAM du serveur (ex: "4 GB", "8 GB") */
   serverRam?: string;
   installationLogs?: Array<{ message: string; stream: 'stdout' | 'stderr' }>;
@@ -1047,12 +982,6 @@ const config = ref({
     enableProtectedMode: true,
   },
   advanced: {
-    backup: {
-      enabled: true,
-      schedule: 'daily' as 'daily' | 'weekly',
-      retentionDays: 7,
-      toolsToInstall: [] as string[],
-    },
     performance: {
       maxConnections: 100,
       sharedBuffers: '256MB',
@@ -1070,7 +999,6 @@ const config = ref({
 
 // Accordion state
 const accordionOpen = ref({
-  backup: false,
   performance: false,
   replication: false,
 });
@@ -1093,12 +1021,6 @@ const logsContainer = ref<HTMLElement | null>(null);
 
 // Computed
 const availableServers = computed(() => props.servers.filter((s) => s.online));
-
-const backupToolsStatus = computed(() => props.backupToolsStatus ?? {
-  rsync: false,
-  rclone: false,
-  restic: false,
-});
 
 const selectedDatabaseName = computed(() => {
   const names: Record<string, string> = {
@@ -1127,7 +1049,7 @@ const canProceed = computed(() => {
 });
 
 // Methods
-function toggleAccordion(section: 'backup' | 'performance' | 'replication') {
+function toggleAccordion(section: 'performance' | 'replication') {
   accordionOpen.value[section] = !accordionOpen.value[section];
 }
 

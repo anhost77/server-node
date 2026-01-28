@@ -486,13 +486,6 @@ const hasAnyDatabaseInstalled = computed(() => {
   return props.infraStatus.databases.some((db) => db.installed);
 });
 
-// Computed pour le statut des outils de backup
-const backupToolsStatus = computed(() => ({
-  rsync: !!getService('rsync')?.installed,
-  rclone: !!getService('rclone')?.installed,
-  restic: !!getService('restic')?.installed,
-}));
-
 // Réduire automatiquement le wizard CTA database si des bases sont installées
 watch(
   hasAnyDatabaseInstalled,
@@ -3708,7 +3701,6 @@ function confirmReconfigureDatabase() {
           online: server.status === 'online',
         },
       ]"
-      :backup-tools-status="backupToolsStatus"
       :server-ram="infraStatus?.system?.ram"
       :installation-logs="infrastructureLogs"
       @close="showDatabaseWizard = false"
