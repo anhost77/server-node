@@ -3709,6 +3709,7 @@ function confirmReconfigureDatabase() {
         },
       ]"
       :backup-tools-status="backupToolsStatus"
+      :server-ram="infraStatus?.system?.ram"
       :installation-logs="infrastructureLogs"
       @close="showDatabaseWizard = false"
       @complete="handleDatabaseWizardComplete"

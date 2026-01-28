@@ -471,69 +471,198 @@
               <ChevronDown :class="['w-5 h-5 text-slate-400 transition-transform', { 'rotate-180': accordionOpen.performance }]" />
             </button>
             <div v-show="accordionOpen.performance" class="p-4 space-y-4">
-              <!-- PostgreSQL Performance -->
-              <div v-if="config.databaseType === 'postgresql'" class="space-y-4">
-                <label class="block">
-                  <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.maxConnections') }}</span>
-                  <input type="number" v-model.number="config.advanced.performance.maxConnections" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-                </label>
-                <label class="block">
-                  <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.sharedBuffers') }}</span>
-                  <select v-model="config.advanced.performance.sharedBuffers" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-                    <option value="256MB">256 MB ({{ t('database.wizard.advanced.performance.small') }})</option>
-                    <option value="512MB">512 MB ({{ t('database.wizard.advanced.performance.medium') }})</option>
-                    <option value="1GB">1 GB ({{ t('database.wizard.advanced.performance.large') }})</option>
-                    <option value="2GB">2 GB ({{ t('database.wizard.advanced.performance.xlarge') }})</option>
-                  </select>
-                </label>
+              <!-- Server RAM Info -->
+              <div v-if="serverRam" class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span class="text-sm text-blue-700">
+                    {{ t('database.wizard.advanced.performance.serverRam') }}: <strong>{{ serverRam }}</strong>
+                  </span>
+                </div>
               </div>
-              <!-- MySQL Performance -->
-              <div v-if="config.databaseType === 'mysql'" class="space-y-4">
-                <label class="block">
-                  <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.maxConnections') }}</span>
-                  <input type="number" v-model.number="config.advanced.performance.maxConnections" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-                </label>
-                <label class="block">
-                  <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.innodbBuffer') }}</span>
-                  <select v-model="config.advanced.performance.innodbBufferPoolSize" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-                    <option value="256M">256 MB</option>
-                    <option value="512M">512 MB</option>
-                    <option value="1G">1 GB</option>
-                    <option value="2G">2 GB</option>
-                  </select>
-                </label>
+
+              <!-- Performance Preset Selector -->
+              <div class="space-y-3">
+                <label class="text-sm font-medium text-slate-700">{{ t('database.wizard.advanced.performance.presetLabel') }}</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <!-- Auto (Recommended) -->
+                  <button
+                    type="button"
+                    @click="applyPerformancePreset('auto')"
+                    :class="[
+                      'p-3 border rounded-lg text-left transition-all',
+                      performancePreset === 'auto'
+                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                        : 'border-slate-200 hover:border-slate-300'
+                    ]"
+                  >
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="text-sm font-medium text-slate-900">{{ t('database.wizard.advanced.performance.presetAuto') }}</span>
+                      <span class="px-1.5 py-0.5 text-xs bg-green-100 text-green-700 rounded">{{ t('common.recommended') }}</span>
+                    </div>
+                    <p class="text-xs text-slate-500">{{ autoPresetDescription }}</p>
+                  </button>
+
+                  <!-- Light -->
+                  <button
+                    type="button"
+                    @click="applyPerformancePreset('light')"
+                    :class="[
+                      'p-3 border rounded-lg text-left transition-all',
+                      performancePreset === 'light'
+                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                        : 'border-slate-200 hover:border-slate-300'
+                    ]"
+                  >
+                    <span class="text-sm font-medium text-slate-900">{{ t('database.wizard.advanced.performance.presetLight') }}</span>
+                    <p class="text-xs text-slate-500">50 conn. / 256MB cache</p>
+                  </button>
+
+                  <!-- Standard -->
+                  <button
+                    type="button"
+                    @click="applyPerformancePreset('standard')"
+                    :class="[
+                      'p-3 border rounded-lg text-left transition-all',
+                      performancePreset === 'standard'
+                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                        : 'border-slate-200 hover:border-slate-300'
+                    ]"
+                  >
+                    <span class="text-sm font-medium text-slate-900">{{ t('database.wizard.advanced.performance.presetStandard') }}</span>
+                    <p class="text-xs text-slate-500">100 conn. / {{ recommendedValues.standard.sharedBuffers }} cache</p>
+                  </button>
+
+                  <!-- Performance -->
+                  <button
+                    type="button"
+                    @click="applyPerformancePreset('performance')"
+                    :class="[
+                      'p-3 border rounded-lg text-left transition-all',
+                      performancePreset === 'performance'
+                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                        : 'border-slate-200 hover:border-slate-300'
+                    ]"
+                  >
+                    <span class="text-sm font-medium text-slate-900">{{ t('database.wizard.advanced.performance.presetPerformance') }}</span>
+                    <p class="text-xs text-slate-500">{{ recommendedValues.performance.maxConnections }} conn. / {{ recommendedValues.performance.sharedBuffers }} cache</p>
+                  </button>
+                </div>
+
+                <!-- Custom toggle -->
+                <button
+                  type="button"
+                  @click="applyPerformancePreset('custom')"
+                  :class="[
+                    'w-full p-3 border rounded-lg text-left transition-all',
+                    performancePreset === 'custom'
+                      ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                      : 'border-slate-200 hover:border-slate-300'
+                  ]"
+                >
+                  <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                    </svg>
+                    <span class="text-sm font-medium text-slate-900">{{ t('database.wizard.advanced.performance.presetCustom') }}</span>
+                  </div>
+                </button>
               </div>
-              <!-- Redis Performance -->
-              <div v-if="config.databaseType === 'redis'" class="space-y-4">
-                <label class="block">
-                  <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.maxMemory') }}</span>
-                  <select v-model="config.advanced.performance.maxMemory" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-                    <option value="128mb">128 MB</option>
-                    <option value="256mb">256 MB</option>
-                    <option value="512mb">512 MB</option>
-                    <option value="1gb">1 GB</option>
-                  </select>
-                </label>
-                <label class="block">
-                  <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.evictionPolicy') }}</span>
-                  <select v-model="config.advanced.performance.maxmemoryPolicy" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-                    <option value="allkeys-lru">allkeys-lru ({{ t('database.wizard.advanced.performance.lruAll') }})</option>
-                    <option value="volatile-lru">volatile-lru ({{ t('database.wizard.advanced.performance.lruExpire') }})</option>
-                    <option value="noeviction">noeviction ({{ t('database.wizard.advanced.performance.noEviction') }})</option>
-                  </select>
-                </label>
+
+              <!-- Custom configuration (shown when preset is 'custom') -->
+              <div v-if="performancePreset === 'custom'" class="pt-4 border-t border-slate-200 space-y-4">
+                <!-- PostgreSQL Performance -->
+                <template v-if="config.databaseType === 'postgresql'">
+                  <label class="block">
+                    <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.maxConnections') }}</span>
+                    <input type="number" v-model.number="config.advanced.performance.maxConnections" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                  </label>
+                  <label class="block">
+                    <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.sharedBuffers') }}</span>
+                    <select v-model="config.advanced.performance.sharedBuffers" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                      <option value="128MB">128 MB</option>
+                      <option value="256MB">256 MB</option>
+                      <option value="512MB">512 MB</option>
+                      <option value="1GB">1 GB</option>
+                      <option value="2GB">2 GB</option>
+                      <option value="4GB">4 GB</option>
+                    </select>
+                  </label>
+                </template>
+                <!-- MySQL Performance -->
+                <template v-if="config.databaseType === 'mysql'">
+                  <label class="block">
+                    <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.maxConnections') }}</span>
+                    <input type="number" v-model.number="config.advanced.performance.maxConnections" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
+                  </label>
+                  <label class="block">
+                    <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.innodbBuffer') }}</span>
+                    <select v-model="config.advanced.performance.innodbBufferPoolSize" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                      <option value="128M">128 MB</option>
+                      <option value="256M">256 MB</option>
+                      <option value="512M">512 MB</option>
+                      <option value="1G">1 GB</option>
+                      <option value="2G">2 GB</option>
+                      <option value="4G">4 GB</option>
+                    </select>
+                  </label>
+                </template>
+                <!-- Redis Performance -->
+                <template v-if="config.databaseType === 'redis'">
+                  <label class="block">
+                    <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.maxMemory') }}</span>
+                    <select v-model="config.advanced.performance.maxMemory" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                      <option value="64mb">64 MB</option>
+                      <option value="128mb">128 MB</option>
+                      <option value="256mb">256 MB</option>
+                      <option value="512mb">512 MB</option>
+                      <option value="1gb">1 GB</option>
+                      <option value="2gb">2 GB</option>
+                    </select>
+                  </label>
+                  <label class="block">
+                    <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.evictionPolicy') }}</span>
+                    <select v-model="config.advanced.performance.maxmemoryPolicy" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                      <option value="allkeys-lru">allkeys-lru ({{ t('database.wizard.advanced.performance.lruAll') }})</option>
+                      <option value="volatile-lru">volatile-lru ({{ t('database.wizard.advanced.performance.lruExpire') }})</option>
+                      <option value="noeviction">noeviction ({{ t('database.wizard.advanced.performance.noEviction') }})</option>
+                    </select>
+                  </label>
+                </template>
+                <!-- MongoDB Performance -->
+                <template v-if="config.databaseType === 'mongodb'">
+                  <label class="block">
+                    <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.cacheSizeGB') }}</span>
+                    <select v-model="config.advanced.performance.wiredTigerCacheSizeGB" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                      <option value="0.25">0.25 GB</option>
+                      <option value="0.5">0.5 GB</option>
+                      <option value="1">1 GB</option>
+                      <option value="2">2 GB</option>
+                      <option value="4">4 GB</option>
+                    </select>
+                  </label>
+                </template>
               </div>
-              <!-- MongoDB Performance -->
-              <div v-if="config.databaseType === 'mongodb'" class="space-y-4">
-                <label class="block">
-                  <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.cacheSizeGB') }}</span>
-                  <select v-model="config.advanced.performance.wiredTigerCacheSizeGB" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-                    <option value="0.5">0.5 GB</option>
-                    <option value="1">1 GB</option>
-                    <option value="2">2 GB</option>
-                    <option value="4">4 GB</option>
-                  </select>
-                </label>
+
+              <!-- Current values summary (shown when not custom) -->
+              <div v-else class="p-3 bg-slate-50 rounded-lg">
+                <p class="text-xs text-slate-500 mb-2">{{ t('database.wizard.advanced.performance.appliedValues') }}:</p>
+                <div class="flex flex-wrap gap-2">
+                  <span class="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-700">
+                    {{ config.advanced.performance.maxConnections }} {{ t('database.wizard.advanced.performance.connections') }}
+                  </span>
+                  <span v-if="config.databaseType === 'postgresql'" class="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-700">
+                    {{ config.advanced.performance.sharedBuffers }} cache
+                  </span>
+                  <span v-if="config.databaseType === 'mysql'" class="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-700">
+                    {{ config.advanced.performance.innodbBufferPoolSize }} buffer
+                  </span>
+                  <span v-if="config.databaseType === 'redis'" class="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-700">
+                    {{ config.advanced.performance.maxMemory }} max
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -799,9 +928,90 @@ const props = defineProps<{
     rclone: boolean;
     restic: boolean;
   };
+  /** RAM du serveur (ex: "4 GB", "8 GB") */
+  serverRam?: string;
   installationLogs?: Array<{ message: string; stream: 'stdout' | 'stderr' }>;
   installationResult?: { success: boolean; connectionString?: string; error?: string } | null;
 }>();
+
+// Performance preset
+type PerformancePreset = 'auto' | 'light' | 'standard' | 'performance' | 'custom';
+const performancePreset = ref<PerformancePreset>('auto');
+
+// Parse RAM from string like "4 GB" or "8192 MB" to GB
+const serverRamGB = computed(() => {
+  if (!props.serverRam) return 4; // Default 4GB
+  const match = props.serverRam.match(/(\d+(?:\.\d+)?)\s*(GB|MB|TB)/i);
+  if (!match) return 4;
+  const value = parseFloat(match[1]);
+  const unit = match[2].toUpperCase();
+  if (unit === 'TB') return value * 1024;
+  if (unit === 'MB') return value / 1024;
+  return value;
+});
+
+// Recommended values based on RAM
+const recommendedValues = computed(() => {
+  const ram = serverRamGB.value;
+
+  // PostgreSQL: shared_buffers = 25% RAM, max_connections based on RAM
+  // MySQL: innodb_buffer_pool_size = 50-70% RAM
+  // Redis: maxmemory = 25% RAM for cache
+
+  const presets = {
+    light: {
+      maxConnections: 50,
+      sharedBuffers: '256MB',
+      innodbBufferPoolSize: '256M',
+      maxMemory: '128mb',
+      wiredTigerCacheSizeGB: '0.5',
+    },
+    standard: {
+      maxConnections: 100,
+      sharedBuffers: ram >= 8 ? '1GB' : ram >= 4 ? '512MB' : '256MB',
+      innodbBufferPoolSize: ram >= 8 ? '1G' : ram >= 4 ? '512M' : '256M',
+      maxMemory: ram >= 8 ? '512mb' : ram >= 4 ? '256mb' : '128mb',
+      wiredTigerCacheSizeGB: ram >= 8 ? '2' : ram >= 4 ? '1' : '0.5',
+    },
+    performance: {
+      maxConnections: ram >= 16 ? 300 : ram >= 8 ? 200 : 150,
+      sharedBuffers: ram >= 16 ? '4GB' : ram >= 8 ? '2GB' : '1GB',
+      innodbBufferPoolSize: ram >= 16 ? '4G' : ram >= 8 ? '2G' : '1G',
+      maxMemory: ram >= 16 ? '2gb' : ram >= 8 ? '1gb' : '512mb',
+      wiredTigerCacheSizeGB: ram >= 16 ? '4' : ram >= 8 ? '2' : '1',
+    },
+    auto: {
+      // Auto = standard optimisé pour la RAM
+      maxConnections: Math.min(Math.floor(ram * 25), 300),
+      sharedBuffers: ram >= 16 ? '4GB' : ram >= 8 ? '2GB' : ram >= 4 ? '1GB' : '512MB',
+      innodbBufferPoolSize: ram >= 16 ? '4G' : ram >= 8 ? '2G' : ram >= 4 ? '1G' : '512M',
+      maxMemory: ram >= 16 ? '2gb' : ram >= 8 ? '1gb' : ram >= 4 ? '512mb' : '256mb',
+      wiredTigerCacheSizeGB: String(Math.min(Math.floor(ram * 0.25), 4)),
+    },
+  };
+
+  return presets;
+});
+
+// Auto description based on server RAM
+const autoPresetDescription = computed(() => {
+  const ram = serverRamGB.value;
+  const v = recommendedValues.value.auto;
+  return `${v.maxConnections} conn. / ${v.sharedBuffers} cache`;
+});
+
+// Apply preset when changed
+function applyPerformancePreset(preset: PerformancePreset) {
+  performancePreset.value = preset;
+  if (preset === 'custom') return; // Don't change values for custom
+
+  const values = recommendedValues.value[preset];
+  config.value.advanced.performance.maxConnections = values.maxConnections;
+  config.value.advanced.performance.sharedBuffers = values.sharedBuffers;
+  config.value.advanced.performance.innodbBufferPoolSize = values.innodbBufferPoolSize;
+  config.value.advanced.performance.maxMemory = values.maxMemory;
+  config.value.advanced.performance.wiredTigerCacheSizeGB = values.wiredTigerCacheSizeGB;
+}
 
 // Current step
 const currentStep = ref(0);
