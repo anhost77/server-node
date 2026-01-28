@@ -371,25 +371,28 @@
             </div>
           </div>
 
-          <!-- Optional security settings -->
-          <div class="p-4 border border-slate-200 rounded-xl space-y-4">
+          <!-- Optional security settings - TLS (Coming Soon) -->
+          <div class="p-4 border border-slate-200 rounded-xl space-y-4 opacity-60">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <Lock class="w-5 h-5 text-blue-600" />
+                <Lock class="w-5 h-5 text-slate-400" />
                 <h4 class="font-medium text-slate-900">{{ t('database.wizard.security.tlsTitle') }}</h4>
+                <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">
+                  Coming Soon
+                </span>
               </div>
-              <label class="relative inline-flex items-center cursor-pointer">
+              <label class="relative inline-flex items-center cursor-not-allowed">
                 <input
                   type="checkbox"
-                  v-model="config.security.enableTls"
+                  disabled
                   class="sr-only peer"
                 />
                 <div
-                  class="w-11 h-6 bg-slate-200 peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"
+                  class="w-11 h-6 bg-slate-200 rounded-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5"
                 ></div>
               </label>
             </div>
-            <p class="text-sm text-slate-500">{{ t('database.wizard.security.tlsDesc') }}</p>
+            <p class="text-sm text-slate-400">{{ t('database.wizard.security.tlsDesc') }}</p>
           </div>
         </div>
 
@@ -587,10 +590,6 @@
               <div>
                 <span class="text-xs text-slate-500 uppercase">{{ t('database.wizard.summary.backup') }}</span>
                 <p class="font-medium text-slate-900">{{ config.advanced.backup.enabled ? t('common.enabled') : t('common.disabled') }}</p>
-              </div>
-              <div>
-                <span class="text-xs text-slate-500 uppercase">TLS</span>
-                <p class="font-medium text-slate-900">{{ config.security.enableTls ? t('common.enabled') : t('common.disabled') }}</p>
               </div>
             </div>
           </div>
