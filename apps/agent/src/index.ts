@@ -654,6 +654,72 @@ WantedBy=multi-user.target
                 return;
             }
 
+            // Handle CONFIGURE_DATABASE_STACK - Installation avancée de base de données via wizard
+            if (raw.type === 'CONFIGURE_DATABASE_STACK') {
+                const config = raw.config as {
+                    type: 'postgresql' | 'mysql' | 'redis' | 'mongodb';
+                    databaseName: string;
+                    username?: string;
+                    redisUsage?: 'cache' | 'sessions' | 'queue' | 'general';
+                    security: {
+                        enableTls?: boolean;
+                        bindLocalhost?: boolean;
+                        setRootPassword?: boolean;
+                        removeAnonymousUsers?: boolean;
+                        disableRemoteRoot?: boolean;
+                        removeTestDb?: boolean;
+                        configureHba?: boolean;
+                        enableProtectedMode?: boolean;
+                    };
+                    advanced: {
+                        backup: {
+                            enabled: boolean;
+                            schedule: 'daily' | 'weekly';
+                            retentionDays: number;
+                            toolsToInstall?: string[];
+                        };
+                        performance: {
+                            maxConnections?: number;
+                            sharedBuffers?: string;
+                            innodbBufferPoolSize?: string;
+                            maxMemory?: string;
+                            maxmemoryPolicy?: string;
+                            wiredTigerCacheSizeGB?: string;
+                        };
+                        replication?: { enabled: boolean; role: 'primary' | 'replica' };
+                    };
+                };
+                const infraManager = new InfrastructureManager((message, stream) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'INFRASTRUCTURE_LOG',
+                            serverId: currentServerId,
+                            message,
+                            stream
+                        }));
+                    }
+                });
+
+                // Utiliser la nouvelle méthode configureDatabaseStack qui gère tout
+                infraManager.configureDatabaseStack(config).then(result => {
+                    ws.send(JSON.stringify({
+                        type: 'DATABASE_STACK_CONFIGURED',
+                        serverId: currentServerId,
+                        success: result.success,
+                        connectionString: result.connectionString,
+                        error: result.error
+                    }));
+                }).catch((error: Error) => {
+                    ws.send(JSON.stringify({
+                        type: 'DATABASE_STACK_CONFIGURED',
+                        serverId: currentServerId,
+                        success: false,
+                        error: error.message
+                    }));
+                });
+                return;
+            }
+
             // Handle REMOVE_SERVICE
             if (raw.type === 'REMOVE_SERVICE') {
                 const service = raw.service as ServiceType;
@@ -774,6 +840,90 @@ WantedBy=multi-user.target
                         serverId: currentServerId,
                         database,
                         success: result.success,
+                        error: result.error
+                    }));
+                });
+                return;
+            }
+
+            // Handle GET_DATABASE_INFO - Liste les BDD installées et leurs instances
+            if (raw.type === 'GET_DATABASE_INFO') {
+                const infraManager = new InfrastructureManager((message, stream) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'INFRASTRUCTURE_LOG',
+                            serverId: currentServerId,
+                            message,
+                            stream
+                        }));
+                    }
+                });
+                infraManager.getDatabaseInfo().then(result => {
+                    ws.send(JSON.stringify({
+                        type: 'DATABASE_INFO_RESPONSE',
+                        serverId: currentServerId,
+                        databases: result.databases
+                    }));
+                }).catch((error: Error) => {
+                    ws.send(JSON.stringify({
+                        type: 'DATABASE_INFO_RESPONSE',
+                        serverId: currentServerId,
+                        databases: [],
+                        error: error.message
+                    }));
+                });
+                return;
+            }
+
+            // Handle RESET_DATABASE_PASSWORD - Réinitialise un mot de passe de BDD
+            if (raw.type === 'RESET_DATABASE_PASSWORD') {
+                const dbType = raw.dbType as DatabaseType;
+                const dbName = raw.dbName as string;
+                const customPassword = raw.customPassword as string | undefined;
+                const infraManager = new InfrastructureManager((message, stream) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'INFRASTRUCTURE_LOG',
+                            serverId: currentServerId,
+                            message,
+                            stream
+                        }));
+                    }
+                });
+                infraManager.resetDatabasePassword(dbType, dbName, customPassword).then(result => {
+                    ws.send(JSON.stringify({
+                        type: 'DATABASE_PASSWORD_RESET',
+                        serverId: currentServerId,
+                        success: result.success,
+                        password: result.password,
+                        error: result.error
+                    }));
+                });
+                return;
+            }
+
+            // Handle CREATE_DATABASE_INSTANCE - Crée une nouvelle BDD
+            if (raw.type === 'CREATE_DATABASE_INSTANCE') {
+                const dbType = raw.dbType as DatabaseType;
+                const dbName = raw.dbName as string;
+                const username = raw.username as string;
+                const infraManager = new InfrastructureManager((message, stream) => {
+                    if (ws.readyState === WebSocket.OPEN && currentServerId) {
+                        ws.send(JSON.stringify({
+                            type: 'INFRASTRUCTURE_LOG',
+                            serverId: currentServerId,
+                            message,
+                            stream
+                        }));
+                    }
+                });
+                infraManager.createDatabaseInstance(dbType, dbName, username).then(result => {
+                    ws.send(JSON.stringify({
+                        type: 'DATABASE_INSTANCE_CREATED',
+                        serverId: currentServerId,
+                        success: result.success,
+                        password: result.password,
+                        connectionString: result.connectionString,
                         error: result.error
                     }));
                 });

@@ -1674,4 +1674,965 @@ options {
 
     this.onLog(`  ✅ DNS configuration saved to ${configDir}/dns.json\n`, 'stdout');
   }
+
+  // ============================================================================
+  // DATABASE STACK CONFIGURATION (Full Wizard)
+  // ============================================================================
+
+  /**
+   * **configureDatabaseStack()** - Configure une base de données complète via le wizard
+   *
+   * Cette fonction orchestre l'installation et la configuration complète d'une
+   * base de données avec toutes les options avancées :
+   * - Installation et sécurité de base
+   * - Configuration des performances (buffer, connexions, mémoire)
+   * - Mise en place du backup automatique (cron)
+   *
+   * @param config - Configuration complète depuis le wizard dashboard
+   */
+  async configureDatabaseStack(config: {
+    type: 'postgresql' | 'mysql' | 'redis' | 'mongodb';
+    databaseName: string;
+    username?: string;
+    redisUsage?: 'cache' | 'sessions' | 'queue' | 'general';
+    security: {
+      enableTls?: boolean;
+      bindLocalhost?: boolean;
+      setRootPassword?: boolean;
+      removeAnonymousUsers?: boolean;
+      disableRemoteRoot?: boolean;
+      removeTestDb?: boolean;
+      configureHba?: boolean;
+      enableProtectedMode?: boolean;
+    };
+    advanced: {
+      backup: {
+        enabled: boolean;
+        schedule: 'daily' | 'weekly';
+        retentionDays: number;
+        toolsToInstall?: string[];
+      };
+      performance: {
+        maxConnections?: number;
+        sharedBuffers?: string;
+        innodbBufferPoolSize?: string;
+        maxMemory?: string;
+        maxmemoryPolicy?: string;
+        wiredTigerCacheSizeGB?: string;
+      };
+      replication?: { enabled: boolean; role: 'primary' | 'replica' };
+    };
+  }): Promise<DatabaseConfigResult> {
+    const hasBackupTools = config.advanced.backup.toolsToInstall && config.advanced.backup.toolsToInstall.length > 0;
+    const totalSteps = hasBackupTools ? 4 : 3;
+
+    this.onLog(`\n🗄️ Configuration de la stack ${config.type.toUpperCase()}\n`, 'stdout');
+    this.onLog(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`, 'stdout');
+
+    try {
+      // Étape 1 : Installation et sécurité de base
+      this.onLog(`\n📦 Étape 1/${totalSteps} : Installation et sécurité...\n`, 'stdout');
+
+      const securityOptions = {
+        setRootPassword: config.security.setRootPassword ?? true,
+        removeAnonymousUsers: config.security.removeAnonymousUsers ?? true,
+        disableRemoteRoot: config.security.disableRemoteRoot ?? true,
+        removeTestDb: config.security.removeTestDb ?? true,
+        configureHba: config.security.configureHba ?? true,
+        enableProtectedMode: config.security.enableProtectedMode ?? true,
+        bindLocalhost: config.security.bindLocalhost ?? true,
+      };
+
+      const dbResult = await this.configureDatabase(
+        config.type,
+        config.databaseName,
+        securityOptions,
+      );
+
+      if (!dbResult.success) {
+        throw new Error(dbResult.error || 'Database configuration failed');
+      }
+
+      // Étape 2 : Configuration des performances
+      this.onLog(`\n⚡ Étape 2/${totalSteps} : Configuration des performances...\n`, 'stdout');
+      await this.applyDatabasePerformanceConfig(config.type, config.advanced.performance, config.redisUsage);
+
+      // Étape 3 (optionnelle) : Installation des outils de backup
+      let currentStep = 3;
+      if (hasBackupTools) {
+        this.onLog(`\n🔧 Étape ${currentStep}/${totalSteps} : Installation des outils de backup...\n`, 'stdout');
+        await this.installBackupTools(config.advanced.backup.toolsToInstall!);
+        currentStep++;
+      }
+
+      // Étape finale : Configuration du backup automatique
+      if (config.advanced.backup.enabled) {
+        this.onLog(`\n💾 Étape ${currentStep}/${totalSteps} : Configuration du backup automatique...\n`, 'stdout');
+        await this.setupDatabaseBackup(config.type, config.databaseName, config.advanced.backup);
+      } else {
+        this.onLog(`\n⏭️ Étape ${currentStep}/${totalSteps} : Backup non activé\n`, 'stdout');
+      }
+
+      // Sauvegarder la configuration
+      await this.saveDatabaseConfig(config, dbResult.connectionString);
+
+      this.onLog(`\n✅ Stack ${config.type.toUpperCase()} configurée avec succès!\n`, 'stdout');
+      this.onLog(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`, 'stdout');
+
+      return dbResult;
+    } catch (err: any) {
+      this.onLog(`\n❌ Erreur lors de la configuration : ${err.message}\n`, 'stderr');
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * **applyDatabasePerformanceConfig()** - Applique la configuration de performance
+   *
+   * Modifie les fichiers de configuration de chaque base de données
+   * pour optimiser les performances selon les paramètres choisis.
+   */
+  private async applyDatabasePerformanceConfig(
+    type: 'postgresql' | 'mysql' | 'redis' | 'mongodb',
+    perf: {
+      maxConnections?: number;
+      sharedBuffers?: string;
+      innodbBufferPoolSize?: string;
+      maxMemory?: string;
+      maxmemoryPolicy?: string;
+      wiredTigerCacheSizeGB?: string;
+    },
+    redisUsage?: 'cache' | 'sessions' | 'queue' | 'general',
+  ): Promise<void> {
+    switch (type) {
+      case 'postgresql':
+        await this.applyPostgresqlPerformance(perf);
+        break;
+      case 'mysql':
+        await this.applyMysqlPerformance(perf);
+        break;
+      case 'redis':
+        await this.applyRedisPerformance(perf, redisUsage);
+        break;
+      case 'mongodb':
+        this.onLog(`  ⚠️ MongoDB non encore supporté\n`, 'stderr');
+        break;
+    }
+  }
+
+  /**
+   * **applyPostgresqlPerformance()** - Configure les performances PostgreSQL
+   */
+  private async applyPostgresqlPerformance(perf: {
+    maxConnections?: number;
+    sharedBuffers?: string;
+  }): Promise<void> {
+    const configPath = '/etc/postgresql';
+    try {
+      const versions = fs.readdirSync(configPath);
+      for (const version of versions) {
+        const confFile = `${configPath}/${version}/main/postgresql.conf`;
+        if (fs.existsSync(confFile)) {
+          let config = fs.readFileSync(confFile, 'utf-8');
+          let modified = false;
+
+          if (perf.maxConnections) {
+            this.onLog(`  📊 max_connections = ${perf.maxConnections}\n`, 'stdout');
+            config = config.replace(/^#?max_connections\s*=.*$/m, `max_connections = ${perf.maxConnections}`);
+            modified = true;
+          }
+
+          if (perf.sharedBuffers) {
+            this.onLog(`  📊 shared_buffers = ${perf.sharedBuffers}\n`, 'stdout');
+            config = config.replace(/^#?shared_buffers\s*=.*$/m, `shared_buffers = ${perf.sharedBuffers}`);
+            modified = true;
+          }
+
+          if (modified) {
+            fs.writeFileSync(confFile, config);
+            this.onLog(`  ✅ ${confFile} mis à jour\n`, 'stdout');
+          }
+        }
+      }
+      await runCommand('systemctl', ['restart', 'postgresql'], this.onLog);
+    } catch (e: any) {
+      this.onLog(`  ⚠️ Impossible de configurer les performances PostgreSQL: ${e.message}\n`, 'stderr');
+    }
+  }
+
+  /**
+   * **applyMysqlPerformance()** - Configure les performances MySQL/MariaDB
+   */
+  private async applyMysqlPerformance(perf: {
+    maxConnections?: number;
+    innodbBufferPoolSize?: string;
+  }): Promise<void> {
+    const configPaths = ['/etc/mysql/mariadb.conf.d/50-server.cnf', '/etc/mysql/my.cnf'];
+    for (const configPath of configPaths) {
+      if (fs.existsSync(configPath)) {
+        let config = fs.readFileSync(configPath, 'utf-8');
+        let modified = false;
+
+        if (perf.maxConnections) {
+          this.onLog(`  📊 max_connections = ${perf.maxConnections}\n`, 'stdout');
+          if (config.includes('max_connections')) {
+            config = config.replace(/^#?max_connections\s*=.*$/m, `max_connections = ${perf.maxConnections}`);
+          } else {
+            config = config.replace(/\[mysqld\]/i, `[mysqld]\nmax_connections = ${perf.maxConnections}`);
+          }
+          modified = true;
+        }
+
+        if (perf.innodbBufferPoolSize) {
+          this.onLog(`  📊 innodb_buffer_pool_size = ${perf.innodbBufferPoolSize}\n`, 'stdout');
+          if (config.includes('innodb_buffer_pool_size')) {
+            config = config.replace(/^#?innodb_buffer_pool_size\s*=.*$/m, `innodb_buffer_pool_size = ${perf.innodbBufferPoolSize}`);
+          } else {
+            config = config.replace(/\[mysqld\]/i, `[mysqld]\ninnodb_buffer_pool_size = ${perf.innodbBufferPoolSize}`);
+          }
+          modified = true;
+        }
+
+        if (modified) {
+          fs.writeFileSync(configPath, config);
+          this.onLog(`  ✅ ${configPath} mis à jour\n`, 'stdout');
+          break; // Ne modifier qu'un seul fichier
+        }
+      }
+    }
+    await runCommand('systemctl', ['restart', 'mariadb'], this.onLog);
+  }
+
+  /**
+   * **applyRedisPerformance()** - Configure les performances Redis
+   */
+  private async applyRedisPerformance(
+    perf: {
+      maxMemory?: string;
+      maxmemoryPolicy?: string;
+    },
+    usage?: 'cache' | 'sessions' | 'queue' | 'general',
+  ): Promise<void> {
+    const configPath = '/etc/redis/redis.conf';
+    if (!fs.existsSync(configPath)) {
+      this.onLog(`  ⚠️ Fichier de configuration Redis non trouvé\n`, 'stderr');
+      return;
+    }
+
+    let config = fs.readFileSync(configPath, 'utf-8');
+
+    if (perf.maxMemory) {
+      this.onLog(`  📊 maxmemory = ${perf.maxMemory}\n`, 'stdout');
+      config = config.replace(/^#?maxmemory\s+.*$/m, '');
+      config += `\nmaxmemory ${perf.maxMemory}\n`;
+    }
+
+    if (perf.maxmemoryPolicy) {
+      this.onLog(`  📊 maxmemory-policy = ${perf.maxmemoryPolicy}\n`, 'stdout');
+      config = config.replace(/^#?maxmemory-policy\s+.*$/m, '');
+      config += `\nmaxmemory-policy ${perf.maxmemoryPolicy}\n`;
+    }
+
+    // Configuration spécifique selon l'usage
+    if (usage) {
+      this.onLog(`  📋 Usage : ${usage}\n`, 'stdout');
+      switch (usage) {
+        case 'cache':
+          // Pour le cache, activer la persistance AOF légère
+          config = config.replace(/^#?appendonly\s+.*$/m, '');
+          config += `\nappendonly no\n`;
+          break;
+        case 'sessions':
+          // Pour les sessions, persistance AOF pour éviter la perte
+          config = config.replace(/^#?appendonly\s+.*$/m, '');
+          config += `\nappendonly yes\n`;
+          config = config.replace(/^#?appendfsync\s+.*$/m, '');
+          config += `\nappendfsync everysec\n`;
+          break;
+        case 'queue':
+          // Pour les queues, persistance AOF stricte
+          config = config.replace(/^#?appendonly\s+.*$/m, '');
+          config += `\nappendonly yes\n`;
+          config = config.replace(/^#?appendfsync\s+.*$/m, '');
+          config += `\nappendfsync always\n`;
+          break;
+        case 'general':
+          // Usage général, garder les valeurs par défaut
+          break;
+      }
+    }
+
+    fs.writeFileSync(configPath, config);
+    this.onLog(`  ✅ ${configPath} mis à jour\n`, 'stdout');
+    await runCommand('systemctl', ['restart', 'redis-server'], this.onLog);
+  }
+
+  /**
+   * **installBackupTools()** - Installe les outils de backup sélectionnés
+   *
+   * Installe rsync, rclone et/ou restic selon la sélection de l'utilisateur.
+   */
+  private async installBackupTools(tools: string[]): Promise<void> {
+    for (const tool of tools) {
+      this.onLog(`  📦 Installation de ${tool}...\n`, 'stdout');
+      try {
+        switch (tool) {
+          case 'rsync':
+            await this.installService('rsync' as ServiceType);
+            break;
+          case 'rclone':
+            await this.installService('rclone' as ServiceType);
+            break;
+          case 'restic':
+            await this.installService('restic' as ServiceType);
+            break;
+          default:
+            this.onLog(`  ⚠️ Outil inconnu: ${tool}\n`, 'stderr');
+        }
+        this.onLog(`  ✅ ${tool} installé\n`, 'stdout');
+      } catch (e: any) {
+        this.onLog(`  ⚠️ Erreur lors de l'installation de ${tool}: ${e.message}\n`, 'stderr');
+        // On continue avec les autres outils même si un échoue
+      }
+    }
+  }
+
+  /**
+   * **setupDatabaseBackup()** - Configure le backup automatique via cron
+   *
+   * Crée un script de backup et l'ajoute au cron pour exécution automatique.
+   */
+  private async setupDatabaseBackup(
+    type: 'postgresql' | 'mysql' | 'redis' | 'mongodb',
+    dbName: string,
+    backupConfig: { enabled: boolean; schedule: 'daily' | 'weekly'; retentionDays: number },
+  ): Promise<void> {
+    const backupDir = '/opt/serverflow/backups';
+    const scriptsDir = '/opt/serverflow/scripts';
+
+    // Créer les répertoires nécessaires
+    await runCommandSilent('mkdir', ['-p', `${backupDir}/${type}`]);
+    await runCommandSilent('mkdir', ['-p', scriptsDir]);
+
+    // Générer le script de backup selon le type de base de données
+    const scriptPath = `${scriptsDir}/backup-${type}.sh`;
+    const scriptContent = this.generateBackupScript(type, dbName, backupDir, backupConfig.retentionDays);
+
+    fs.writeFileSync(scriptPath, scriptContent, { mode: 0o755 });
+    this.onLog(`  📝 Script de backup créé : ${scriptPath}\n`, 'stdout');
+
+    // Configurer le cron job
+    const cronSchedule = backupConfig.schedule === 'daily' ? '0 2 * * *' : '0 2 * * 0';
+    const cronLine = `${cronSchedule} root ${scriptPath} >> /var/log/serverflow-backup.log 2>&1`;
+
+    // Ajouter au cron (dans /etc/cron.d/)
+    const cronFile = `/etc/cron.d/serverflow-backup-${type}`;
+    fs.writeFileSync(cronFile, `# ServerFlow ${type} Backup - ${backupConfig.schedule}\n${cronLine}\n`, { mode: 0o644 });
+
+    this.onLog(`  ⏰ Cron job configuré : ${backupConfig.schedule} à 02:00\n`, 'stdout');
+    this.onLog(`  📁 Rétention : ${backupConfig.retentionDays} jours\n`, 'stdout');
+
+    // Exécuter un premier backup pour tester
+    this.onLog(`  🔄 Exécution du premier backup...\n`, 'stdout');
+    try {
+      await runCommand('bash', [scriptPath], this.onLog);
+      this.onLog(`  ✅ Premier backup effectué avec succès\n`, 'stdout');
+    } catch (e: any) {
+      this.onLog(`  ⚠️ Premier backup échoué (non bloquant) : ${e.message}\n`, 'stderr');
+    }
+  }
+
+  /**
+   * **generateBackupScript()** - Génère le script de backup pour chaque type de DB
+   */
+  private generateBackupScript(
+    type: 'postgresql' | 'mysql' | 'redis' | 'mongodb',
+    dbName: string,
+    backupDir: string,
+    retentionDays: number,
+  ): string {
+    const timestamp = '$(date +%Y%m%d_%H%M%S)';
+    const cleanupCmd = `find ${backupDir}/${type} -name "*.sql*" -o -name "*.rdb" -o -name "*.tar.gz" | xargs ls -t | tail -n +$((${retentionDays} + 1)) | xargs rm -f 2>/dev/null || true`;
+
+    switch (type) {
+      case 'postgresql':
+        return `#!/bin/bash
+# ServerFlow PostgreSQL Backup Script
+# Base de données: ${dbName}
+# Rétention: ${retentionDays} jours
+
+BACKUP_DIR="${backupDir}/${type}"
+DATE="${timestamp}"
+
+echo "[\$(date)] Démarrage du backup PostgreSQL..."
+
+# Backup de la base de données spécifique
+su - postgres -c "pg_dump ${dbName}" | gzip > "\${BACKUP_DIR}/${dbName}_\${DATE}.sql.gz"
+
+# Backup de toutes les bases (full dump)
+su - postgres -c "pg_dumpall" | gzip > "\${BACKUP_DIR}/full_\${DATE}.sql.gz"
+
+echo "[\$(date)] Backup terminé: \${BACKUP_DIR}/${dbName}_\${DATE}.sql.gz"
+
+# Nettoyage des anciens backups
+${cleanupCmd}
+
+echo "[\$(date)] Nettoyage effectué (rétention: ${retentionDays} jours)"
+`;
+
+      case 'mysql':
+        return `#!/bin/bash
+# ServerFlow MySQL/MariaDB Backup Script
+# Base de données: ${dbName}
+# Rétention: ${retentionDays} jours
+
+BACKUP_DIR="${backupDir}/${type}"
+DATE="${timestamp}"
+CREDS_FILE="/root/.server-flow/credentials/mysql.json"
+
+echo "[\$(date)] Démarrage du backup MySQL..."
+
+# Lire le mot de passe root depuis les credentials stockés
+if [ -f "\$CREDS_FILE" ]; then
+    ROOT_PASS=\$(cat "\$CREDS_FILE" | grep -o '"rootPassword":"[^"]*"' | cut -d'"' -f4)
+    MYSQL_AUTH="-u root -p\${ROOT_PASS}"
+else
+    MYSQL_AUTH="-u root"
+fi
+
+# Backup de la base de données spécifique
+mysqldump \$MYSQL_AUTH ${dbName} | gzip > "\${BACKUP_DIR}/${dbName}_\${DATE}.sql.gz"
+
+# Backup de toutes les bases
+mysqldump \$MYSQL_AUTH --all-databases | gzip > "\${BACKUP_DIR}/full_\${DATE}.sql.gz"
+
+echo "[\$(date)] Backup terminé: \${BACKUP_DIR}/${dbName}_\${DATE}.sql.gz"
+
+# Nettoyage des anciens backups
+${cleanupCmd}
+
+echo "[\$(date)] Nettoyage effectué (rétention: ${retentionDays} jours)"
+`;
+
+      case 'redis':
+        return `#!/bin/bash
+# ServerFlow Redis Backup Script
+# Rétention: ${retentionDays} jours
+
+BACKUP_DIR="${backupDir}/${type}"
+DATE="${timestamp}"
+REDIS_DATA="/var/lib/redis"
+
+echo "[\$(date)] Démarrage du backup Redis..."
+
+# Forcer un save RDB
+redis-cli BGSAVE
+sleep 5
+
+# Copier les fichiers de données
+if [ -f "\${REDIS_DATA}/dump.rdb" ]; then
+    cp "\${REDIS_DATA}/dump.rdb" "\${BACKUP_DIR}/dump_\${DATE}.rdb"
+    echo "[\$(date)] RDB copié: \${BACKUP_DIR}/dump_\${DATE}.rdb"
+fi
+
+if [ -f "\${REDIS_DATA}/appendonly.aof" ]; then
+    cp "\${REDIS_DATA}/appendonly.aof" "\${BACKUP_DIR}/appendonly_\${DATE}.aof"
+    gzip "\${BACKUP_DIR}/appendonly_\${DATE}.aof"
+    echo "[\$(date)] AOF copié et compressé"
+fi
+
+# Nettoyage des anciens backups
+${cleanupCmd}
+
+echo "[\$(date)] Nettoyage effectué (rétention: ${retentionDays} jours)"
+`;
+
+      case 'mongodb':
+        return `#!/bin/bash
+# ServerFlow MongoDB Backup Script
+# Base de données: ${dbName}
+# Rétention: ${retentionDays} jours
+
+BACKUP_DIR="${backupDir}/${type}"
+DATE="${timestamp}"
+
+echo "[\$(date)] Démarrage du backup MongoDB..."
+
+# Backup de la base de données
+mongodump --db ${dbName} --out "\${BACKUP_DIR}/\${DATE}"
+tar -czf "\${BACKUP_DIR}/${dbName}_\${DATE}.tar.gz" -C "\${BACKUP_DIR}" "\${DATE}"
+rm -rf "\${BACKUP_DIR}/\${DATE}"
+
+echo "[\$(date)] Backup terminé: \${BACKUP_DIR}/${dbName}_\${DATE}.tar.gz"
+
+# Nettoyage des anciens backups
+${cleanupCmd}
+
+echo "[\$(date)] Nettoyage effectué (rétention: ${retentionDays} jours)"
+`;
+
+      default:
+        return '#!/bin/bash\necho "Database type not supported"\n';
+    }
+  }
+
+  /**
+   * **saveDatabaseConfig()** - Sauvegarde la configuration de la base de données
+   * Note: connectionString n'est PAS stockée pour des raisons de sécurité
+   */
+  private async saveDatabaseConfig(config: any, _connectionString?: string): Promise<void> {
+    const configDir = '/opt/serverflow/config';
+    await runCommandSilent('mkdir', ['-p', configDir]);
+
+    // Ne PAS stocker la connection string dans les logs ou fichiers non sécurisés
+    const dbConfig = {
+      type: config.type,
+      databaseName: config.databaseName,
+      security: config.security,
+      advanced: {
+        backup: config.advanced.backup,
+        performance: config.advanced.performance,
+      },
+      configuredAt: new Date().toISOString(),
+    };
+
+    fs.writeFileSync(path.join(configDir, `database-${config.type}.json`), JSON.stringify(dbConfig, null, 2));
+
+    this.onLog(`  ✅ Configuration sauvegardée dans ${configDir}/database-${config.type}.json\n`, 'stdout');
+  }
+
+  // ============================================================================
+  // DATABASE MANAGEMENT (Wizard de gestion des BDD existantes)
+  // ============================================================================
+
+  /**
+   * **getDatabaseInfo()** - Récupère les informations sur les BDD installées
+   *
+   * Cette fonction détecte les bases de données installées et récupère
+   * les informations de configuration stockées localement sur l'agent.
+   * Les credentials sont stockés dans des fichiers JSON sécurisés.
+   *
+   * @returns Liste des bases de données avec leurs instances
+   */
+  async getDatabaseInfo(): Promise<{
+    databases: Array<{
+      type: 'postgresql' | 'mysql' | 'redis' | 'mongodb';
+      version?: string;
+      running: boolean;
+      instances: Array<{
+        name: string;
+        user?: string;
+        createdAt?: string;
+      }>;
+    }>;
+  }> {
+    this.onLog(`\n📊 Récupération des informations des bases de données...\n`, 'stdout');
+
+    const databases: Array<{
+      type: 'postgresql' | 'mysql' | 'redis' | 'mongodb';
+      version?: string;
+      running: boolean;
+      instances: Array<{ name: string; user?: string; createdAt?: string }>;
+    }> = [];
+
+    // Détecter les BDD installées
+    const dbStatus = await detectDatabases();
+
+    for (const [dbType, info] of Object.entries(dbStatus)) {
+      if (info.installed) {
+        const instances = await this.getDatabaseInstances(dbType as DatabaseType);
+        databases.push({
+          type: dbType as 'postgresql' | 'mysql' | 'redis' | 'mongodb',
+          version: info.version,
+          running: info.running,
+          instances,
+        });
+      }
+    }
+
+    this.onLog(`  ✅ ${databases.length} base(s) de données détectée(s)\n`, 'stdout');
+    return { databases };
+  }
+
+  /**
+   * **getDatabaseInstances()** - Récupère les instances d'une BDD
+   *
+   * Lit le fichier de credentials stocké sur l'agent pour récupérer
+   * la liste des bases de données et utilisateurs créés.
+   */
+  private async getDatabaseInstances(dbType: DatabaseType): Promise<Array<{
+    name: string;
+    user?: string;
+    createdAt?: string;
+  }>> {
+    const credentialsPath = this.getCredentialsPath(dbType);
+    const instances: Array<{ name: string; user?: string; createdAt?: string }> = [];
+
+    // Lire le fichier de credentials s'il existe
+    if (fs.existsSync(credentialsPath)) {
+      try {
+        const data = JSON.parse(fs.readFileSync(credentialsPath, 'utf-8'));
+        if (data.instances && Array.isArray(data.instances)) {
+          return data.instances;
+        }
+        // Format ancien : une seule instance
+        if (data.databaseName) {
+          instances.push({
+            name: data.databaseName,
+            user: data.username,
+            createdAt: data.createdAt,
+          });
+        }
+      } catch (e) {
+        this.onLog(`  ⚠️ Erreur lecture credentials ${dbType}\n`, 'stderr');
+      }
+    }
+
+    // Pour Redis, pas de "bases de données" traditionnelles
+    if (dbType === 'redis' && instances.length === 0) {
+      instances.push({ name: 'default', createdAt: new Date().toISOString() });
+    }
+
+    return instances;
+  }
+
+  /**
+   * **getCredentialsPath()** - Retourne le chemin du fichier credentials
+   */
+  private getCredentialsPath(dbType: DatabaseType): string {
+    const credentialsDir = path.join(os.homedir(), '.server-flow', 'credentials');
+    return path.join(credentialsDir, `${dbType}.json`);
+  }
+
+  /**
+   * **saveCredentials()** - Sauvegarde les credentials d'une instance de BDD
+   *
+   * Stocke de manière sécurisée les informations de connexion sur l'agent.
+   * Le fichier est créé avec des permissions restreintes (0600).
+   */
+  private async saveCredentials(
+    dbType: DatabaseType,
+    instance: {
+      name: string;
+      user?: string;
+      password: string;
+      createdAt: string;
+    },
+  ): Promise<void> {
+    const credentialsDir = path.join(os.homedir(), '.server-flow', 'credentials');
+    const credentialsPath = this.getCredentialsPath(dbType);
+
+    // Créer le répertoire si nécessaire
+    if (!fs.existsSync(credentialsDir)) {
+      fs.mkdirSync(credentialsDir, { recursive: true, mode: 0o700 });
+    }
+
+    // Lire les credentials existantes ou initialiser
+    let data: { instances: Array<any>; rootPassword?: string } = { instances: [] };
+    if (fs.existsSync(credentialsPath)) {
+      try {
+        data = JSON.parse(fs.readFileSync(credentialsPath, 'utf-8'));
+        if (!data.instances) {
+          // Migration depuis l'ancien format
+          const oldInstance = {
+            name: (data as any).databaseName,
+            user: (data as any).username,
+            password: (data as any).password,
+            createdAt: (data as any).createdAt || new Date().toISOString(),
+          };
+          if (oldInstance.name) {
+            data.instances = [oldInstance];
+          } else {
+            data.instances = [];
+          }
+          if ((data as any).rootPassword) {
+            data.rootPassword = (data as any).rootPassword;
+          }
+        }
+      } catch {
+        data = { instances: [] };
+      }
+    }
+
+    // Ajouter ou mettre à jour l'instance
+    const existingIndex = data.instances.findIndex((i: any) => i.name === instance.name);
+    if (existingIndex >= 0) {
+      data.instances[existingIndex] = { ...data.instances[existingIndex], ...instance };
+    } else {
+      data.instances.push(instance);
+    }
+
+    // Écrire avec permissions restreintes
+    fs.writeFileSync(credentialsPath, JSON.stringify(data, null, 2), { mode: 0o600 });
+  }
+
+  /**
+   * **resetDatabasePassword()** - Réinitialise le mot de passe d'une BDD
+   *
+   * Génère un nouveau mot de passe sécurisé et met à jour la base de données.
+   * Le nouveau mot de passe est stocké dans le fichier credentials de l'agent.
+   *
+   * @param dbType - Type de base de données
+   * @param dbName - Nom de la base de données ou de l'utilisateur
+   * @param customPassword - Mot de passe personnalisé (optionnel)
+   * @returns Le nouveau mot de passe généré
+   */
+  async resetDatabasePassword(
+    dbType: DatabaseType,
+    dbName: string,
+    customPassword?: string,
+  ): Promise<{ success: boolean; password?: string; error?: string }> {
+    this.setCurrentService(dbType);
+    this.onLog(`\n🔐 Réinitialisation du mot de passe ${dbType} pour ${dbName}...\n`, 'stdout');
+
+    try {
+      // Générer un nouveau mot de passe si pas de custom
+      const newPassword = customPassword || this.generateSecurePassword();
+
+      switch (dbType) {
+        case 'postgresql':
+          await this.resetPostgresPassword(dbName, newPassword);
+          break;
+        case 'mysql':
+          await this.resetMysqlPassword(dbName, newPassword);
+          break;
+        case 'redis':
+          await this.resetRedisPassword(newPassword);
+          break;
+        case 'mongodb':
+          throw new Error('MongoDB non encore supporté');
+        default:
+          throw new Error(`Type de base de données inconnu: ${dbType}`);
+      }
+
+      // Sauvegarder les nouveaux credentials
+      await this.saveCredentials(dbType, {
+        name: dbName,
+        user: dbName, // Pour PostgreSQL/MySQL, le nom de l'utilisateur est souvent le même que la BDD
+        password: newPassword,
+        createdAt: new Date().toISOString(),
+      });
+
+      this.onLog(`\n✅ Mot de passe réinitialisé avec succès\n`, 'stdout');
+      this.setCurrentService(null);
+      return { success: true, password: newPassword };
+    } catch (err: any) {
+      this.onLog(`\n❌ Erreur: ${err.message}\n`, 'stderr');
+      this.setCurrentService(null);
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * **resetPostgresPassword()** - Réinitialise un mot de passe PostgreSQL
+   */
+  private async resetPostgresPassword(username: string, newPassword: string): Promise<void> {
+    // Échapper le mot de passe pour SQL
+    const escapedPassword = newPassword.replace(/'/g, "''");
+    const sqlCommand = `ALTER USER ${username} WITH PASSWORD '${escapedPassword}';`;
+
+    await runCommand(
+      'su',
+      ['-', 'postgres', '-c', `psql -c "${sqlCommand}"`],
+      this.onLog,
+    );
+  }
+
+  /**
+   * **resetMysqlPassword()** - Réinitialise un mot de passe MySQL/MariaDB
+   */
+  private async resetMysqlPassword(username: string, newPassword: string): Promise<void> {
+    // Lire le mot de passe root depuis les credentials
+    const credentialsPath = this.getCredentialsPath('mysql');
+    let rootPassword = '';
+
+    if (fs.existsSync(credentialsPath)) {
+      try {
+        const data = JSON.parse(fs.readFileSync(credentialsPath, 'utf-8'));
+        rootPassword = data.rootPassword || '';
+      } catch {}
+    }
+
+    const escapedPassword = newPassword.replace(/'/g, "\\'");
+    const authArg = rootPassword ? `-p'${rootPassword}'` : '';
+
+    await runCommand(
+      'mysql',
+      ['-u', 'root', authArg, '-e', `ALTER USER '${username}'@'localhost' IDENTIFIED BY '${escapedPassword}';`],
+      this.onLog,
+    );
+
+    await runCommand('mysql', ['-u', 'root', authArg, '-e', 'FLUSH PRIVILEGES;'], this.onLog);
+  }
+
+  /**
+   * **resetRedisPassword()** - Réinitialise le mot de passe Redis
+   */
+  private async resetRedisPassword(newPassword: string): Promise<void> {
+    const configPath = '/etc/redis/redis.conf';
+
+    if (!fs.existsSync(configPath)) {
+      throw new Error('Fichier de configuration Redis non trouvé');
+    }
+
+    let config = fs.readFileSync(configPath, 'utf-8');
+
+    // Supprimer l'ancien requirepass s'il existe
+    config = config.replace(/^requirepass\s+.*$/m, '');
+
+    // Ajouter le nouveau mot de passe
+    config += `\nrequirepass ${newPassword}\n`;
+
+    fs.writeFileSync(configPath, config);
+
+    // Redémarrer Redis
+    await runCommand('systemctl', ['restart', 'redis-server'], this.onLog);
+  }
+
+  /**
+   * **createDatabaseInstance()** - Crée une nouvelle instance de BDD
+   *
+   * Crée une nouvelle base de données et un utilisateur associé.
+   * Les credentials sont stockés sur l'agent.
+   */
+  async createDatabaseInstance(
+    dbType: DatabaseType,
+    dbName: string,
+    username: string,
+  ): Promise<{ success: boolean; password?: string; connectionString?: string; error?: string }> {
+    this.setCurrentService(dbType);
+    this.onLog(`\n🆕 Création d'une nouvelle base de données ${dbType}...\n`, 'stdout');
+
+    try {
+      const password = this.generateSecurePassword();
+      let connectionString = '';
+
+      switch (dbType) {
+        case 'postgresql':
+          await this.createPostgresDatabase(dbName, username, password);
+          connectionString = `postgresql://${username}:${password}@localhost:5432/${dbName}`;
+          break;
+        case 'mysql':
+          await this.createMysqlDatabase(dbName, username, password);
+          connectionString = `mysql://${username}:${password}@localhost:3306/${dbName}`;
+          break;
+        case 'redis':
+          // Redis n'a pas vraiment de "bases de données" distinctes au sens traditionnel
+          throw new Error('Redis ne supporte pas la création de bases de données distinctes');
+        case 'mongodb':
+          throw new Error('MongoDB non encore supporté');
+        default:
+          throw new Error(`Type de base de données inconnu: ${dbType}`);
+      }
+
+      // Sauvegarder les credentials
+      await this.saveCredentials(dbType, {
+        name: dbName,
+        user: username,
+        password,
+        createdAt: new Date().toISOString(),
+      });
+
+      this.onLog(`\n✅ Base de données créée avec succès\n`, 'stdout');
+      this.setCurrentService(null);
+      return { success: true, password, connectionString };
+    } catch (err: any) {
+      this.onLog(`\n❌ Erreur: ${err.message}\n`, 'stderr');
+      this.setCurrentService(null);
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * **createPostgresDatabase()** - Crée une BDD et un utilisateur PostgreSQL
+   */
+  private async createPostgresDatabase(dbName: string, username: string, password: string): Promise<void> {
+    const escapedPassword = password.replace(/'/g, "''");
+
+    // Créer l'utilisateur
+    await runCommand(
+      'su',
+      ['-', 'postgres', '-c', `psql -c "CREATE USER ${username} WITH PASSWORD '${escapedPassword}';"`],
+      this.onLog,
+    );
+
+    // Créer la base de données
+    await runCommand(
+      'su',
+      ['-', 'postgres', '-c', `psql -c "CREATE DATABASE ${dbName} OWNER ${username};"`],
+      this.onLog,
+    );
+
+    // Donner tous les privilèges
+    await runCommand(
+      'su',
+      ['-', 'postgres', '-c', `psql -c "GRANT ALL PRIVILEGES ON DATABASE ${dbName} TO ${username};"`],
+      this.onLog,
+    );
+
+    this.onLog(`  ✅ Base de données PostgreSQL '${dbName}' créée\n`, 'stdout');
+    this.onLog(`  ✅ Utilisateur '${username}' créé\n`, 'stdout');
+  }
+
+  /**
+   * **createMysqlDatabase()** - Crée une BDD et un utilisateur MySQL/MariaDB
+   */
+  private async createMysqlDatabase(dbName: string, username: string, password: string): Promise<void> {
+    // Lire le mot de passe root depuis les credentials
+    const credentialsPath = this.getCredentialsPath('mysql');
+    let rootPassword = '';
+
+    if (fs.existsSync(credentialsPath)) {
+      try {
+        const data = JSON.parse(fs.readFileSync(credentialsPath, 'utf-8'));
+        rootPassword = data.rootPassword || '';
+      } catch {}
+    }
+
+    const escapedPassword = password.replace(/'/g, "\\'");
+    const authArg = rootPassword ? `-p'${rootPassword}'` : '';
+
+    // Créer la base de données
+    await runCommand(
+      'mysql',
+      ['-u', 'root', authArg, '-e', `CREATE DATABASE IF NOT EXISTS ${dbName};`],
+      this.onLog,
+    );
+
+    // Créer l'utilisateur
+    await runCommand(
+      'mysql',
+      ['-u', 'root', authArg, '-e', `CREATE USER IF NOT EXISTS '${username}'@'localhost' IDENTIFIED BY '${escapedPassword}';`],
+      this.onLog,
+    );
+
+    // Donner tous les privilèges
+    await runCommand(
+      'mysql',
+      ['-u', 'root', authArg, '-e', `GRANT ALL PRIVILEGES ON ${dbName}.* TO '${username}'@'localhost';`],
+      this.onLog,
+    );
+
+    await runCommand('mysql', ['-u', 'root', authArg, '-e', 'FLUSH PRIVILEGES;'], this.onLog);
+
+    this.onLog(`  ✅ Base de données MySQL '${dbName}' créée\n`, 'stdout');
+    this.onLog(`  ✅ Utilisateur '${username}' créé\n`, 'stdout');
+  }
+
+  /**
+   * **generateSecurePassword()** - Génère un mot de passe sécurisé
+   */
+  private generateSecurePassword(): string {
+    const { randomBytes } = require('crypto');
+    const length = 24;
+    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    let password = '';
+
+    const bytes = randomBytes(length);
+    for (let i = 0; i < length; i++) {
+      password += charset[bytes[i] % charset.length];
+    }
+
+    return password;
+  }
 }

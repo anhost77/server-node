@@ -881,6 +881,20 @@ function connectWS() {
           }
         }
       }
+      // Database Stack Configuration Response (Wizard)
+      else if (msg.type === 'DATABASE_STACK_CONFIGURED') {
+        if (msg.serverId === selectedServerId.value) {
+          configuringDatabaseStack.value = false
+          databaseStackResult.value = {
+            success: msg.success,
+            connectionString: msg.connectionString,
+            error: msg.error
+          }
+          if (msg.success) {
+            requestServerStatus()
+          }
+        }
+      }
       else if (msg.type === 'DATABASE_STARTED') {
         if (msg.serverId === selectedServerId.value) {
           startingDatabase.value = null
@@ -1827,6 +1841,23 @@ function configureDnsStack(serverId: string, config: any) {
   infrastructureLogs.value = []
   ws?.send(JSON.stringify({
     type: 'CONFIGURE_DNS_STACK',
+    serverId,
+    config
+  }))
+}
+
+// Database Stack Configuration (Wizard)
+const configuringDatabaseStack = ref(false)
+const databaseStackResult = ref<{ success: boolean; connectionString?: string; error?: string } | null>(null)
+
+function configureDatabaseStack(serverId: string, config: any) {
+  if (configuringDatabaseStack.value) return
+
+  configuringDatabaseStack.value = true
+  databaseStackResult.value = null
+  infrastructureLogs.value = []
+  ws?.send(JSON.stringify({
+    type: 'CONFIGURE_DATABASE_STACK',
     serverId,
     config
   }))
@@ -4420,6 +4451,7 @@ function openNewCannedResponse() {
              @clear-infra-logs="() => infrastructureLogs = []"
              @configure-mail-stack="configureMailStack"
              @configure-dns-stack="configureDnsStack"
+             @configure-database-stack="configureDatabaseStack"
            />
 
         </div>

@@ -3,6 +3,8 @@ import { ref, computed, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import MailServerWizard from '@/components/mail/MailServerWizard.vue';
 import DnsServerWizard from '@/components/dns/DnsServerWizard.vue';
+import DatabaseServerWizard from '@/components/databases/DatabaseServerWizard.vue';
+import DatabaseManagementWizard from '@/components/databases/DatabaseManagementWizard.vue';
 
 const { t } = useI18n();
 
@@ -75,6 +77,20 @@ interface Props {
   remoteLogFilePath: string | null;
   // Mail stack configuration result
   mailStackResult?: { success: boolean; dkimPublicKey?: string; error?: string } | null;
+  // Database management
+  databaseInfo?: Array<{
+    type: 'postgresql' | 'mysql' | 'redis' | 'mongodb';
+    version?: string;
+    running: boolean;
+    instances: Array<{ name: string; user?: string; createdAt?: string }>;
+  }>;
+  databaseOperationResult?: {
+    success: boolean;
+    operation: 'reset_password' | 'create_database';
+    connectionString?: string;
+    password?: string;
+    error?: string;
+  } | null;
 }
 
 const props = defineProps<Props>();
@@ -102,6 +118,11 @@ const emit = defineEmits<{
   copyInfraLogs: [];
   configureMailStack: [serverId: string, config: any];
   configureDnsStack: [serverId: string, config: any];
+  configureDatabaseStack: [serverId: string, config: any];
+  // Database management events
+  getDatabaseInfo: [serverId: string];
+  resetDatabasePassword: [serverId: string, dbType: string, dbName: string, customPassword?: string];
+  createDatabaseInstance: [serverId: string, dbType: string, dbName: string, username: string];
 }>();
 
 const serverName = computed(
@@ -448,6 +469,52 @@ function handleDnsWizardComplete(config: any) {
   console.log('DNS wizard completed with config:', config);
   showDnsWizard.value = false;
   // Rafraîchir le statut du serveur pour voir les nouveaux services
+  emit('refresh');
+}
+
+// Database Wizard
+const showDatabaseWizard = ref(false);
+const showManualDbConfig = ref(false);
+const isDatabaseWizardCtaCollapsed = ref(false);
+
+// Database Management Wizard (gestion des BDD existantes)
+const showDatabaseManagement = ref(false);
+
+// Computed pour vérifier si des bases de données sont installées
+const hasAnyDatabaseInstalled = computed(() => {
+  if (!props.infraStatus?.databases) return false;
+  return props.infraStatus.databases.some((db) => db.installed);
+});
+
+// Computed pour le statut des outils de backup
+const backupToolsStatus = computed(() => ({
+  rsync: !!getService('rsync')?.installed,
+  rclone: !!getService('rclone')?.installed,
+  restic: !!getService('restic')?.installed,
+}));
+
+// Réduire automatiquement le wizard CTA database si des bases sont installées
+watch(
+  hasAnyDatabaseInstalled,
+  (hasDatabases) => {
+    if (hasDatabases) {
+      isDatabaseWizardCtaCollapsed.value = true;
+    }
+  },
+  { immediate: true },
+);
+
+/**
+ * **handleDatabaseWizardComplete()** - Gère la fin du wizard base de données
+ *
+ * Cette fonction est appelée quand l'utilisateur termine le wizard de
+ * configuration base de données. Elle ferme le modal et rafraîchit le statut
+ * du serveur pour afficher les nouvelles bases installées.
+ */
+function handleDatabaseWizardComplete(config: any) {
+  console.log('Database wizard completed with config:', config);
+  showDatabaseWizard.value = false;
+  // Rafraîchir le statut du serveur pour voir les nouvelles bases
   emit('refresh');
 }
 
@@ -874,145 +941,481 @@ function confirmReconfigureDatabase() {
 
     <!-- Databases Section -->
     <section class="mb-8">
-      <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-        <span
-          class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 text-sm font-bold"
-          >DB</span
-        >
-        {{ t('infrastructure.databases') }}
-      </h2>
-      <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <span
+            class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 text-sm font-bold"
+            >DB</span
+          >
+          {{ t('infrastructure.databases') }}
+        </h2>
+      </div>
+
+      <!-- Wizard CTA Card - Collapsible quand bases installées -->
+      <div
+        class="glass-card mb-4 overflow-hidden transition-all duration-300 ease-out relative"
+        :class="[
+          hasAnyDatabaseInstalled && isDatabaseWizardCtaCollapsed
+            ? 'bg-gradient-to-r from-blue-50/50 to-cyan-50/50 border border-blue-100/50 cursor-pointer hover:border-blue-200 hover:shadow-md'
+            : 'bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200/50',
+        ]"
+        @click="
+          hasAnyDatabaseInstalled && isDatabaseWizardCtaCollapsed ? (isDatabaseWizardCtaCollapsed = false) : null
+        "
+      >
+        <!-- Version collapsed (quand bases installées) -->
         <div
-          v-for="db in databases"
-          :key="db.type"
-          class="glass-card p-4"
-          :class="{ 'ring-2 ring-emerald-500/30': getDatabase(db.type)?.installed }"
+          v-if="hasAnyDatabaseInstalled && isDatabaseWizardCtaCollapsed"
+          class="p-3 flex items-center justify-between group"
         >
-          <div class="flex items-start gap-3">
+          <div class="flex items-center gap-3">
             <div
-              class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-sm font-bold text-blue-600 flex-shrink-0"
+              class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-sm shadow-blue-500/10 transition-transform group-hover:scale-105"
             >
-              {{ db.icon }}
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
+                />
+              </svg>
             </div>
-            <div class="flex-1 min-w-0">
-              <h3 class="font-semibold text-slate-800 text-sm">{{ db.name }}</h3>
-              <p v-if="getDatabase(db.type)?.installed" class="text-xs font-medium mt-0.5">
-                <span
-                  class="inline-flex items-center gap-1"
-                  :class="getDatabase(db.type)?.running ? 'text-emerald-600' : 'text-red-500'"
-                >
-                  <span
-                    class="w-1.5 h-1.5 rounded-full"
-                    :class="getDatabase(db.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"
-                  ></span>
-                  {{
-                    getDatabase(db.type)?.running
-                      ? t('infrastructure.running')
-                      : t('infrastructure.stopped')
-                  }}
-                </span>
-              </p>
-              <p v-else class="text-xs text-slate-400 mt-0.5">
-                {{ t('infrastructure.notConfigured') }}
-              </p>
-              <p v-if="getDatabase(db.type)?.version" class="text-xs text-slate-500 mt-0.5">
-                v{{ getDatabase(db.type)?.version }}
+            <div>
+              <h3 class="text-sm font-semibold text-slate-700">
+                {{ t('database.wizard.cta.collapsed') || 'Assistant de configuration base de données' }}
+              </h3>
+              <p class="text-xs text-slate-500">
+                {{ t('database.wizard.cta.clickExpand') || 'Cliquez pour développer' }}
               </p>
             </div>
           </div>
-          <div class="flex items-center gap-2 mt-3">
-            <template v-if="!getDatabase(db.type)?.installed">
-              <button
-                class="flex-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-                :disabled="configuringDatabase !== null"
-                @click="openDbConfig(db.type as any)"
-              >
+          <svg
+            class="w-5 h-5 text-blue-400 transition-transform group-hover:translate-y-0.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </div>
+
+        <!-- Version expanded (par défaut ou quand déplié) -->
+        <div v-else class="p-6">
+          <!-- Bouton collapse (visible uniquement si bases installées) -->
+          <button
+            v-if="hasAnyDatabaseInstalled"
+            @click.stop="isDatabaseWizardCtaCollapsed = true"
+            class="absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-white/60 transition-all"
+            :title="t('database.wizard.cta.collapse') || 'Réduire'"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 15l7-7 7 7"
+              />
+            </svg>
+          </button>
+
+          <div class="flex flex-col md:flex-row items-start md:items-center gap-4">
+            <div
+              class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/20"
+            >
+              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
+                />
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-lg font-bold text-slate-900 mb-1">
+                {{ t('database.wizard.cta.title') || 'Configurer votre base de données' }}
+              </h3>
+              <p class="text-sm text-slate-600 mb-3">
                 {{
-                  configuringDatabase === db.type
-                    ? t('infrastructure.settingUp')
-                    : t('infrastructure.setup')
+                  t('database.wizard.cta.description') ||
+                  "L'assistant guidé configure automatiquement PostgreSQL, MySQL, Redis ou MongoDB avec les options de sécurité en quelques clics."
                 }}
-              </button>
-            </template>
-            <template v-else>
-              <!-- Start/Stop button -->
-              <button
-                v-if="getDatabase(db.type)?.running"
-                class="flex-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-                :disabled="stoppingDatabase !== null"
-                @click="emit('stopDatabase', db.type)"
+              </p>
+              <div class="flex flex-wrap items-center gap-3">
+                <button
+                  @click.stop="showDatabaseWizard = true"
+                  class="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-all shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                  {{ t('database.wizard.cta.button') || "Lancer l'assistant" }}
+                </button>
+                <span class="text-xs text-slate-500 flex items-center gap-1">
+                  <svg
+                    class="w-4 h-4 text-emerald-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  {{ t('database.wizard.cta.recommended') || 'Recommandé' }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barre de statut des bases installées -->
+      <div v-if="hasAnyDatabaseInstalled" class="glass-card p-3 mb-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">{{
+            t('database.status.title') || 'Bases actives'
+          }}</span>
+          <button
+            @click="showDatabaseWizard = true"
+            class="text-xs text-blue-500 hover:text-blue-600 font-medium flex items-center gap-1 transition-colors"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+            </svg>
+            {{ t('database.wizard.reconfigure') || 'Ajouter une base' }}
+          </button>
+          <!-- Bouton Gérer les bases de données -->
+          <button
+            v-if="hasAnyDatabaseInstalled"
+            @click="showDatabaseManagement = true"
+            class="text-xs text-emerald-500 hover:text-emerald-600 font-medium flex items-center gap-1 transition-colors"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
+              />
+            </svg>
+            {{ t('database.management.button') || 'Gérer' }}
+          </button>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <template v-for="db in databases" :key="db.type">
+            <div
+              v-if="getDatabase(db.type)?.installed"
+              class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm"
+              :class="
+                getDatabase(db.type)?.running
+                  ? 'bg-emerald-50 border border-emerald-200'
+                  : 'bg-red-50 border border-red-200'
+              "
+            >
+              <!-- Indicateur de statut -->
+              <span
+                class="w-2 h-2 rounded-full flex-shrink-0"
+                :class="
+                  getDatabase(db.type)?.running ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'
+                "
+              ></span>
+              <!-- Nom de la base -->
+              <span
+                class="font-medium"
+                :class="getDatabase(db.type)?.running ? 'text-emerald-700' : 'text-red-700'"
               >
-                {{
-                  stoppingDatabase === db.type
-                    ? t('infrastructure.stopping')
-                    : t('infrastructure.stop')
-                }}
-              </button>
-              <button
-                v-else
-                class="flex-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-                :disabled="startingDatabase !== null"
-                @click="emit('startDatabase', db.type)"
+                {{ db.name }}
+              </span>
+              <!-- Version -->
+              <span v-if="getDatabase(db.type)?.version" class="text-xs text-slate-400">
+                v{{ getDatabase(db.type)?.version }}
+              </span>
+              <!-- Actions -->
+              <div class="flex items-center gap-1 ml-1">
+                <!-- Bouton Start/Stop -->
+                <button
+                  class="w-6 h-6 flex items-center justify-center rounded transition-colors"
+                  :class="
+                    getDatabase(db.type)?.running
+                      ? 'text-amber-500 hover:bg-amber-100'
+                      : 'text-emerald-500 hover:bg-emerald-100'
+                  "
+                  :disabled="startingDatabase === db.type || stoppingDatabase === db.type"
+                  :title="
+                    getDatabase(db.type)?.running
+                      ? t('infrastructure.stop')
+                      : t('infrastructure.start')
+                  "
+                  @click="
+                    getDatabase(db.type)?.running
+                      ? emit('stopDatabase', db.type)
+                      : emit('startDatabase', db.type)
+                  "
+                >
+                  <svg
+                    v-if="startingDatabase === db.type || stoppingDatabase === db.type"
+                    class="w-3.5 h-3.5 animate-spin"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                  <svg
+                    v-else-if="getDatabase(db.type)?.running"
+                    class="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"
+                    />
+                  </svg>
+                  <svg
+                    v-else
+                    class="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </button>
+                <!-- Bouton Logs -->
+                <button
+                  class="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                  :title="t('infrastructure.viewLogs')"
+                  @click="openConsoleForLogs(db.type)"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Toggle pour afficher la configuration manuelle -->
+      <div class="flex items-center justify-between mb-3">
+        <button
+          @click="showManualDbConfig = !showManualDbConfig"
+          class="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+        >
+          <svg
+            class="w-4 h-4 transition-transform duration-200"
+            :class="{ 'rotate-90': showManualDbConfig }"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+          <span class="font-medium">{{ t('database.manual.title') || 'Configuration manuelle' }}</span>
+          <span class="text-xs text-slate-400"
+            >({{ t('database.manual.subtitle') || 'services individuels' }})</span
+          >
+        </button>
+      </div>
+
+      <!-- Configuration manuelle (accordéon) -->
+      <div v-show="showManualDbConfig" class="transition-all duration-300">
+        <div v-if="infraStatus" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div
+            v-for="db in databases"
+            :key="db.type"
+            class="glass-card p-4"
+            :class="{ 'ring-2 ring-emerald-500/30': getDatabase(db.type)?.installed }"
+          >
+            <div class="flex items-start gap-3">
+              <div
+                class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-sm font-bold text-blue-600 flex-shrink-0"
               >
-                {{
-                  startingDatabase === db.type
-                    ? t('infrastructure.starting')
-                    : t('infrastructure.start')
-                }}
-              </button>
-              <!-- Logs button -->
-              <button
-                class="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors"
-                :title="t('infrastructure.viewLogs')"
-                @click="openConsoleForLogs(db.type)"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-              </button>
-              <!-- Reconfigure button -->
-              <button
-                class="w-8 h-8 flex items-center justify-center bg-violet-50 hover:bg-violet-100 rounded-lg text-violet-600 transition-colors"
-                :disabled="reconfiguringDatabase !== null"
-                :title="t('infrastructure.reconfigure')"
-                @click="openReconfigureDatabase(db.type)"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                  />
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-              </button>
-              <!-- Delete button -->
-              <button
-                class="w-8 h-8 flex items-center justify-center bg-red-50 hover:bg-red-100 rounded-lg text-red-500 transition-colors"
-                :disabled="removingDatabase !== null"
-                @click="openRemoveDatabase(db.type)"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-              </button>
-            </template>
+                {{ db.icon }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-semibold text-slate-800 text-sm">{{ db.name }}</h3>
+                <p v-if="getDatabase(db.type)?.installed" class="text-xs font-medium mt-0.5">
+                  <span
+                    class="inline-flex items-center gap-1"
+                    :class="getDatabase(db.type)?.running ? 'text-emerald-600' : 'text-red-500'"
+                  >
+                    <span
+                      class="w-1.5 h-1.5 rounded-full"
+                      :class="getDatabase(db.type)?.running ? 'bg-emerald-500' : 'bg-red-500'"
+                    ></span>
+                    {{
+                      getDatabase(db.type)?.running
+                        ? t('infrastructure.running')
+                        : t('infrastructure.stopped')
+                    }}
+                  </span>
+                </p>
+                <p v-else class="text-xs text-slate-400 mt-0.5">
+                  {{ t('infrastructure.notConfigured') }}
+                </p>
+                <p v-if="getDatabase(db.type)?.version" class="text-xs text-slate-500 mt-0.5">
+                  v{{ getDatabase(db.type)?.version }}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 mt-3">
+              <template v-if="!getDatabase(db.type)?.installed">
+                <button
+                  class="flex-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                  :disabled="configuringDatabase !== null"
+                  @click="openDbConfig(db.type as any)"
+                >
+                  {{
+                    configuringDatabase === db.type
+                      ? t('infrastructure.settingUp')
+                      : t('infrastructure.setup')
+                  }}
+                </button>
+              </template>
+              <template v-else>
+                <!-- Start/Stop button -->
+                <button
+                  v-if="getDatabase(db.type)?.running"
+                  class="flex-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                  :disabled="stoppingDatabase !== null"
+                  @click="emit('stopDatabase', db.type)"
+                >
+                  {{
+                    stoppingDatabase === db.type
+                      ? t('infrastructure.stopping')
+                      : t('infrastructure.stop')
+                  }}
+                </button>
+                <button
+                  v-else
+                  class="flex-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                  :disabled="startingDatabase !== null"
+                  @click="emit('startDatabase', db.type)"
+                >
+                  {{
+                    startingDatabase === db.type
+                      ? t('infrastructure.starting')
+                      : t('infrastructure.start')
+                  }}
+                </button>
+                <!-- Logs button -->
+                <button
+                  class="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors"
+                  :title="t('infrastructure.viewLogs')"
+                  @click="openConsoleForLogs(db.type)"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                </button>
+                <!-- Reconfigure button -->
+                <button
+                  class="w-8 h-8 flex items-center justify-center bg-violet-50 hover:bg-violet-100 rounded-lg text-violet-600 transition-colors"
+                  :disabled="reconfiguringDatabase !== null"
+                  :title="t('infrastructure.reconfigure')"
+                  @click="openReconfigureDatabase(db.type)"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                </button>
+                <!-- Delete button -->
+                <button
+                  class="w-8 h-8 flex items-center justify-center bg-red-50 hover:bg-red-100 rounded-lg text-red-500 transition-colors"
+                  :disabled="removingDatabase !== null"
+                  @click="openRemoveDatabase(db.type)"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
+              </template>
+            </div>
           </div>
         </div>
       </div>
@@ -3291,6 +3694,46 @@ function confirmReconfigureDatabase() {
       @close="showDnsWizard = false"
       @complete="handleDnsWizardComplete"
       @configure-dns-stack="(serverId, config) => emit('configureDnsStack', serverId, config)"
+    />
+
+    <!-- Database Server Wizard -->
+    <DatabaseServerWizard
+      v-if="showDatabaseWizard"
+      :servers="[
+        {
+          id: server.id,
+          hostname: server.alias || server.hostname || `Serveur ${server.id.slice(0, 8)}`,
+          ip: server.ip || '',
+          alias: server.alias,
+          online: server.status === 'online',
+        },
+      ]"
+      :backup-tools-status="backupToolsStatus"
+      :installation-logs="infrastructureLogs"
+      @close="showDatabaseWizard = false"
+      @complete="handleDatabaseWizardComplete"
+      @configure-database-stack="(serverId, config) => emit('configureDatabaseStack', serverId, config)"
+    />
+
+    <!-- Database Management Wizard -->
+    <DatabaseManagementWizard
+      v-if="showDatabaseManagement"
+      :servers="[
+        {
+          id: server.id,
+          hostname: server.alias || server.hostname || `Serveur ${server.id.slice(0, 8)}`,
+          ip: server.ip || '',
+          alias: server.alias,
+          online: server.status === 'online',
+        },
+      ]"
+      :preselected-server-id="server.id"
+      :database-info="databaseInfo"
+      :operation-result="databaseOperationResult"
+      @close="showDatabaseManagement = false"
+      @get-database-info="(serverId) => emit('getDatabaseInfo', serverId)"
+      @reset-database-password="(serverId, dbType, dbName, customPassword) => emit('resetDatabasePassword', serverId, dbType, dbName, customPassword)"
+      @create-database="(serverId, dbType, dbName, username) => emit('createDatabaseInstance', serverId, dbType, dbName, username)"
     />
   </div>
 </template>

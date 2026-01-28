@@ -45,6 +45,10 @@ export default {
     profile: 'Profile',
     done: 'Done',
     tryAgain: 'Try Again',
+    enabled: 'Enabled',
+    disabled: 'Disabled',
+    comingSoon: 'Coming Soon',
+    days: 'days',
   },
 
   // Auth
@@ -1168,6 +1172,210 @@ export default {
     },
     status: {
       title: 'Active services',
+    },
+  },
+
+  // Database Wizard
+  database: {
+    wizard: {
+      title: 'Database Configuration',
+      subtitle: 'Database configuration wizard',
+      recommended: 'Recommended',
+      selection: {
+        title: 'Choose your database',
+        description: 'Select the type of database that fits your needs.',
+        postgresql: {
+          description:
+            'Advanced relational database. Ideal for critical applications with transactions.',
+        },
+        mysql: {
+          description:
+            'Popular relational database. Perfect for websites and CMS (WordPress, etc.).',
+        },
+        redis: {
+          description:
+            'Ultra-fast in-memory database. Ideal for caching, sessions and queues.',
+        },
+        mongodb: {
+          description:
+            'NoSQL document database. Perfect for flexible data and rapid prototyping.',
+        },
+      },
+      server: {
+        title: 'Server selection',
+        description: 'Choose the server on which to install the database.',
+        selectServer: 'Target server',
+        choose: 'Choose a server...',
+        whatWillBeInstalled: 'What will be installed:',
+        clientTools: 'Client and administration tools',
+        securityConfig: 'Automatic security configuration',
+      },
+      config: {
+        title: 'Basic configuration',
+        description: 'Configure the essential parameters of your database.',
+        dbName: 'Database name',
+        dbNameHint: 'Your database name (e.g., app_db)',
+        username: 'Application user',
+        usernameHint: 'A user will be created with access to this database only',
+        usage: 'Intended usage',
+        usageCache: 'Application cache',
+        usageSessions: 'User sessions',
+        usageQueue: 'Message queues',
+        usageGeneral: 'General purpose',
+        passwordAuto: 'Automatically generated password',
+        passwordAutoDesc:
+          'A strong 24-character password will be generated and stored securely on the server.',
+      },
+      security: {
+        title: 'Security configuration',
+        description: 'Security settings to protect your data.',
+        autoConfig: 'Auto-configured security',
+        bindLocalhost: 'Listen on localhost only',
+        strongPassword: 'Strong root/admin password generated',
+        removeAnonymous: 'Remove anonymous users',
+        disableRemoteRoot: 'Disable remote root access',
+        scramAuth: 'SCRAM-SHA-256 authentication',
+        protectedMode: 'Protected mode enabled',
+        tlsTitle: 'TLS/SSL encryption',
+        tlsDesc: 'Enable encryption for database connections.',
+      },
+      advanced: {
+        title: 'Advanced options',
+        description: 'Optional configuration to customize your installation.',
+        backup: {
+          title: 'Automated backup',
+          enable: 'Enable automatic backups',
+          schedule: 'Frequency',
+          daily: 'Daily (2 AM)',
+          weekly: 'Weekly (Sunday 2 AM)',
+          retention: 'Retention',
+        },
+        performance: {
+          title: 'Performance',
+          maxConnections: 'Max connections',
+          sharedBuffers: 'Cache memory (shared_buffers)',
+          innodbBuffer: 'InnoDB buffer',
+          maxMemory: 'Max memory',
+          evictionPolicy: 'Eviction policy',
+          cacheSizeGB: 'WiredTiger cache (GB)',
+          small: 'Small server',
+          medium: 'Medium server',
+          large: 'Large server',
+          xlarge: 'Extra large server',
+          lruAll: 'Remove least recently used keys',
+          lruExpire: 'Remove least recently used expirable keys',
+          noEviction: 'Error when memory full',
+        },
+        replication: {
+          title: 'Replication',
+        },
+      },
+      summary: {
+        title: 'Summary',
+        description: 'Review your configuration before installation.',
+        database: 'Database',
+        user: 'User',
+        usage: 'Usage',
+        backup: 'Backup',
+        credentialsReminder: 'Secure credentials',
+        credentialsReminderDesc:
+          'Credentials will be stored securely on the server in /root/.server-flow/credentials/',
+      },
+      install: {
+        title: 'Installation',
+        description: 'Installation is in progress on your server.',
+        start: 'Start installation',
+        complete: 'Installation complete!',
+        completeDesc: 'Your database is configured and ready to use.',
+        connectionString: 'Connection string',
+        waitingLogs: 'Waiting for logs...',
+        steps: {
+          installing: 'Installing packages',
+          security: 'Configuring security',
+          configuring: 'Applying configuration',
+          starting: 'Starting service',
+        },
+      },
+      cta: {
+        title: 'Configure your database',
+        description:
+          'The guided wizard automatically configures PostgreSQL, MySQL, Redis or MongoDB with security options in a few clicks.',
+        button: 'Start wizard',
+        recommended: 'Recommended',
+        collapsed: 'Database configuration wizard',
+        clickExpand: 'Click to expand',
+        collapse: 'Collapse',
+      },
+    },
+    manual: {
+      title: 'Manual configuration',
+      subtitle: 'individual services',
+    },
+    status: {
+      title: 'Active databases',
+    },
+    management: {
+      title: 'Database Management',
+      subtitle: 'Manage your existing databases',
+      button: 'Manage',
+      selectServer: 'Select a server',
+      loading: 'Loading information...',
+      noDatabases: 'No databases',
+      noDatabasesDesc: 'No databases are configured on this server.',
+      createFirst: 'Create a database',
+      installedDatabases: 'Installed databases',
+      createNew: 'New database',
+      versionUnknown: 'Version unknown',
+      user: 'User',
+      noInstances: 'No databases configured.',
+      createOne: 'Create one',
+      viewConnection: 'View connection info',
+      resetPassword: 'Reset password',
+      deleteDatabase: 'Delete database',
+      connectionInfo: 'Connection Information',
+      connectionString: 'Connection string',
+      host: 'Host',
+      port: 'Port',
+      database: 'Database',
+      username: 'Username',
+      connectionWarning:
+        "Password is not displayed for security reasons. Use 'Reset password' if you forgot it.",
+      resetPasswordTitle: 'Reset password',
+      resetPasswordWarning:
+        'This action will generate a new password. Applications using this database will need to be updated.',
+      useCustomPassword: 'Use a custom password',
+      enterPassword: 'Enter your password...',
+      createNewDatabase: 'Create a new database',
+      selectType: 'Database type',
+      databaseName: 'Database name',
+      passwordAutoGenerated: 'A secure password will be automatically generated.',
+      create: 'Create',
+      passwordResetSuccess: 'Password reset',
+      newPassword: 'New password',
+      savePasswordWarning:
+        'Copy this password now. It will not be shown again after closing this window.',
+      understood: 'I understand',
+    },
+  },
+
+  // Backup tools (shared component)
+  backup: {
+    tools: {
+      title: 'Backup tools',
+      installed: 'Installed',
+      allInstalled: 'All backup tools are already installed.',
+      cloudSyncAvailable: 'Cloud sync available',
+      cloudSyncDesc:
+        'Rclone allows syncing your backups to S3, Google Drive, Dropbox and 40+ cloud services.',
+      rsync: {
+        description: 'Local/remote file synchronization',
+      },
+      rclone: {
+        description: 'Cloud storage sync (S3, GDrive...)',
+      },
+      restic: {
+        description: 'Encrypted backups with deduplication',
+      },
     },
   },
 };

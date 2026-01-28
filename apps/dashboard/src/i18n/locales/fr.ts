@@ -45,6 +45,10 @@ export default {
     profile: 'Profil',
     done: 'Terminé',
     tryAgain: 'Réessayer',
+    enabled: 'Activé',
+    disabled: 'Désactivé',
+    comingSoon: 'Bientôt',
+    days: 'jours',
   },
 
   // Auth
@@ -1178,6 +1182,210 @@ export default {
     },
     status: {
       title: 'Services actifs',
+    },
+  },
+
+  // Database Wizard
+  database: {
+    wizard: {
+      title: 'Configuration Base de Données',
+      subtitle: 'Assistant de configuration de votre base de données',
+      recommended: 'Recommandé',
+      selection: {
+        title: 'Choisissez votre base de données',
+        description: 'Sélectionnez le type de base de données qui correspond à vos besoins.',
+        postgresql: {
+          description:
+            'Base de données relationnelle avancée. Idéale pour les applications critiques avec transactions.',
+        },
+        mysql: {
+          description:
+            'Base de données relationnelle populaire. Parfaite pour les sites web et CMS (WordPress, etc.).',
+        },
+        redis: {
+          description:
+            'Base de données en mémoire ultra-rapide. Idéale pour le cache, les sessions et les files.',
+        },
+        mongodb: {
+          description:
+            'Base de données NoSQL document. Parfaite pour les données flexibles et le prototypage rapide.',
+        },
+      },
+      server: {
+        title: 'Sélection du serveur',
+        description: 'Choisissez le serveur sur lequel installer la base de données.',
+        selectServer: 'Serveur cible',
+        choose: 'Choisir un serveur...',
+        whatWillBeInstalled: 'Ce qui sera installé :',
+        clientTools: 'Outils client et administration',
+        securityConfig: 'Configuration de sécurité automatique',
+      },
+      config: {
+        title: 'Configuration de base',
+        description: 'Configurez les paramètres essentiels de votre base de données.',
+        dbName: 'Nom de la base',
+        dbNameHint: 'Le nom de votre base de données (ex: app_db)',
+        username: 'Utilisateur applicatif',
+        usernameHint: 'Un utilisateur sera créé avec accès à cette base uniquement',
+        usage: 'Usage prévu',
+        usageCache: 'Cache applicatif',
+        usageSessions: 'Sessions utilisateurs',
+        usageQueue: 'Files de messages',
+        usageGeneral: 'Usage général',
+        passwordAuto: 'Mot de passe généré automatiquement',
+        passwordAutoDesc:
+          'Un mot de passe fort de 24 caractères sera généré et stocké de manière sécurisée sur le serveur.',
+      },
+      security: {
+        title: 'Configuration de sécurité',
+        description: 'Paramètres de sécurité pour protéger vos données.',
+        autoConfig: 'Sécurité auto-configurée',
+        bindLocalhost: 'Écoute sur localhost uniquement',
+        strongPassword: 'Mot de passe root/admin fort généré',
+        removeAnonymous: 'Suppression des utilisateurs anonymes',
+        disableRemoteRoot: 'Désactivation du root distant',
+        scramAuth: 'Authentification SCRAM-SHA-256',
+        protectedMode: 'Mode protégé activé',
+        tlsTitle: 'Chiffrement TLS/SSL',
+        tlsDesc: 'Active le chiffrement des connexions à la base de données.',
+      },
+      advanced: {
+        title: 'Options avancées',
+        description: 'Configuration optionnelle pour personnaliser votre installation.',
+        backup: {
+          title: 'Backup automatisé',
+          enable: 'Activer les sauvegardes automatiques',
+          schedule: 'Fréquence',
+          daily: 'Quotidien (2h du matin)',
+          weekly: 'Hebdomadaire (dimanche 2h)',
+          retention: 'Rétention',
+        },
+        performance: {
+          title: 'Performance',
+          maxConnections: 'Connexions max',
+          sharedBuffers: 'Mémoire cache (shared_buffers)',
+          innodbBuffer: 'Buffer InnoDB',
+          maxMemory: 'Mémoire max',
+          evictionPolicy: "Politique d'éviction",
+          cacheSizeGB: 'Cache WiredTiger (GB)',
+          small: 'Petit serveur',
+          medium: 'Serveur moyen',
+          large: 'Grand serveur',
+          xlarge: 'Très grand serveur',
+          lruAll: 'Supprime les clés les moins utilisées',
+          lruExpire: 'Supprime les clés expirables les moins utilisées',
+          noEviction: 'Erreur si mémoire pleine',
+        },
+        replication: {
+          title: 'Réplication',
+        },
+      },
+      summary: {
+        title: 'Résumé',
+        description: 'Vérifiez votre configuration avant installation.',
+        database: 'Base',
+        user: 'Utilisateur',
+        usage: 'Usage',
+        backup: 'Backup',
+        credentialsReminder: 'Credentials sécurisés',
+        credentialsReminderDesc:
+          'Les identifiants seront stockés de manière sécurisée sur le serveur dans /root/.server-flow/credentials/',
+      },
+      install: {
+        title: 'Installation',
+        description: "L'installation est en cours sur votre serveur.",
+        start: "Lancer l'installation",
+        complete: 'Installation terminée !',
+        completeDesc: 'Votre base de données est configurée et prête à utiliser.',
+        connectionString: 'Connection string',
+        waitingLogs: 'En attente des logs...',
+        steps: {
+          installing: 'Installation des packages',
+          security: 'Configuration de la sécurité',
+          configuring: 'Application de la configuration',
+          starting: 'Démarrage du service',
+        },
+      },
+      cta: {
+        title: 'Configurer votre base de données',
+        description:
+          "L'assistant guidé configure automatiquement PostgreSQL, MySQL, Redis ou MongoDB avec les options de sécurité en quelques clics.",
+        button: "Lancer l'assistant",
+        recommended: 'Recommandé',
+        collapsed: 'Assistant de configuration base de données',
+        clickExpand: 'Cliquez pour développer',
+        collapse: 'Réduire',
+      },
+    },
+    manual: {
+      title: 'Configuration manuelle',
+      subtitle: 'services individuels',
+    },
+    status: {
+      title: 'Bases actives',
+    },
+    management: {
+      title: 'Gestion des bases de données',
+      subtitle: 'Gérer vos bases existantes',
+      button: 'Gérer',
+      selectServer: 'Sélectionnez un serveur',
+      loading: 'Chargement des informations...',
+      noDatabases: 'Aucune base de données',
+      noDatabasesDesc: "Aucune base de données n'est configurée sur ce serveur.",
+      createFirst: 'Créer une base de données',
+      installedDatabases: 'Bases de données installées',
+      createNew: 'Nouvelle base',
+      versionUnknown: 'Version inconnue',
+      user: 'Utilisateur',
+      noInstances: 'Aucune base configurée.',
+      createOne: 'Créer une base',
+      viewConnection: 'Voir les infos de connexion',
+      resetPassword: 'Réinitialiser le mot de passe',
+      deleteDatabase: 'Supprimer la base',
+      connectionInfo: 'Informations de connexion',
+      connectionString: 'Chaîne de connexion',
+      host: 'Hôte',
+      port: 'Port',
+      database: 'Base de données',
+      username: 'Utilisateur',
+      connectionWarning:
+        "Le mot de passe n'est pas affiché pour des raisons de sécurité. Utilisez 'Réinitialiser le mot de passe' si vous l'avez oublié.",
+      resetPasswordTitle: 'Réinitialiser le mot de passe',
+      resetPasswordWarning:
+        'Cette action va générer un nouveau mot de passe. Les applications utilisant cette base devront être mises à jour.',
+      useCustomPassword: 'Utiliser un mot de passe personnalisé',
+      enterPassword: 'Entrez votre mot de passe...',
+      createNewDatabase: 'Créer une nouvelle base de données',
+      selectType: 'Type de base de données',
+      databaseName: 'Nom de la base',
+      passwordAutoGenerated: 'Un mot de passe sécurisé sera généré automatiquement.',
+      create: 'Créer',
+      passwordResetSuccess: 'Mot de passe réinitialisé',
+      newPassword: 'Nouveau mot de passe',
+      savePasswordWarning:
+        'Copiez ce mot de passe maintenant. Il ne sera plus affiché après la fermeture de cette fenêtre.',
+      understood: "J'ai compris",
+    },
+  },
+
+  // Backup tools (composant partagé)
+  backup: {
+    tools: {
+      title: 'Outils de sauvegarde',
+      installed: 'Installé',
+      allInstalled: 'Tous les outils de sauvegarde sont déjà installés.',
+      cloudSyncAvailable: 'Synchronisation cloud disponible',
+      cloudSyncDesc:
+        'Rclone permet de synchroniser vos backups vers S3, Google Drive, Dropbox et 40+ services cloud.',
+      rsync: {
+        description: 'Synchronisation de fichiers locale/distante',
+      },
+      rclone: {
+        description: 'Synchronisation vers le cloud (S3, GDrive...)',
+      },
+      restic: {
+        description: 'Backups chiffrés avec déduplication',
+      },
     },
   },
 };

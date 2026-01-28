@@ -1207,11 +1207,11 @@ async function startInstallation() {
     security: {
       tls: {
         provider: config.value.security.tls.provider,
-        // Pour 'existing', les chemins seront demandés à l'utilisateur plus tard
+        // Pour 'custom', les chemins seront demandés à l'utilisateur plus tard
         certPath:
-          config.value.security.tls.provider === 'existing' ? '/etc/ssl/certs/mail.pem' : undefined,
+          config.value.security.tls.provider === 'custom' ? '/etc/ssl/certs/mail.pem' : undefined,
         keyPath:
-          config.value.security.tls.provider === 'existing'
+          config.value.security.tls.provider === 'custom'
             ? '/etc/ssl/private/mail.key'
             : undefined,
       },
