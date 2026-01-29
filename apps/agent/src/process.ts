@@ -1,6 +1,6 @@
 import pm2 from 'pm2';
 import path from 'node:path';
-import { exec } from 'node:child_process';
+import { exec, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 
 const execAsync = promisify(exec);
@@ -176,7 +176,6 @@ export class ProcessManager {
                 });
             } else if (command === 'resurrect') {
                 // Resurrect requires spawning pm2 CLI
-                const { spawn } = require('node:child_process');
                 const proc = spawn('pm2', ['resurrect'], { shell: true });
                 proc.on('close', (code: number) => {
                     if (code === 0) {

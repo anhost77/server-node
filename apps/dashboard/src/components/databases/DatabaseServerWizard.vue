@@ -1,29 +1,61 @@
 <!--
   @file apps/dashboard/src/components/databases/DatabaseServerWizard.vue
-  @description Wizard de configuration pour installer et configurer les bases de données.
-  Ce composant guide l'utilisateur à travers toutes les étapes nécessaires
-  pour configurer une base de données : choix du type, configuration, sécurité, backup.
+
+  @description Wizard d'INSTALLATION de base de données étape par étape.
+
+  Ce composant est un assistant multi-étapes pour installer une nouvelle
+  base de données sur un serveur. Il guide l'utilisateur à travers :
+
+  1. SÉLECTION DU TYPE : PostgreSQL, MySQL, Redis ou MongoDB
+  2. SÉLECTION DU SERVEUR : Choisir sur quel serveur installer
+  3. CONFIGURATION DE BASE : Nom de la BDD, utilisateur (ou usage Redis)
+  4. SÉCURITÉ : Voir les mesures de sécurité automatiques
+  5. PERFORMANCE : Configurer les paramètres avancés (optionnel)
+  6. RÉSUMÉ : Vérifier la configuration avant installation
+  7. INSTALLATION : Suivre la progression en temps réel
+
+  Ce wizard est différent de DatabaseManagementWizard qui gère les BDD
+  EXISTANTES. Celui-ci installe le serveur de BDD depuis zéro.
 
   @dependencies
-  - Vue 3 : Framework frontend
-  - Lucide Icons : Icônes pour l'interface
+  - Vue 3 : Framework frontend avec ref, computed, watch
+  - vue-i18n : Traductions
+  - Lucide Icons : Database, X, ChevronLeft, ChevronRight, Play
+
+  @composants_enfants (dans wizard/)
+  - StepIndicator : Barre de progression
+  - StepTypeSelection : Sélection du type de BDD
+  - StepServerSelection : Sélection du serveur cible
+  - StepBasicConfig : Configuration nom/user
+  - StepSecurityConfig : Info sécurité automatique
+  - StepPerformanceConfig : Configuration performance
+  - StepSummary : Récapitulatif
+  - StepInstallation : Progression de l'installation
 
   @fonctions_principales
-  - selectDatabase() : Choix du type de base de données
-  - configureBasic() : Configuration de base (nom, user, password)
-  - configureAdvanced() : Options avancées (performance, réplication, backup)
-  - startInstallation() : Lance l'installation sur le serveur
+  - nextStep() / previousStep() : Navigation entre les étapes
+  - startInstallation() : Lance l'installation
+  - updateStepStatus() : Met à jour le statut des étapes d'installation
 -->
 <template>
+  <!--
+    ═══════════════════════════════════════════════════════════════════════════
+    OVERLAY DU MODAL
+    ═══════════════════════════════════════════════════════════════════════════
+    Fond noir semi-transparent qui recouvre toute la page.
+  -->
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-    <div
-      class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
-    >
-      <!-- Header -->
-      <div
-        class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-blue-500 to-blue-600"
-      >
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <!--
+        ═══════════════════════════════════════════════════════════════════════════
+        EN-TÊTE DU WIZARD
+        ═══════════════════════════════════════════════════════════════════════════
+        Bandeau bleu avec le titre et le bouton de fermeture.
+        Couleur bleue pour différencier du wizard de gestion (vert).
+      -->
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-blue-500 to-blue-600">
         <div class="flex items-center gap-3">
+          <!-- Icône dans un cercle semi-transparent -->
           <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
             <Database class="w-5 h-5 text-white" />
           </div>
@@ -32,758 +64,127 @@
             <p class="text-sm text-white/80">{{ t('database.wizard.subtitle') }}</p>
           </div>
         </div>
+        <!-- Bouton fermer (X) -->
         <button @click="$emit('close')" class="text-white/80 hover:text-white transition-colors">
           <X class="w-5 h-5" />
         </button>
       </div>
 
-      <!-- Progress Steps -->
-      <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
-        <div class="flex items-center justify-between">
-          <template v-for="(step, index) in steps" :key="step.id">
-            <div class="flex items-center gap-2">
-              <div
-                :class="[
-                  'w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors',
-                  currentStep > index
-                    ? 'bg-green-500 text-white'
-                    : currentStep === index
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-slate-200 text-slate-500',
-                ]"
-              >
-                <Check v-if="currentStep > index" class="w-4 h-4" />
-                <span v-else>{{ index + 1 }}</span>
-              </div>
-              <span
-                :class="[
-                  'text-sm font-medium hidden sm:block',
-                  currentStep >= index ? 'text-slate-900' : 'text-slate-400',
-                ]"
-              >
-                {{ step.title }}
-              </span>
-            </div>
-            <div
-              v-if="index < steps.length - 1"
-              :class="['flex-1 h-0.5 mx-2', currentStep > index ? 'bg-green-500' : 'bg-slate-200']"
-            />
-          </template>
-        </div>
-      </div>
+      <!--
+        ═══════════════════════════════════════════════════════════════════════════
+        INDICATEUR DE PROGRESSION
+        ═══════════════════════════════════════════════════════════════════════════
+        Barre horizontale montrant les 7 étapes avec l'étape actuelle en surbrillance.
+      -->
+      <StepIndicator :steps="steps" :currentStep="currentStep" />
 
-      <!-- Content -->
+      <!--
+        ═══════════════════════════════════════════════════════════════════════════
+        CONTENU PRINCIPAL - ÉTAPES DU WIZARD
+        ═══════════════════════════════════════════════════════════════════════════
+        Affiche le composant correspondant à l'étape actuelle.
+        Un seul composant est visible à la fois grâce aux v-if.
+      -->
       <div class="flex-1 overflow-y-auto p-6">
-        <!-- Step 1: Database Selection -->
-        <div v-if="currentStep === 0" class="space-y-6">
-          <div>
-            <h3 class="text-lg font-semibold text-slate-900 mb-2">
-              {{ t('database.wizard.selection.title') }}
-            </h3>
-            <p class="text-sm text-slate-600">{{ t('database.wizard.selection.description') }}</p>
-          </div>
+        <!--
+          ÉTAPE 1 : TYPE DE BASE DE DONNÉES
+          L'utilisateur choisit entre PostgreSQL, MySQL, Redis, MongoDB
+        -->
+        <StepTypeSelection
+          v-if="currentStep === 0"
+          v-model="config.databaseType"
+        />
 
-          <div class="grid gap-4">
-            <!-- PostgreSQL -->
-            <label
-              :class="[
-                'relative flex items-start gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all',
-                config.databaseType === 'postgresql'
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-slate-200 hover:border-slate-300',
-              ]"
-            >
-              <input type="radio" v-model="config.databaseType" value="postgresql" class="sr-only" />
-              <div
-                class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0"
-              >
-                <span class="text-lg font-bold text-blue-600">PG</span>
-              </div>
-              <div class="flex-1">
-                <div class="flex items-center gap-2">
-                  <h4 class="font-semibold text-slate-900">PostgreSQL</h4>
-                  <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">{{
-                    t('database.wizard.recommended')
-                  }}</span>
-                </div>
-                <p class="text-sm text-slate-600 mt-1">
-                  {{ t('database.wizard.selection.postgresql.description') }}
-                </p>
-                <div class="flex flex-wrap gap-2 mt-2">
-                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">Transactions ACID</span>
-                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">JSON/JSONB</span>
-                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">Extensions</span>
-                </div>
-              </div>
-              <div v-if="config.databaseType === 'postgresql'" class="absolute top-4 right-4">
-                <CheckCircle2 class="w-5 h-5 text-blue-500" />
-              </div>
-            </label>
+        <!--
+          ÉTAPE 2 : SÉLECTION DU SERVEUR
+          L'utilisateur choisit sur quel serveur installer la BDD
+        -->
+        <StepServerSelection
+          v-if="currentStep === 1"
+          :servers="servers"
+          v-model="config.serverId"
+          :databaseName="selectedDatabaseName"
+        />
 
-            <!-- MySQL/MariaDB -->
-            <label
-              :class="[
-                'relative flex items-start gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all',
-                config.databaseType === 'mysql'
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-slate-200 hover:border-slate-300',
-              ]"
-            >
-              <input type="radio" v-model="config.databaseType" value="mysql" class="sr-only" />
-              <div
-                class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0"
-              >
-                <span class="text-lg font-bold text-orange-600">My</span>
-              </div>
-              <div class="flex-1">
-                <div class="flex items-center gap-2">
-                  <h4 class="font-semibold text-slate-900">MySQL / MariaDB</h4>
-                </div>
-                <p class="text-sm text-slate-600 mt-1">
-                  {{ t('database.wizard.selection.mysql.description') }}
-                </p>
-                <div class="flex flex-wrap gap-2 mt-2">
-                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">WordPress</span>
-                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">Lectures rapides</span>
-                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">Ecosystème PHP</span>
-                </div>
-              </div>
-              <div v-if="config.databaseType === 'mysql'" class="absolute top-4 right-4">
-                <CheckCircle2 class="w-5 h-5 text-blue-500" />
-              </div>
-            </label>
+        <!--
+          ÉTAPE 3 : CONFIGURATION DE BASE
+          Nom de la BDD, nom d'utilisateur (ou usage Redis)
+        -->
+        <StepBasicConfig
+          v-if="currentStep === 2"
+          :databaseType="config.databaseType"
+          :databaseName="config.basic.databaseName"
+          :username="config.basic.username"
+          :redisUsage="config.basic.redisUsage"
+          @update:databaseName="config.basic.databaseName = $event"
+          @update:username="onUsernameManualInput($event)"
+          @update:redisUsage="config.basic.redisUsage = $event"
+        />
 
-            <!-- Redis -->
-            <label
-              :class="[
-                'relative flex items-start gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all',
-                config.databaseType === 'redis'
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-slate-200 hover:border-slate-300',
-              ]"
-            >
-              <input type="radio" v-model="config.databaseType" value="redis" class="sr-only" />
-              <div
-                class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0"
-              >
-                <span class="text-lg font-bold text-red-600">Rd</span>
-              </div>
-              <div class="flex-1">
-                <div class="flex items-center gap-2">
-                  <h4 class="font-semibold text-slate-900">Redis</h4>
-                </div>
-                <p class="text-sm text-slate-600 mt-1">
-                  {{ t('database.wizard.selection.redis.description') }}
-                </p>
-                <div class="flex flex-wrap gap-2 mt-2">
-                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">Cache</span>
-                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">Sessions</span>
-                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">Queues</span>
-                </div>
-              </div>
-              <div v-if="config.databaseType === 'redis'" class="absolute top-4 right-4">
-                <CheckCircle2 class="w-5 h-5 text-blue-500" />
-              </div>
-            </label>
+        <!--
+          ÉTAPE 4 : SÉCURITÉ (informative)
+          Montre les mesures de sécurité qui seront appliquées automatiquement
+        -->
+        <StepSecurityConfig
+          v-if="currentStep === 3"
+          :databaseType="config.databaseType"
+        />
 
-            <!-- MongoDB -->
-            <label
-              :class="[
-                'relative flex items-start gap-4 p-4 border-2 rounded-xl cursor-pointer transition-all',
-                config.databaseType === 'mongodb'
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-slate-200 hover:border-slate-300',
-              ]"
-            >
-              <input type="radio" v-model="config.databaseType" value="mongodb" class="sr-only" />
-              <div
-                class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0"
-              >
-                <span class="text-lg font-bold text-green-600">Mg</span>
-              </div>
-              <div class="flex-1">
-                <div class="flex items-center gap-2">
-                  <h4 class="font-semibold text-slate-900">MongoDB</h4>
-                </div>
-                <p class="text-sm text-slate-600 mt-1">
-                  {{ t('database.wizard.selection.mongodb.description') }}
-                </p>
-                <div class="flex flex-wrap gap-2 mt-2">
-                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">Documents</span>
-                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">Schéma flexible</span>
-                  <span class="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded">Scalable</span>
-                </div>
-              </div>
-              <div v-if="config.databaseType === 'mongodb'" class="absolute top-4 right-4">
-                <CheckCircle2 class="w-5 h-5 text-blue-500" />
-              </div>
-            </label>
-          </div>
-        </div>
+        <!--
+          ÉTAPE 5 : CONFIGURATION PERFORMANCE (optionnelle)
+          L'utilisateur peut ajuster les paramètres de performance via des presets
+        -->
+        <StepPerformanceConfig
+          v-if="currentStep === 4"
+          :databaseType="config.databaseType"
+          :serverRam="serverRam"
+          :config="config.advanced.performance"
+          @update:config="config.advanced.performance = $event"
+        />
 
-        <!-- Step 2: Server Selection -->
-        <div v-if="currentStep === 1" class="space-y-6">
-          <div>
-            <h3 class="text-lg font-semibold text-slate-900 mb-2">
-              {{ t('database.wizard.server.title') }}
-            </h3>
-            <p class="text-sm text-slate-600">{{ t('database.wizard.server.description') }}</p>
-          </div>
+        <!--
+          ÉTAPE 6 : RÉSUMÉ
+          Récapitule toute la configuration pour vérification avant installation
+        -->
+        <StepSummary
+          v-if="currentStep === 5"
+          :databaseType="config.databaseType"
+          :databaseName="config.basic.databaseName"
+          :username="config.basic.username"
+          :redisUsage="config.basic.redisUsage"
+          :serverName="getServerName()"
+        />
 
-          <label class="block">
-            <span class="text-sm font-medium text-slate-700">{{
-              t('database.wizard.server.selectServer')
-            }}</span>
-            <select
-              v-model="config.serverId"
-              class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">{{ t('database.wizard.server.choose') }}</option>
-              <option v-for="server in availableServers" :key="server.id" :value="server.id">
-                {{ server.alias || server.hostname }} ({{ server.ip }})
-              </option>
-            </select>
-          </label>
-
-          <div v-if="config.serverId" class="p-4 bg-blue-50 rounded-xl">
-            <h4 class="font-medium text-blue-900 mb-2">
-              {{ t('database.wizard.server.whatWillBeInstalled') }}
-            </h4>
-            <div class="space-y-2">
-              <div class="flex items-center gap-2">
-                <CheckCircle2 class="w-4 h-4 text-green-500" />
-                <span class="text-sm text-slate-700">{{ selectedDatabaseName }} Server</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <CheckCircle2 class="w-4 h-4 text-green-500" />
-                <span class="text-sm text-slate-700">{{ t('database.wizard.server.clientTools') }}</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <CheckCircle2 class="w-4 h-4 text-green-500" />
-                <span class="text-sm text-slate-700">{{ t('database.wizard.server.securityConfig') }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Step 3: Basic Configuration -->
-        <div v-if="currentStep === 2" class="space-y-6">
-          <div>
-            <h3 class="text-lg font-semibold text-slate-900 mb-2">
-              {{ t('database.wizard.config.title') }}
-            </h3>
-            <p class="text-sm text-slate-600">{{ t('database.wizard.config.description') }}</p>
-          </div>
-
-          <!-- For Redis, we don't need a database name -->
-          <div v-if="config.databaseType !== 'redis'" class="space-y-4">
-            <label class="block">
-              <span class="text-sm font-medium text-slate-700">{{ t('database.wizard.config.dbName') }} *</span>
-              <input
-                v-model="config.basic.databaseName"
-                type="text"
-                placeholder="app_db"
-                class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <p class="mt-1 text-xs text-slate-500">{{ t('database.wizard.config.dbNameHint') }}</p>
-            </label>
-
-            <label class="block">
-              <span class="text-sm font-medium text-slate-700">{{ t('database.wizard.config.username') }} *</span>
-              <input
-                v-model="config.basic.username"
-                type="text"
-                :placeholder="config.basic.databaseName ? `${config.basic.databaseName}_user` : 'app_user'"
-                class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <p class="mt-1 text-xs text-slate-500">{{ t('database.wizard.config.usernameHint') }}</p>
-            </label>
-          </div>
-
-          <!-- Redis-specific config -->
-          <div v-if="config.databaseType === 'redis'" class="space-y-4">
-            <label class="block">
-              <span class="text-sm font-medium text-slate-700">{{ t('database.wizard.config.usage') }}</span>
-              <select
-                v-model="config.basic.redisUsage"
-                class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="cache">{{ t('database.wizard.config.usageCache') }}</option>
-                <option value="sessions">{{ t('database.wizard.config.usageSessions') }}</option>
-                <option value="queue">{{ t('database.wizard.config.usageQueue') }}</option>
-                <option value="general">{{ t('database.wizard.config.usageGeneral') }}</option>
-              </select>
-            </label>
-          </div>
-
-          <!-- Password info -->
-          <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
-            <div class="flex items-start gap-3">
-              <Lock class="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 class="font-medium text-emerald-900">{{ t('database.wizard.config.passwordAuto') }}</h4>
-                <p class="text-sm text-emerald-700 mt-1">{{ t('database.wizard.config.passwordAutoDesc') }}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Step 4: Security Configuration -->
-        <div v-if="currentStep === 3" class="space-y-6">
-          <div>
-            <h3 class="text-lg font-semibold text-slate-900 mb-2">
-              {{ t('database.wizard.security.title') }}
-            </h3>
-            <p class="text-sm text-slate-600">{{ t('database.wizard.security.description') }}</p>
-          </div>
-
-          <!-- Auto-configured security -->
-          <div class="p-4 bg-green-50 border border-green-200 rounded-xl">
-            <div class="flex items-center gap-2 mb-3">
-              <ShieldCheck class="w-5 h-5 text-green-600" />
-              <h4 class="font-medium text-green-900">{{ t('database.wizard.security.autoConfig') }}</h4>
-            </div>
-            <div class="space-y-2">
-              <div class="flex items-center gap-2">
-                <Check class="w-4 h-4 text-green-600" />
-                <span class="text-sm text-green-800">{{ t('database.wizard.security.bindLocalhost') }}</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <Check class="w-4 h-4 text-green-600" />
-                <span class="text-sm text-green-800">{{ t('database.wizard.security.strongPassword') }}</span>
-              </div>
-              <div v-if="config.databaseType === 'mysql'" class="flex items-center gap-2">
-                <Check class="w-4 h-4 text-green-600" />
-                <span class="text-sm text-green-800">{{ t('database.wizard.security.removeAnonymous') }}</span>
-              </div>
-              <div v-if="config.databaseType === 'mysql'" class="flex items-center gap-2">
-                <Check class="w-4 h-4 text-green-600" />
-                <span class="text-sm text-green-800">{{ t('database.wizard.security.disableRemoteRoot') }}</span>
-              </div>
-              <div v-if="config.databaseType === 'postgresql'" class="flex items-center gap-2">
-                <Check class="w-4 h-4 text-green-600" />
-                <span class="text-sm text-green-800">{{ t('database.wizard.security.scramAuth') }}</span>
-              </div>
-              <div v-if="config.databaseType === 'redis'" class="flex items-center gap-2">
-                <Check class="w-4 h-4 text-green-600" />
-                <span class="text-sm text-green-800">{{ t('database.wizard.security.protectedMode') }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Optional security settings - TLS (Coming Soon) -->
-          <div class="p-4 border border-slate-200 rounded-xl space-y-4 opacity-60">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <Lock class="w-5 h-5 text-slate-400" />
-                <h4 class="font-medium text-slate-900">{{ t('database.wizard.security.tlsTitle') }}</h4>
-                <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">
-                  Coming Soon
-                </span>
-              </div>
-              <label class="relative inline-flex items-center cursor-not-allowed">
-                <input
-                  type="checkbox"
-                  disabled
-                  class="sr-only peer"
-                />
-                <div
-                  class="w-11 h-6 bg-slate-200 rounded-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5"
-                ></div>
-              </label>
-            </div>
-            <p class="text-sm text-slate-400">{{ t('database.wizard.security.tlsDesc') }}</p>
-          </div>
-        </div>
-
-        <!-- Step 5: Advanced Options (Accordion) -->
-        <div v-if="currentStep === 4" class="space-y-6">
-          <div>
-            <h3 class="text-lg font-semibold text-slate-900 mb-2">
-              {{ t('database.wizard.advanced.title') }}
-            </h3>
-            <p class="text-sm text-slate-600">{{ t('database.wizard.advanced.description') }}</p>
-          </div>
-
-          <!-- Performance Accordion -->
-          <div class="border border-slate-200 rounded-xl overflow-hidden">
-            <button
-              @click="toggleAccordion('performance')"
-              class="w-full px-4 py-3 bg-slate-50 flex items-center justify-between text-left"
-            >
-              <div class="flex items-center gap-3">
-                <Gauge class="w-5 h-5 text-slate-600" />
-                <span class="font-medium text-slate-900">{{ t('database.wizard.advanced.performance.title') }}</span>
-              </div>
-              <ChevronDown :class="['w-5 h-5 text-slate-400 transition-transform', { 'rotate-180': accordionOpen.performance }]" />
-            </button>
-            <div v-show="accordionOpen.performance" class="p-4 space-y-4">
-              <!-- Server RAM Info -->
-              <div v-if="serverRam" class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div class="flex items-center gap-2">
-                  <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span class="text-sm text-blue-700">
-                    {{ t('database.wizard.advanced.performance.serverRam') }}: <strong>{{ serverRam }}</strong>
-                  </span>
-                </div>
-              </div>
-
-              <!-- Performance Preset Selector -->
-              <div class="space-y-3">
-                <label class="text-sm font-medium text-slate-700">{{ t('database.wizard.advanced.performance.presetLabel') }}</label>
-                <div class="grid grid-cols-2 gap-2">
-                  <!-- Auto (Recommended) -->
-                  <button
-                    type="button"
-                    @click="applyPerformancePreset('auto')"
-                    :class="[
-                      'p-3 border rounded-lg text-left transition-all',
-                      performancePreset === 'auto'
-                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                        : 'border-slate-200 hover:border-slate-300'
-                    ]"
-                  >
-                    <div class="flex items-center gap-2 mb-1">
-                      <span class="text-sm font-medium text-slate-900">{{ t('database.wizard.advanced.performance.presetAuto') }}</span>
-                      <span class="px-1.5 py-0.5 text-xs bg-green-100 text-green-700 rounded">{{ t('common.recommended') }}</span>
-                    </div>
-                    <p class="text-xs text-slate-500">{{ autoPresetDescription }}</p>
-                  </button>
-
-                  <!-- Light -->
-                  <button
-                    type="button"
-                    @click="applyPerformancePreset('light')"
-                    :class="[
-                      'p-3 border rounded-lg text-left transition-all',
-                      performancePreset === 'light'
-                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                        : 'border-slate-200 hover:border-slate-300'
-                    ]"
-                  >
-                    <span class="text-sm font-medium text-slate-900">{{ t('database.wizard.advanced.performance.presetLight') }}</span>
-                    <p class="text-xs text-slate-500">50 conn. / 256MB cache</p>
-                  </button>
-
-                  <!-- Standard -->
-                  <button
-                    type="button"
-                    @click="applyPerformancePreset('standard')"
-                    :class="[
-                      'p-3 border rounded-lg text-left transition-all',
-                      performancePreset === 'standard'
-                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                        : 'border-slate-200 hover:border-slate-300'
-                    ]"
-                  >
-                    <span class="text-sm font-medium text-slate-900">{{ t('database.wizard.advanced.performance.presetStandard') }}</span>
-                    <p class="text-xs text-slate-500">100 conn. / {{ recommendedValues.standard.sharedBuffers }} cache</p>
-                  </button>
-
-                  <!-- Performance -->
-                  <button
-                    type="button"
-                    @click="applyPerformancePreset('performance')"
-                    :class="[
-                      'p-3 border rounded-lg text-left transition-all',
-                      performancePreset === 'performance'
-                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                        : 'border-slate-200 hover:border-slate-300'
-                    ]"
-                  >
-                    <span class="text-sm font-medium text-slate-900">{{ t('database.wizard.advanced.performance.presetPerformance') }}</span>
-                    <p class="text-xs text-slate-500">{{ recommendedValues.performance.maxConnections }} conn. / {{ recommendedValues.performance.sharedBuffers }} cache</p>
-                  </button>
-                </div>
-
-                <!-- Custom toggle -->
-                <button
-                  type="button"
-                  @click="applyPerformancePreset('custom')"
-                  :class="[
-                    'w-full p-3 border rounded-lg text-left transition-all',
-                    performancePreset === 'custom'
-                      ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                      : 'border-slate-200 hover:border-slate-300'
-                  ]"
-                >
-                  <div class="flex items-center gap-2">
-                    <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                    </svg>
-                    <span class="text-sm font-medium text-slate-900">{{ t('database.wizard.advanced.performance.presetCustom') }}</span>
-                  </div>
-                </button>
-              </div>
-
-              <!-- Custom configuration (shown when preset is 'custom') -->
-              <div v-if="performancePreset === 'custom'" class="pt-4 border-t border-slate-200 space-y-4">
-                <!-- PostgreSQL Performance -->
-                <template v-if="config.databaseType === 'postgresql'">
-                  <label class="block">
-                    <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.maxConnections') }}</span>
-                    <input type="number" v-model.number="config.advanced.performance.maxConnections" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-                  </label>
-                  <label class="block">
-                    <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.sharedBuffers') }}</span>
-                    <select v-model="config.advanced.performance.sharedBuffers" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-                      <option value="128MB">128 MB</option>
-                      <option value="256MB">256 MB</option>
-                      <option value="512MB">512 MB</option>
-                      <option value="1GB">1 GB</option>
-                      <option value="2GB">2 GB</option>
-                      <option value="4GB">4 GB</option>
-                    </select>
-                  </label>
-                </template>
-                <!-- MySQL Performance -->
-                <template v-if="config.databaseType === 'mysql'">
-                  <label class="block">
-                    <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.maxConnections') }}</span>
-                    <input type="number" v-model.number="config.advanced.performance.maxConnections" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" />
-                  </label>
-                  <label class="block">
-                    <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.innodbBuffer') }}</span>
-                    <select v-model="config.advanced.performance.innodbBufferPoolSize" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-                      <option value="128M">128 MB</option>
-                      <option value="256M">256 MB</option>
-                      <option value="512M">512 MB</option>
-                      <option value="1G">1 GB</option>
-                      <option value="2G">2 GB</option>
-                      <option value="4G">4 GB</option>
-                    </select>
-                  </label>
-                </template>
-                <!-- Redis Performance -->
-                <template v-if="config.databaseType === 'redis'">
-                  <label class="block">
-                    <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.maxMemory') }}</span>
-                    <select v-model="config.advanced.performance.maxMemory" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-                      <option value="64mb">64 MB</option>
-                      <option value="128mb">128 MB</option>
-                      <option value="256mb">256 MB</option>
-                      <option value="512mb">512 MB</option>
-                      <option value="1gb">1 GB</option>
-                      <option value="2gb">2 GB</option>
-                    </select>
-                  </label>
-                  <label class="block">
-                    <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.evictionPolicy') }}</span>
-                    <select v-model="config.advanced.performance.maxmemoryPolicy" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-                      <option value="allkeys-lru">allkeys-lru ({{ t('database.wizard.advanced.performance.lruAll') }})</option>
-                      <option value="volatile-lru">volatile-lru ({{ t('database.wizard.advanced.performance.lruExpire') }})</option>
-                      <option value="noeviction">noeviction ({{ t('database.wizard.advanced.performance.noEviction') }})</option>
-                    </select>
-                  </label>
-                </template>
-                <!-- MongoDB Performance -->
-                <template v-if="config.databaseType === 'mongodb'">
-                  <label class="block">
-                    <span class="text-sm text-slate-600">{{ t('database.wizard.advanced.performance.cacheSizeGB') }}</span>
-                    <select v-model="config.advanced.performance.wiredTigerCacheSizeGB" class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-                      <option value="0.25">0.25 GB</option>
-                      <option value="0.5">0.5 GB</option>
-                      <option value="1">1 GB</option>
-                      <option value="2">2 GB</option>
-                      <option value="4">4 GB</option>
-                    </select>
-                  </label>
-                </template>
-              </div>
-
-              <!-- Current values summary (shown when not custom) -->
-              <div v-else class="p-3 bg-slate-50 rounded-lg">
-                <p class="text-xs text-slate-500 mb-2">{{ t('database.wizard.advanced.performance.appliedValues') }}:</p>
-                <div class="flex flex-wrap gap-2">
-                  <span class="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-700">
-                    {{ config.advanced.performance.maxConnections }} {{ t('database.wizard.advanced.performance.connections') }}
-                  </span>
-                  <span v-if="config.databaseType === 'postgresql'" class="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-700">
-                    {{ config.advanced.performance.sharedBuffers }} cache
-                  </span>
-                  <span v-if="config.databaseType === 'mysql'" class="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-700">
-                    {{ config.advanced.performance.innodbBufferPoolSize }} buffer
-                  </span>
-                  <span v-if="config.databaseType === 'redis'" class="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-700">
-                    {{ config.advanced.performance.maxMemory }} max
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Replication Accordion (Coming Soon) -->
-          <div class="border border-slate-200 rounded-xl overflow-hidden opacity-60">
-            <div class="w-full px-4 py-3 bg-slate-50 flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <Network class="w-5 h-5 text-slate-600" />
-                <span class="font-medium text-slate-900">{{ t('database.wizard.advanced.replication.title') }}</span>
-                <span class="px-2 py-0.5 bg-slate-200 text-slate-600 text-xs rounded-full">{{ t('common.comingSoon') }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Step 6: Summary -->
-        <div v-if="currentStep === 5" class="space-y-6">
-          <div>
-            <h3 class="text-lg font-semibold text-slate-900 mb-2">
-              {{ t('database.wizard.summary.title') }}
-            </h3>
-            <p class="text-sm text-slate-600">{{ t('database.wizard.summary.description') }}</p>
-          </div>
-
-          <!-- Summary Card -->
-          <div class="p-4 bg-slate-50 rounded-xl space-y-4">
-            <div class="flex items-center gap-3">
-              <div
-                class="w-12 h-12 rounded-xl flex items-center justify-center"
-                :class="getDatabaseColorClass()"
-              >
-                <span class="text-lg font-bold">{{ getDatabaseIcon() }}</span>
-              </div>
-              <div>
-                <h4 class="font-semibold text-slate-900">{{ selectedDatabaseName }}</h4>
-                <p class="text-sm text-slate-500">{{ getServerName() }}</p>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
-              <div v-if="config.databaseType !== 'redis'">
-                <span class="text-xs text-slate-500 uppercase">{{ t('database.wizard.summary.database') }}</span>
-                <p class="font-medium text-slate-900">{{ config.basic.databaseName || 'app_db' }}</p>
-              </div>
-              <div v-if="config.databaseType !== 'redis'">
-                <span class="text-xs text-slate-500 uppercase">{{ t('database.wizard.summary.user') }}</span>
-                <p class="font-medium text-slate-900">{{ config.basic.username || `${config.basic.databaseName}_user` }}</p>
-              </div>
-              <div v-if="config.databaseType === 'redis'">
-                <span class="text-xs text-slate-500 uppercase">{{ t('database.wizard.summary.usage') }}</span>
-                <p class="font-medium text-slate-900">{{ getRedisUsageLabel() }}</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Security reminder -->
-          <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-            <div class="flex items-start gap-3">
-              <AlertTriangle class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 class="font-medium text-amber-900">{{ t('database.wizard.summary.credentialsReminder') }}</h4>
-                <p class="text-sm text-amber-700 mt-1">{{ t('database.wizard.summary.credentialsReminderDesc') }}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Step 7: Installation -->
-        <div v-if="currentStep === 6" class="space-y-6">
-          <div v-if="!installComplete">
-            <h3 class="text-lg font-semibold text-slate-900 mb-2">
-              {{ t('database.wizard.install.title') }}
-            </h3>
-            <p class="text-sm text-slate-600">{{ t('database.wizard.install.description') }}</p>
-          </div>
-
-          <!-- Installation Progress -->
-          <div v-if="installing" class="space-y-4">
-            <div
-              v-for="step in installationSteps"
-              :key="step.id"
-              class="flex items-center gap-3 p-3 rounded-lg"
-              :class="{
-                'bg-blue-50': step.status === 'running',
-                'bg-green-50': step.status === 'complete',
-                'bg-red-50': step.status === 'error',
-              }"
-            >
-              <div
-                v-if="step.status === 'pending'"
-                class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center"
-              >
-                <span class="text-xs text-slate-500">{{ installationSteps.indexOf(step) + 1 }}</span>
-              </div>
-              <Loader2
-                v-else-if="step.status === 'running'"
-                class="w-6 h-6 text-blue-500 animate-spin"
-              />
-              <CheckCircle2
-                v-else-if="step.status === 'complete'"
-                class="w-6 h-6 text-green-500"
-              />
-              <XCircle v-else-if="step.status === 'error'" class="w-6 h-6 text-red-500" />
-              <div class="flex-1">
-                <span
-                  :class="[
-                    'text-sm font-medium',
-                    step.status === 'running' ? 'text-blue-600' : 'text-slate-700',
-                  ]"
-                >
-                  {{ step.name }}
-                </span>
-                <p v-if="step.message" class="text-xs text-slate-500">{{ step.message }}</p>
-              </div>
-            </div>
-
-            <!-- Live Console Logs -->
-            <div class="mt-4">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium text-slate-700">Console</span>
-                <span class="text-xs text-slate-500">{{ installationLogs?.length || 0 }} lignes</span>
-              </div>
-              <div
-                ref="logsContainer"
-                class="bg-slate-900 rounded-lg p-3 h-48 overflow-y-auto font-mono text-xs"
-              >
-                <div
-                  v-for="(log, i) in installationLogs"
-                  :key="i"
-                  :class="[
-                    'whitespace-pre-wrap',
-                    log.stream === 'stderr' ? 'text-red-400' : 'text-green-400',
-                  ]"
-                >
-                  {{ log.message }}
-                </div>
-                <div v-if="!installationLogs?.length" class="text-slate-500 italic">
-                  {{ t('database.wizard.install.waitingLogs') }}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Installation Complete -->
-          <div v-if="installComplete" class="text-center py-8">
-            <div
-              class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"
-            >
-              <CheckCircle2 class="w-8 h-8 text-green-600" />
-            </div>
-            <h4 class="text-lg font-semibold text-slate-900 mb-2">
-              {{ t('database.wizard.install.complete') }}
-            </h4>
-            <p class="text-sm text-slate-600 mb-4">{{ t('database.wizard.install.completeDesc') }}</p>
-
-            <!-- Connection String -->
-            <div v-if="connectionString" class="p-4 bg-slate-100 rounded-xl text-left mb-4">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium text-slate-700">{{ t('database.wizard.install.connectionString') }}</span>
-                <button @click="copyConnectionString" class="text-blue-500 hover:text-blue-600">
-                  <Copy class="w-4 h-4" />
-                </button>
-              </div>
-              <code class="text-xs text-slate-600 break-all">{{ connectionString }}</code>
-            </div>
-          </div>
-        </div>
+        <!--
+          ÉTAPE 7 : INSTALLATION
+          Affiche la progression de l'installation avec logs en temps réel
+        -->
+        <StepInstallation
+          v-if="currentStep === 6"
+          :installing="installing"
+          :installComplete="installComplete"
+          :steps="installationSteps"
+          :logs="installationLogs || []"
+          :connectionString="connectionString"
+          @copyConnectionString="copyConnectionString"
+        />
       </div>
 
-      <!-- Footer -->
-      <div
-        class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between"
-      >
+      <!--
+        ═══════════════════════════════════════════════════════════════════════════
+        PIED DE PAGE - NAVIGATION
+        ═══════════════════════════════════════════════════════════════════════════
+        Boutons Précédent et Suivant pour naviguer entre les étapes.
+        Le bouton change selon l'étape :
+        - Étapes 0-5 : "Suivant"
+        - Étape 6 avant install : "Installer"
+        - Après installation : "Terminé"
+      -->
+      <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+        <!--
+          BOUTON PRÉCÉDENT
+          Visible sauf à la première étape et pendant l'installation
+        -->
         <button
           v-if="currentStep > 0 && !installing"
           @click="previousStep"
@@ -792,9 +193,14 @@
           <ChevronLeft class="w-4 h-4" />
           {{ t('common.back') }}
         </button>
+        <!-- Placeholder vide si pas de bouton Précédent -->
         <div v-else></div>
 
         <div class="flex items-center gap-3">
+          <!--
+            BOUTON SUIVANT
+            Pour les étapes 0 à 5 (avant l'installation)
+          -->
           <button
             v-if="currentStep < steps.length - 1"
             @click="nextStep"
@@ -804,6 +210,11 @@
             {{ t('common.next') }}
             <ChevronRight class="w-4 h-4" />
           </button>
+
+          <!--
+            BOUTON INSTALLER
+            À l'étape finale, avant de lancer l'installation
+          -->
           <button
             v-else-if="!installing && !installComplete"
             @click="startInstallation"
@@ -812,9 +223,15 @@
             <Play class="w-4 h-4" />
             {{ t('database.wizard.install.start') }}
           </button>
+
+          <!--
+            BOUTON TERMINÉ
+            Après la fin de l'installation pour fermer le wizard.
+            Émet 'complete' pour que le parent rafraîchisse le statut du serveur.
+          -->
           <button
             v-else-if="installComplete"
-            @click="$emit('close')"
+            @click="emit('complete', config)"
             class="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
           >
             {{ t('common.done') }}
@@ -826,132 +243,123 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue';
-import { useI18n } from 'vue-i18n';
-import {
-  Database,
-  X,
-  Check,
-  CheckCircle2,
-  XCircle,
-  Lock,
-  ShieldCheck,
-  Gauge,
-  Network,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Play,
-  Loader2,
-  Copy,
-  AlertTriangle,
-} from 'lucide-vue-next';
+import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { Database, X, ChevronLeft, ChevronRight, Play } from 'lucide-vue-next'
 
-const { t } = useI18n();
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * IMPORTS DES COMPOSANTS D'ÉTAPES
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Chaque étape du wizard est un composant séparé pour maintenir la lisibilité.
+ */
+import StepIndicator from './wizard/StepIndicator.vue'
+import StepTypeSelection from './wizard/StepTypeSelection.vue'
+import StepServerSelection from './wizard/StepServerSelection.vue'
+import StepBasicConfig from './wizard/StepBasicConfig.vue'
+import StepSecurityConfig from './wizard/StepSecurityConfig.vue'
+import StepPerformanceConfig from './wizard/StepPerformanceConfig.vue'
+import StepSummary from './wizard/StepSummary.vue'
+import StepInstallation from './wizard/StepInstallation.vue'
 
-const emit = defineEmits<{
-  (e: 'close'): void;
-  (e: 'complete', config: any): void;
-  (e: 'configureDatabaseStack', serverId: string, config: any): void;
-}>();
+const { t } = useI18n()
 
-const props = defineProps<{
-  servers: Array<{
-    id: string;
-    hostname: string;
-    ip: string;
-    alias?: string;
-    online: boolean;
-  }>;
-  /** RAM du serveur (ex: "4 GB", "8 GB") */
-  serverRam?: string;
-  installationLogs?: Array<{ message: string; stream: 'stdout' | 'stderr' }>;
-  installationResult?: { success: boolean; connectionString?: string; error?: string } | null;
-}>();
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * TYPES
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
 
-// Performance preset
-type PerformancePreset = 'auto' | 'light' | 'standard' | 'performance' | 'custom';
-const performancePreset = ref<PerformancePreset>('auto');
+/** Types de bases de données supportés */
+type DbType = 'postgresql' | 'mysql' | 'redis' | 'mongodb'
 
-// Parse RAM from string like "4 GB" or "8192 MB" to GB
-const serverRamGB = computed(() => {
-  if (!props.serverRam) return 4; // Default 4GB
-  const match = props.serverRam.match(/(\d+(?:\.\d+)?)\s*(GB|MB|TB)/i);
-  if (!match) return 4;
-  const value = parseFloat(match[1]);
-  const unit = match[2].toUpperCase();
-  if (unit === 'TB') return value * 1024;
-  if (unit === 'MB') return value / 1024;
-  return value;
-});
+/** Types d'utilisation de Redis */
+type RedisUsage = 'cache' | 'sessions' | 'queue' | 'general'
 
-// Recommended values based on RAM
-const recommendedValues = computed(() => {
-  const ram = serverRamGB.value;
-
-  // PostgreSQL: shared_buffers = 25% RAM, max_connections based on RAM
-  // MySQL: innodb_buffer_pool_size = 50-70% RAM
-  // Redis: maxmemory = 25% RAM for cache
-
-  const presets = {
-    light: {
-      maxConnections: 50,
-      sharedBuffers: '256MB',
-      innodbBufferPoolSize: '256M',
-      maxMemory: '128mb',
-      wiredTigerCacheSizeGB: '0.5',
-    },
-    standard: {
-      maxConnections: 100,
-      sharedBuffers: ram >= 8 ? '1GB' : ram >= 4 ? '512MB' : '256MB',
-      innodbBufferPoolSize: ram >= 8 ? '1G' : ram >= 4 ? '512M' : '256M',
-      maxMemory: ram >= 8 ? '512mb' : ram >= 4 ? '256mb' : '128mb',
-      wiredTigerCacheSizeGB: ram >= 8 ? '2' : ram >= 4 ? '1' : '0.5',
-    },
-    performance: {
-      maxConnections: ram >= 16 ? 300 : ram >= 8 ? 200 : 150,
-      sharedBuffers: ram >= 16 ? '4GB' : ram >= 8 ? '2GB' : '1GB',
-      innodbBufferPoolSize: ram >= 16 ? '4G' : ram >= 8 ? '2G' : '1G',
-      maxMemory: ram >= 16 ? '2gb' : ram >= 8 ? '1gb' : '512mb',
-      wiredTigerCacheSizeGB: ram >= 16 ? '4' : ram >= 8 ? '2' : '1',
-    },
-    auto: {
-      // Auto = standard optimisé pour la RAM
-      maxConnections: Math.min(Math.floor(ram * 25), 300),
-      sharedBuffers: ram >= 16 ? '4GB' : ram >= 8 ? '2GB' : ram >= 4 ? '1GB' : '512MB',
-      innodbBufferPoolSize: ram >= 16 ? '4G' : ram >= 8 ? '2G' : ram >= 4 ? '1G' : '512M',
-      maxMemory: ram >= 16 ? '2gb' : ram >= 8 ? '1gb' : ram >= 4 ? '512mb' : '256mb',
-      wiredTigerCacheSizeGB: String(Math.min(Math.floor(ram * 0.25), 4)),
-    },
-  };
-
-  return presets;
-});
-
-// Auto description based on server RAM
-const autoPresetDescription = computed(() => {
-  const ram = serverRamGB.value;
-  const v = recommendedValues.value.auto;
-  return `${v.maxConnections} conn. / ${v.sharedBuffers} cache`;
-});
-
-// Apply preset when changed
-function applyPerformancePreset(preset: PerformancePreset) {
-  performancePreset.value = preset;
-  if (preset === 'custom') return; // Don't change values for custom
-
-  const values = recommendedValues.value[preset];
-  config.value.advanced.performance.maxConnections = values.maxConnections;
-  config.value.advanced.performance.sharedBuffers = values.sharedBuffers;
-  config.value.advanced.performance.innodbBufferPoolSize = values.innodbBufferPoolSize;
-  config.value.advanced.performance.maxMemory = values.maxMemory;
-  config.value.advanced.performance.wiredTigerCacheSizeGB = values.wiredTigerCacheSizeGB;
+/**
+ * **ServerInfo** - Informations sur un serveur disponible
+ */
+interface ServerInfo {
+  /** Identifiant unique */
+  id: string
+  /** Nom d'hôte */
+  hostname: string
+  /** Adresse IP */
+  ip: string
+  /** Alias optionnel */
+  alias?: string
+  /** Est-il en ligne ? */
+  online: boolean
 }
 
-// Current step
-const currentStep = ref(0);
+/**
+ * **InstallStep** - Une étape du processus d'installation
+ */
+interface InstallStep {
+  /** Identifiant unique */
+  id: string
+  /** Nom affiché */
+  name: string
+  /** Statut actuel */
+  status: 'pending' | 'running' | 'complete' | 'error'
+  /** Message optionnel (ex: erreur) */
+  message?: string
+}
 
-// Steps definition
+/**
+ * **LogEntry** - Une ligne de log de l'installation
+ */
+interface LogEntry {
+  /** Contenu du message */
+  message: string
+  /** Source : stdout (normal) ou stderr (erreur) */
+  stream: 'stdout' | 'stderr'
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ÉVÉNEMENTS ÉMIS
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+const emit = defineEmits<{
+  /** Fermer le wizard */
+  close: []
+  /** Installation terminée avec succès */
+  complete: [config: any]
+  /** Lancer l'installation sur le serveur */
+  configureDatabaseStack: [serverId: string, config: any]
+}>()
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * PROPS
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+const props = defineProps<{
+  /** Liste des serveurs disponibles */
+  servers: ServerInfo[]
+  /** RAM du serveur sélectionné (pour les recommandations de performance) */
+  serverRam?: string
+  /** Logs d'installation reçus en temps réel */
+  installationLogs?: LogEntry[]
+  /** Résultat de l'installation */
+  installationResult?: { success: boolean; connectionString?: string; error?: string } | null
+}>()
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ÉTAT DE NAVIGATION
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/** Index de l'étape actuelle (0-6) */
+const currentStep = ref(0)
+
+/**
+ * **steps** - Définition des 7 étapes du wizard
+ *
+ * Chaque étape a un id et un titre affiché dans l'indicateur de progression.
+ */
 const steps = [
   { id: 'selection', title: 'Type' },
   { id: 'server', title: 'Serveur' },
@@ -960,20 +368,29 @@ const steps = [
   { id: 'advanced', title: 'Avancé' },
   { id: 'summary', title: 'Résumé' },
   { id: 'install', title: 'Installation' },
-];
+]
 
-// Configuration
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ÉTAT DE CONFIGURATION
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Stocke toutes les valeurs saisies par l'utilisateur à travers les étapes.
+ */
 const config = ref({
-  databaseType: 'postgresql' as 'postgresql' | 'mysql' | 'redis' | 'mongodb',
+  /** Type de BDD sélectionné */
+  databaseType: 'postgresql' as DbType,
+  /** ID du serveur sélectionné */
   serverId: '',
+  /** Configuration de base */
   basic: {
     databaseName: '',
     username: '',
-    redisUsage: 'cache' as 'cache' | 'sessions' | 'queue' | 'general',
+    redisUsage: 'cache' as RedisUsage,
   },
+  /** Options de sécurité (appliquées automatiquement) */
   security: {
     enableTls: false,
-    bindLocalhost: true, // Always true by default
+    bindLocalhost: true,
     setRootPassword: true,
     removeAnonymousUsers: true,
     disableRemoteRoot: true,
@@ -981,6 +398,7 @@ const config = ref({
     configureHba: true,
     enableProtectedMode: true,
   },
+  /** Configuration avancée (performance) */
   advanced: {
     performance: {
       maxConnections: 100,
@@ -990,132 +408,180 @@ const config = ref({
       maxmemoryPolicy: 'allkeys-lru',
       wiredTigerCacheSizeGB: '1',
     },
-    replication: {
-      enabled: false,
-      role: 'primary' as 'primary' | 'replica',
-    },
   },
-});
+})
 
-// Accordion state
-const accordionOpen = ref({
-  performance: false,
-  replication: false,
-});
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ÉTAT DE L'INSTALLATION
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
 
-// Installation state
-const installing = ref(false);
-const installComplete = ref(false);
-const connectionString = ref('');
-const installationSteps = ref<
-  Array<{
-    id: string;
-    name: string;
-    status: 'pending' | 'running' | 'complete' | 'error';
-    message?: string;
-  }>
->([]);
+/** Installation en cours ? */
+const installing = ref(false)
 
-// Logs container ref for auto-scroll
-const logsContainer = ref<HTMLElement | null>(null);
+/** Installation terminée avec succès ? */
+const installComplete = ref(false)
 
-// Computed
-const availableServers = computed(() => props.servers.filter((s) => s.online));
+/** Connection string générée après installation */
+const connectionString = ref('')
 
+/** Étapes de l'installation avec leur statut */
+const installationSteps = ref<InstallStep[]>([])
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * PROPRIÉTÉS CALCULÉES
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * **selectedDatabaseName** - Nom complet du type de BDD sélectionné
+ *
+ * Utilisé pour l'affichage (ex: "PostgreSQL" au lieu de "postgresql")
+ */
 const selectedDatabaseName = computed(() => {
   const names: Record<string, string> = {
     postgresql: 'PostgreSQL',
     mysql: 'MySQL / MariaDB',
     redis: 'Redis',
     mongodb: 'MongoDB',
-  };
-  return names[config.value.databaseType] || '';
-});
+  }
+  return names[config.value.databaseType] || ''
+})
 
+/**
+ * **canProceed** - L'utilisateur peut-il passer à l'étape suivante ?
+ *
+ * Vérifie que les champs obligatoires de l'étape actuelle sont remplis.
+ */
 const canProceed = computed(() => {
   switch (currentStep.value) {
-    case 0: // Database Selection
-      return !!config.value.databaseType;
-    case 1: // Server Selection
-      return !!config.value.serverId;
-    case 2: // Basic Config
-      if (config.value.databaseType === 'redis') {
-        return true; // Redis doesn't need a database name
-      }
-      return !!config.value.basic.databaseName;
+    case 0:
+      // Étape 1 : Un type doit être sélectionné
+      return !!config.value.databaseType
+    case 1:
+      // Étape 2 : Un serveur doit être sélectionné
+      return !!config.value.serverId
+    case 2:
+      // Étape 3 : Nom de BDD et username requis (sauf pour Redis)
+      if (config.value.databaseType === 'redis') return true
+      return !!config.value.basic.databaseName && !!config.value.basic.username
     default:
-      return true;
+      // Les autres étapes n'ont pas de champs obligatoires
+      return true
   }
-});
+})
 
-// Methods
-function toggleAccordion(section: 'performance' | 'replication') {
-  accordionOpen.value[section] = !accordionOpen.value[section];
+/**
+ * **userManuallyEditedUsername** - Indique si l'utilisateur a modifié manuellement le username
+ *
+ * Si false, on continue d'auto-remplir le username quand le nom de BDD change.
+ * Si true, on ne touche plus au username car l'utilisateur l'a personnalisé.
+ */
+const userManuallyEditedUsername = ref(false)
+
+/**
+ * **Auto-remplissage du username**
+ *
+ * Quand l'utilisateur saisit un nom de base de données, on suggère
+ * automatiquement un nom d'utilisateur basé sur ce nom (dbname_user).
+ * Cela facilite la saisie et évite les oublis.
+ *
+ * On arrête d'auto-remplir dès que l'utilisateur modifie manuellement le username.
+ */
+watch(
+  () => config.value.basic.databaseName,
+  (newDbName) => {
+    // Auto-remplir le username seulement si l'utilisateur ne l'a pas modifié manuellement
+    if (newDbName && !userManuallyEditedUsername.value) {
+      config.value.basic.username = `${newDbName}_user`
+    }
+  }
+)
+
+/**
+ * **onUsernameManualInput()** - Appelé quand l'utilisateur modifie manuellement le username
+ *
+ * Marque que l'utilisateur a personnalisé le username, ce qui désactive
+ * l'auto-remplissage basé sur le nom de la BDD.
+ */
+function onUsernameManualInput(value: string) {
+  userManuallyEditedUsername.value = true
+  config.value.basic.username = value
 }
 
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ACTIONS DE NAVIGATION
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * **nextStep()** - Passe à l'étape suivante
+ */
 function nextStep() {
   if (currentStep.value < steps.length - 1) {
-    currentStep.value++;
+    currentStep.value++
   }
 }
 
+/**
+ * **previousStep()** - Retourne à l'étape précédente
+ */
 function previousStep() {
   if (currentStep.value > 0) {
-    currentStep.value--;
+    currentStep.value--
   }
 }
 
-function getDatabaseColorClass() {
-  const colors: Record<string, string> = {
-    postgresql: 'bg-blue-100 text-blue-600',
-    mysql: 'bg-orange-100 text-orange-600',
-    redis: 'bg-red-100 text-red-600',
-    mongodb: 'bg-green-100 text-green-600',
-  };
-  return colors[config.value.databaseType] || 'bg-slate-100 text-slate-600';
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * FONCTIONS UTILITAIRES
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * **getServerName()** - Retourne le nom du serveur sélectionné
+ *
+ * Affiche l'alias s'il existe, sinon le hostname, sinon l'IP.
+ */
+function getServerName(): string {
+  const server = props.servers.find(s => s.id === config.value.serverId)
+  return server ? (server.alias || server.hostname || server.ip) : ''
 }
 
-function getDatabaseIcon() {
-  const icons: Record<string, string> = {
-    postgresql: 'PG',
-    mysql: 'My',
-    redis: 'Rd',
-    mongodb: 'Mg',
-  };
-  return icons[config.value.databaseType] || 'DB';
-}
-
-function getServerName() {
-  const server = props.servers.find((s) => s.id === config.value.serverId);
-  return server ? (server.alias || server.hostname || server.ip) : '';
-}
-
-function getRedisUsageLabel() {
-  const labels: Record<string, string> = {
-    cache: t('database.wizard.config.usageCache'),
-    sessions: t('database.wizard.config.usageSessions'),
-    queue: t('database.wizard.config.usageQueue'),
-    general: t('database.wizard.config.usageGeneral'),
-  };
-  return labels[config.value.basic.redisUsage] || '';
-}
-
+/**
+ * **copyConnectionString()** - Copie la connection string dans le presse-papier
+ */
 function copyConnectionString() {
-  navigator.clipboard.writeText(connectionString.value);
+  navigator.clipboard.writeText(connectionString.value)
 }
 
-async function startInstallation() {
-  installing.value = true;
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ACTIONS D'INSTALLATION
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
 
-  // Build installation steps based on database type
+/**
+ * **startInstallation()** - Lance le processus d'installation
+ *
+ * Prépare les étapes d'installation et émet l'événement pour que
+ * le parent lance l'installation via l'API.
+ */
+async function startInstallation() {
+  installing.value = true
+
+  // Initialise les 4 étapes de l'installation avec leur statut
   installationSteps.value = [
     { id: 'install', name: t('database.wizard.install.steps.installing'), status: 'running' },
     { id: 'security', name: t('database.wizard.install.steps.security'), status: 'pending' },
     { id: 'config', name: t('database.wizard.install.steps.configuring'), status: 'pending' },
     { id: 'start', name: t('database.wizard.install.steps.starting'), status: 'pending' },
-  ];
+  ]
 
-  // Emit event to trigger installation via WebSocket
+  // Émet l'événement avec toute la configuration
   emit('configureDatabaseStack', config.value.serverId, {
     type: config.value.databaseType,
     databaseName: config.value.basic.databaseName || 'app_db',
@@ -1123,71 +589,99 @@ async function startInstallation() {
     redisUsage: config.value.basic.redisUsage,
     security: config.value.security,
     advanced: config.value.advanced,
-  });
+  })
 }
 
-// Watcher for installation result
-watch(
-  () => props.installationResult,
-  (result) => {
-    if (result) {
-      if (result.success) {
-        installationSteps.value.forEach((step) => (step.status = 'complete'));
-        installComplete.value = true;
-        if (result.connectionString) {
-          connectionString.value = result.connectionString;
-        }
-        emit('complete', config.value);
-      } else {
-        const runningStep = installationSteps.value.find((s) => s.status === 'running');
-        if (runningStep) {
-          runningStep.status = 'error';
-          runningStep.message = result.error;
-        }
-        installing.value = false;
-      }
-    }
-  },
-);
-
-// Watcher for auto-scroll logs
-watch(
-  () => props.installationLogs?.length,
-  () => {
-    nextTick(() => {
-      if (logsContainer.value) {
-        logsContainer.value.scrollTop = logsContainer.value.scrollHeight;
-      }
-    });
-
-    // Update installation steps based on logs
-    if (props.installationLogs && props.installationLogs.length > 0) {
-      const lastLogs = props.installationLogs.slice(-5);
-      for (const log of lastLogs) {
-        const msg = log.message;
-        if (msg.includes('Installing') || msg.includes('apt-get install')) {
-          updateStepStatus('install', 'running');
-        } else if (msg.includes('Securing') || msg.includes('security')) {
-          updateStepStatus('install', 'complete');
-          updateStepStatus('security', 'running');
-        } else if (msg.includes('Configuring') || msg.includes('configuration')) {
-          updateStepStatus('security', 'complete');
-          updateStepStatus('config', 'running');
-        } else if (msg.includes('Starting') || msg.includes('systemctl start')) {
-          updateStepStatus('config', 'complete');
-          updateStepStatus('start', 'running');
-        } else if (msg.includes('successfully') || msg.includes('complete')) {
-          updateStepStatus('start', 'complete');
-        }
-      }
-    }
-  },
-);
-
+/**
+ * **updateStepStatus()** - Met à jour le statut d'une étape d'installation
+ *
+ * Utilisé pour suivre la progression en analysant les logs.
+ * Ne met à jour que si l'étape n'est pas déjà complétée ou en erreur.
+ *
+ * @param stepId - L'ID de l'étape à mettre à jour
+ * @param status - Le nouveau statut
+ */
 function updateStepStatus(stepId: string, status: 'pending' | 'running' | 'complete' | 'error') {
-  const step = installationSteps.value.find((s) => s.id === stepId);
+  const step = installationSteps.value.find(s => s.id === stepId)
   if (step && step.status !== 'complete' && step.status !== 'error') {
-    step.status = status;
+    step.status = status
   }
 }
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * WATCHERS
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * Observe le résultat de l'installation (reçu via prop du parent).
+ *
+ * - Si succès : marque toutes les étapes comme complétées, affiche le résultat
+ * - Si erreur : marque l'étape en cours comme erreur, arrête l'installation
+ */
+watch(() => props.installationResult, (result) => {
+  if (result) {
+    if (result.success) {
+      // Succès : toutes les étapes sont complétées
+      installationSteps.value.forEach(step => (step.status = 'complete'))
+      installComplete.value = true
+      installing.value = false // Arrêter l'état "installing" pour afficher le résultat
+      if (result.connectionString) {
+        connectionString.value = result.connectionString
+      }
+      // NE PAS émettre 'complete' ici - l'utilisateur doit d'abord voir la connection string
+      // Le wizard sera fermé quand l'utilisateur clique sur "Terminer"
+    } else {
+      // Erreur : marque l'étape en cours comme erreur
+      const runningStep = installationSteps.value.find(s => s.status === 'running')
+      if (runningStep) {
+        runningStep.status = 'error'
+        runningStep.message = result.error
+      }
+      installing.value = false
+    }
+  }
+})
+
+/**
+ * Observe les logs d'installation pour mettre à jour automatiquement
+ * le statut des étapes en fonction du contenu des logs.
+ *
+ * Cette logique analyse les derniers logs pour détecter les mots-clés
+ * indiquant quelle étape est en cours.
+ */
+watch(() => props.installationLogs?.length, () => {
+  if (props.installationLogs && props.installationLogs.length > 0) {
+    // Analyse les 5 derniers logs
+    const lastLogs = props.installationLogs.slice(-5)
+    for (const log of lastLogs) {
+      const msg = log.message
+
+      // Détection de l'étape d'installation
+      if (msg.includes('Installing') || msg.includes('apt-get install')) {
+        updateStepStatus('install', 'running')
+      }
+      // Détection de l'étape de sécurité
+      else if (msg.includes('Securing') || msg.includes('security')) {
+        updateStepStatus('install', 'complete')
+        updateStepStatus('security', 'running')
+      }
+      // Détection de l'étape de configuration
+      else if (msg.includes('Configuring') || msg.includes('configuration')) {
+        updateStepStatus('security', 'complete')
+        updateStepStatus('config', 'running')
+      }
+      // Détection de l'étape de démarrage
+      else if (msg.includes('Starting') || msg.includes('systemctl start')) {
+        updateStepStatus('config', 'complete')
+        updateStepStatus('start', 'running')
+      }
+      // Détection de la fin
+      else if (msg.includes('successfully') || msg.includes('complete')) {
+        updateStepStatus('start', 'complete')
+      }
+    }
+  }
+})
 </script>

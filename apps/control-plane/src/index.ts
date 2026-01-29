@@ -1473,8 +1473,8 @@ fastify.register(async function (fastify) {
                     return;
                 }
 
-                // Infrastructure messages (Story 7.7) + Agent Update + Logs + Removal/Reconfiguration + Start/Stop + Mail/DNS/Database Stack
-                if (['GET_SERVER_STATUS', 'INSTALL_RUNTIME', 'UPDATE_RUNTIME', 'CONFIGURE_DATABASE', 'UPDATE_AGENT', 'GET_INFRASTRUCTURE_LOGS', 'CLEAR_INFRASTRUCTURE_LOGS', 'GET_SERVICE_LOGS', 'REMOVE_RUNTIME', 'REMOVE_DATABASE', 'RECONFIGURE_DATABASE', 'INSTALL_SERVICE', 'REMOVE_SERVICE', 'START_SERVICE', 'STOP_SERVICE', 'START_DATABASE', 'STOP_DATABASE', 'CONFIGURE_MAIL_STACK', 'CONFIGURE_DNS_STACK', 'CONFIGURE_DATABASE_STACK'].includes(msg.type)) {
+                // Infrastructure messages (Story 7.7) + Agent Update + Logs + Removal/Reconfiguration + Start/Stop + Mail/DNS/Database Stack + Database Management
+                if (['GET_SERVER_STATUS', 'INSTALL_RUNTIME', 'UPDATE_RUNTIME', 'CONFIGURE_DATABASE', 'UPDATE_AGENT', 'GET_INFRASTRUCTURE_LOGS', 'CLEAR_INFRASTRUCTURE_LOGS', 'GET_SERVICE_LOGS', 'REMOVE_RUNTIME', 'REMOVE_DATABASE', 'RECONFIGURE_DATABASE', 'INSTALL_SERVICE', 'REMOVE_SERVICE', 'START_SERVICE', 'STOP_SERVICE', 'START_DATABASE', 'STOP_DATABASE', 'CONFIGURE_MAIL_STACK', 'CONFIGURE_DNS_STACK', 'CONFIGURE_DATABASE_STACK', 'GET_DATABASE_INFO', 'RESET_DATABASE_PASSWORD', 'CREATE_DATABASE_INSTANCE'].includes(msg.type)) {
                     const ok = await sendToAgentById(nodeId, msg, userId);
                     if (!ok) console.error(`❌ Infrastructure command failed: ${msg.type}`);
                     return;
@@ -1610,8 +1610,8 @@ fastify.register(async function (fastify) {
                         }
                     }
                 }
-                // Infrastructure response messages (Story 7.7) + Agent Update + Removal/Reconfiguration + Start/Stop responses + Mail Stack
-                else if (['SERVER_STATUS_RESPONSE', 'INFRASTRUCTURE_LOG', 'RUNTIME_INSTALLED', 'RUNTIME_UPDATED', 'DATABASE_CONFIGURED', 'AGENT_UPDATE_STATUS', 'AGENT_UPDATE_LOG', 'INFRASTRUCTURE_LOGS_RESPONSE', 'INFRASTRUCTURE_LOGS_CLEARED', 'SERVICE_LOGS_RESPONSE', 'RUNTIME_REMOVED', 'DATABASE_REMOVED', 'DATABASE_RECONFIGURED', 'SERVICE_INSTALLED', 'SERVICE_REMOVED', 'SERVICE_STARTED', 'SERVICE_STOPPED', 'DATABASE_STARTED', 'DATABASE_STOPPED', 'MAIL_STACK_CONFIGURED'].includes(msg.type)) {
+                // Infrastructure response messages (Story 7.7) + Agent Update + Removal/Reconfiguration + Start/Stop responses + Mail/DNS/Database Stack + Database Management
+                else if (['SERVER_STATUS_RESPONSE', 'INFRASTRUCTURE_LOG', 'RUNTIME_INSTALLED', 'RUNTIME_UPDATED', 'DATABASE_CONFIGURED', 'AGENT_UPDATE_STATUS', 'AGENT_UPDATE_LOG', 'INFRASTRUCTURE_LOGS_RESPONSE', 'INFRASTRUCTURE_LOGS_CLEARED', 'SERVICE_LOGS_RESPONSE', 'RUNTIME_REMOVED', 'DATABASE_REMOVED', 'DATABASE_RECONFIGURED', 'SERVICE_INSTALLED', 'SERVICE_REMOVED', 'SERVICE_STARTED', 'SERVICE_STOPPED', 'DATABASE_STARTED', 'DATABASE_STOPPED', 'MAIL_STACK_CONFIGURED', 'DNS_STACK_CONFIGURED', 'DATABASE_STACK_CONFIGURED', 'DATABASE_INFO_RESPONSE', 'DATABASE_PASSWORD_RESET', 'DATABASE_INSTANCE_CREATED'].includes(msg.type)) {
                     const sess = agentSessions.get(connectionId);
                     if (sess?.authorized) {
                         console.log(`🔧 [${sess.nodeId}] Infrastructure: ${msg.type}`);

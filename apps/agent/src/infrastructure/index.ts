@@ -30,6 +30,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { randomBytes } from 'node:crypto';
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -1723,7 +1724,9 @@ options {
       replication?: { enabled: boolean; role: 'primary' | 'replica' };
     };
   }): Promise<DatabaseConfigResult> {
-    const hasBackupTools = config.advanced.backup.toolsToInstall && config.advanced.backup.toolsToInstall.length > 0;
+    // Vérifier si backup est défini avant d'accéder à ses propriétés
+    const hasBackupTools = config.advanced?.backup?.toolsToInstall && config.advanced.backup.toolsToInstall.length > 0;
+    const hasBackupEnabled = config.advanced?.backup?.enabled ?? false;
     const totalSteps = hasBackupTools ? 4 : 3;
 
     this.onLog(`\n🗄️ Configuration de la stack ${config.type.toUpperCase()}\n`, 'stdout');
@@ -1759,14 +1762,14 @@ options {
 
       // Étape 3 (optionnelle) : Installation des outils de backup
       let currentStep = 3;
-      if (hasBackupTools) {
+      if (hasBackupTools && config.advanced?.backup?.toolsToInstall) {
         this.onLog(`\n🔧 Étape ${currentStep}/${totalSteps} : Installation des outils de backup...\n`, 'stdout');
-        await this.installBackupTools(config.advanced.backup.toolsToInstall!);
+        await this.installBackupTools(config.advanced.backup.toolsToInstall);
         currentStep++;
       }
 
       // Étape finale : Configuration du backup automatique
-      if (config.advanced.backup.enabled) {
+      if (hasBackupEnabled && config.advanced?.backup) {
         this.onLog(`\n💾 Étape ${currentStep}/${totalSteps} : Configuration du backup automatique...\n`, 'stdout');
         await this.setupDatabaseBackup(config.type, config.databaseName, config.advanced.backup);
       } else {
@@ -1775,6 +1778,25 @@ options {
 
       // Sauvegarder la configuration
       await this.saveDatabaseConfig(config, dbResult.connectionString);
+
+      // Sauvegarder les credentials de l'instance pour le DatabaseManagementWizard
+      if (dbResult.connectionString && config.databaseName) {
+        // Extraire le password de la connectionString
+        // Format: postgresql://user:password@localhost:5432/dbname
+        //         mysql://user:password@localhost:3306/dbname
+        //         redis://:password@localhost:6379/0
+        const passwordMatch = dbResult.connectionString.match(/:([^:@]+)@/);
+        if (passwordMatch) {
+          const password = passwordMatch[1];
+          await this.saveCredentials(config.type, {
+            name: config.databaseName,
+            user: config.username || `${config.databaseName}_user`,
+            password,
+            createdAt: new Date().toISOString(),
+          });
+          this.onLog(`  ✅ Credentials sauvegardées pour ${config.databaseName}\n`, 'stdout');
+        }
+      }
 
       this.onLog(`\n✅ Stack ${config.type.toUpperCase()} configurée avec succès!\n`, 'stdout');
       this.onLog(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`, 'stdout');
@@ -2235,14 +2257,14 @@ echo "[\$(date)] Nettoyage effectué (rétention: ${retentionDays} jours)"
       instances: Array<{ name: string; user?: string; createdAt?: string }>;
     }> = [];
 
-    // Détecter les BDD installées
+    // Détecter les BDD installées (retourne un tableau, pas un objet)
     const dbStatus = await detectDatabases();
 
-    for (const [dbType, info] of Object.entries(dbStatus)) {
+    for (const info of dbStatus) {
       if (info.installed) {
-        const instances = await this.getDatabaseInstances(dbType as DatabaseType);
+        const instances = await this.getDatabaseInstances(info.type as DatabaseType);
         databases.push({
-          type: dbType as 'postgresql' | 'mysql' | 'redis' | 'mongodb',
+          type: info.type as 'postgresql' | 'mysql' | 'redis' | 'mongodb',
           version: info.version,
           running: info.running,
           instances,
@@ -2372,29 +2394,38 @@ echo "[\$(date)] Nettoyage effectué (rétention: ${retentionDays} jours)"
    * Génère un nouveau mot de passe sécurisé et met à jour la base de données.
    * Le nouveau mot de passe est stocké dans le fichier credentials de l'agent.
    *
+   * IMPORTANT : On cherche d'abord dans les credentials le vrai nom d'utilisateur
+   * associé à cette base de données, car le nom de l'utilisateur peut être différent
+   * du nom de la BDD (ex: BDD "data" avec utilisateur "data_user").
+   *
    * @param dbType - Type de base de données
-   * @param dbName - Nom de la base de données ou de l'utilisateur
-   * @param customPassword - Mot de passe personnalisé (optionnel)
+   * @param dbName - Nom de la base de données
    * @returns Le nouveau mot de passe généré
    */
   async resetDatabasePassword(
     dbType: DatabaseType,
     dbName: string,
-    customPassword?: string,
   ): Promise<{ success: boolean; password?: string; error?: string }> {
     this.setCurrentService(dbType);
     this.onLog(`\n🔐 Réinitialisation du mot de passe ${dbType} pour ${dbName}...\n`, 'stdout');
 
     try {
-      // Générer un nouveau mot de passe si pas de custom
-      const newPassword = customPassword || this.generateSecurePassword();
+      // Chercher le vrai nom d'utilisateur dans les credentials
+      const instances = await this.getDatabaseInstances(dbType);
+      const instance = instances.find(i => i.name === dbName);
+      const username = instance?.user || dbName; // Fallback sur le nom de la BDD si pas d'user
+
+      this.onLog(`  👤 Utilisateur associé: ${username}\n`, 'stdout');
+
+      // Générer un nouveau mot de passe
+      const newPassword = this.generateSecurePassword();
 
       switch (dbType) {
         case 'postgresql':
-          await this.resetPostgresPassword(dbName, newPassword);
+          await this.resetPostgresPassword(username, newPassword);
           break;
         case 'mysql':
-          await this.resetMysqlPassword(dbName, newPassword);
+          await this.resetMysqlPassword(username, newPassword);
           break;
         case 'redis':
           await this.resetRedisPassword(newPassword);
@@ -2405,10 +2436,10 @@ echo "[\$(date)] Nettoyage effectué (rétention: ${retentionDays} jours)"
           throw new Error(`Type de base de données inconnu: ${dbType}`);
       }
 
-      // Sauvegarder les nouveaux credentials
+      // Sauvegarder les nouveaux credentials (garder le bon username)
       await this.saveCredentials(dbType, {
         name: dbName,
-        user: dbName, // Pour PostgreSQL/MySQL, le nom de l'utilisateur est souvent le même que la BDD
+        user: username,
         password: newPassword,
         createdAt: new Date().toISOString(),
       });
@@ -2425,17 +2456,74 @@ echo "[\$(date)] Nettoyage effectué (rétention: ${retentionDays} jours)"
 
   /**
    * **resetPostgresPassword()** - Réinitialise un mot de passe PostgreSQL
+   *
+   * Si l'utilisateur n'existe pas, il est créé automatiquement.
+   * Si une base de données du même nom existe, l'utilisateur en devient propriétaire.
    */
   private async resetPostgresPassword(username: string, newPassword: string): Promise<void> {
     // Échapper le mot de passe pour SQL
     const escapedPassword = newPassword.replace(/'/g, "''");
-    const sqlCommand = `ALTER USER ${username} WITH PASSWORD '${escapedPassword}';`;
 
-    await runCommand(
-      'su',
-      ['-', 'postgres', '-c', `psql -c "${sqlCommand}"`],
-      this.onLog,
-    );
+    // Vérifier si l'utilisateur existe (utiliser runCommandSilent qui retourne le stdout)
+    let userExists = false;
+    try {
+      const checkUserResult = await runCommandSilent(
+        'su',
+        ['-', 'postgres', '-c', `psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${username}'"`],
+      );
+      userExists = checkUserResult.trim() === '1';
+      this.onLog(`  🔍 Vérification utilisateur '${username}': ${userExists ? 'existe' : 'n\'existe pas'}\n`, 'stdout');
+    } catch (e) {
+      this.onLog(`  ⚠️ Impossible de vérifier si l'utilisateur existe: ${e}\n`, 'stderr');
+      userExists = false;
+    }
+
+    if (userExists) {
+      // L'utilisateur existe, on change son mot de passe
+      this.onLog(`  📝 Mise à jour du mot de passe pour '${username}'...\n`, 'stdout');
+      await runCommand(
+        'su',
+        ['-', 'postgres', '-c', `psql -c "ALTER USER ${username} WITH PASSWORD '${escapedPassword}';"`],
+        this.onLog,
+      );
+    } else {
+      // L'utilisateur n'existe pas, on le crée
+      this.onLog(`  🆕 L'utilisateur '${username}' n'existe pas, création...\n`, 'stdout');
+      await runCommand(
+        'su',
+        ['-', 'postgres', '-c', `psql -c "CREATE USER ${username} WITH PASSWORD '${escapedPassword}';"`],
+        this.onLog,
+      );
+
+      // Vérifier si une base de données du même nom existe
+      let dbExists = false;
+      try {
+        const checkDbResult = await runCommandSilent(
+          'su',
+          ['-', 'postgres', '-c', `psql -tAc "SELECT 1 FROM pg_database WHERE datname='${username}'"`],
+        );
+        dbExists = checkDbResult.trim() === '1';
+      } catch {
+        dbExists = false;
+      }
+
+      if (dbExists) {
+        // Donner les droits sur la base de données
+        this.onLog(`  🔑 Attribution des droits sur la base '${username}'...\n`, 'stdout');
+        await runCommand(
+          'su',
+          ['-', 'postgres', '-c', `psql -c "ALTER DATABASE ${username} OWNER TO ${username};"`],
+          this.onLog,
+        );
+        await runCommand(
+          'su',
+          ['-', 'postgres', '-c', `psql -c "GRANT ALL PRIVILEGES ON DATABASE ${username} TO ${username};"`],
+          this.onLog,
+        );
+      }
+    }
+
+    this.onLog(`  ✅ Mot de passe configuré pour '${username}'\n`, 'stdout');
   }
 
   /**
@@ -2623,7 +2711,6 @@ echo "[\$(date)] Nettoyage effectué (rétention: ${retentionDays} jours)"
    * **generateSecurePassword()** - Génère un mot de passe sécurisé
    */
   private generateSecurePassword(): string {
-    const { randomBytes } = require('crypto');
     const length = 24;
     const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
     let password = '';

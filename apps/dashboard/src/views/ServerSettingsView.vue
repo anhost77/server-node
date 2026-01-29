@@ -77,6 +77,8 @@ interface Props {
   remoteLogFilePath: string | null;
   // Mail stack configuration result
   mailStackResult?: { success: boolean; dkimPublicKey?: string; error?: string } | null;
+  // Database stack configuration result (from wizard)
+  databaseStackResult?: { success: boolean; connectionString?: string; error?: string } | null;
   // Database management
   databaseInfo?: Array<{
     type: 'postgresql' | 'mysql' | 'redis' | 'mongodb';
@@ -121,7 +123,7 @@ const emit = defineEmits<{
   configureDatabaseStack: [serverId: string, config: any];
   // Database management events
   getDatabaseInfo: [serverId: string];
-  resetDatabasePassword: [serverId: string, dbType: string, dbName: string, customPassword?: string];
+  resetDatabasePassword: [serverId: string, dbType: string, dbName: string];
   createDatabaseInstance: [serverId: string, dbType: string, dbName: string, username: string];
 }>();
 
@@ -144,7 +146,6 @@ const databases = [
   { type: 'postgresql', name: 'PostgreSQL', icon: 'PG' },
   { type: 'mysql', name: 'MySQL', icon: 'My' },
   { type: 'redis', name: 'Redis', icon: 'Rd' },
-  { type: 'mongodb', name: 'MongoDB', icon: 'Mg' },
 ];
 
 // Network & Proxy services
@@ -1037,7 +1038,7 @@ function confirmReconfigureDatabase() {
               <p class="text-sm text-slate-600 mb-3">
                 {{
                   t('database.wizard.cta.description') ||
-                  "L'assistant guidé configure automatiquement PostgreSQL, MySQL, Redis ou MongoDB avec les options de sécurité en quelques clics."
+                  "L'assistant guidé configure automatiquement PostgreSQL, MySQL ou Redis avec les options de sécurité en quelques clics."
                 }}
               </p>
               <div class="flex flex-wrap items-center gap-3">
@@ -3703,6 +3704,7 @@ function confirmReconfigureDatabase() {
       ]"
       :server-ram="infraStatus?.system?.ram"
       :installation-logs="infrastructureLogs"
+      :installation-result="databaseStackResult"
       @close="showDatabaseWizard = false"
       @complete="handleDatabaseWizardComplete"
       @configure-database-stack="(serverId, config) => emit('configureDatabaseStack', serverId, config)"
@@ -3723,9 +3725,10 @@ function confirmReconfigureDatabase() {
       :preselected-server-id="server.id"
       :database-info="databaseInfo"
       :operation-result="databaseOperationResult"
+      :infrastructure-logs="infrastructureLogs"
       @close="showDatabaseManagement = false"
       @get-database-info="(serverId) => emit('getDatabaseInfo', serverId)"
-      @reset-database-password="(serverId, dbType, dbName, customPassword) => emit('resetDatabasePassword', serverId, dbType, dbName, customPassword)"
+      @reset-database-password="(serverId, dbType, dbName) => emit('resetDatabasePassword', serverId, dbType, dbName)"
       @create-database="(serverId, dbType, dbName, username) => emit('createDatabaseInstance', serverId, dbType, dbName, username)"
     />
   </div>

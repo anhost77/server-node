@@ -1,33 +1,63 @@
 <!--
   @file apps/dashboard/src/components/databases/DatabaseManagementWizard.vue
-  @description Wizard de gestion des bases de données existantes.
-  Ce composant permet de lister, gérer et modifier les bases de données
-  déjà configurées sur un serveur : reset password, créer une nouvelle BDD,
-  voir les infos de connexion.
 
-  IMPORTANT: Aucune donnée n'est stockée sur le dashboard.
-  Toutes les informations sont récupérées et stockées sur l'agent via JSON.
+  @description Wizard de gestion des bases de données EXISTANTES.
+
+  Ce composant est un modal plein écran qui permet de gérer les bases de
+  données déjà installées sur les serveurs. Il est différent du
+  DatabaseServerWizard qui est pour l'INSTALLATION de nouvelles BDD.
+
+  Fonctionnalités principales :
+  1. Sélectionner un serveur pour voir ses BDD
+  2. Voir les informations de connexion (host, port, user...)
+  3. Réinitialiser le mot de passe d'une BDD
+  4. Créer une nouvelle BDD (sur un serveur où le type est déjà installé)
+  5. Supprimer une BDD (à venir)
+
+  Architecture du composant :
+  - Ce fichier est le CONTENEUR principal (orchestrateur)
+  - La logique d'affichage est déléguée aux sous-composants dans management/
+  - Les modals sont aussi des sous-composants séparés
 
   @dependencies
-  - Vue 3 : Framework frontend
-  - Lucide Icons : Icônes pour l'interface
+  - Vue 3 : Framework frontend avec ref, watch, onMounted
+  - vue-i18n : Traductions
+  - Lucide Icons : Settings, X, Loader2
+
+  @composants_enfants
+  - ServerSelect : Sélection du serveur
+  - DatabaseList : Liste des BDD avec actions
+  - ConnectionModal : Affiche les infos de connexion
+  - ResetPasswordModal : Confirmation reset password
+  - CreateModal : Création d'une nouvelle BDD
+  - NewPasswordModal : Affiche le nouveau password après reset/création
 
   @fonctions_principales
-  - loadDatabaseInfo() : Charge les infos DB depuis l'agent
-  - resetPassword() : Réinitialise le mot de passe d'une BDD
-  - createDatabase() : Crée une nouvelle base de données
-  - viewConnectionInfo() : Affiche les infos de connexion
+  - selectServer() : Sélectionne un serveur et charge ses BDD
+  - viewConnectionInfo() : Ouvre le modal de connexion
+  - executeResetPassword() : Lance le reset de mot de passe
+  - executeCreateDatabase() : Lance la création de BDD
 -->
 <template>
+  <!--
+    ═══════════════════════════════════════════════════════════════════════════
+    OVERLAY DU MODAL
+    ═══════════════════════════════════════════════════════════════════════════
+    Fond noir semi-transparent qui recouvre toute la page.
+    Le modal est centré au milieu de l'écran.
+  -->
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-    <div
-      class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
-    >
-      <!-- Header -->
-      <div
-        class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-emerald-500 to-emerald-600"
-      >
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <!--
+        ═══════════════════════════════════════════════════════════════════════════
+        EN-TÊTE DU MODAL
+        ═══════════════════════════════════════════════════════════════════════════
+        Bandeau vert avec le titre et le bouton de fermeture.
+        Couleur emerald pour différencier du wizard d'installation (bleu).
+      -->
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-emerald-500 to-emerald-600">
         <div class="flex items-center gap-3">
+          <!-- Icône dans un cercle semi-transparent -->
           <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
             <Settings class="w-5 h-5 text-white" />
           </div>
@@ -36,36 +66,37 @@
             <p class="text-sm text-white/80">{{ t('database.management.subtitle') }}</p>
           </div>
         </div>
+        <!-- Bouton fermer (X) -->
         <button @click="$emit('close')" class="text-white/80 hover:text-white transition-colors">
           <X class="w-5 h-5" />
         </button>
       </div>
 
-      <!-- Server Selection (if not preselected) -->
-      <div v-if="!selectedServer && !loading" class="p-6">
-        <h3 class="text-lg font-semibold text-slate-900 mb-4">
-          {{ t('database.management.selectServer') }}
-        </h3>
-        <div class="grid gap-3">
-          <button
-            v-for="server in availableServers"
-            :key="server.id"
-            @click="selectServer(server)"
-            class="flex items-center gap-3 p-4 border border-slate-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all text-left"
-          >
-            <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
-              <Server class="w-5 h-5 text-emerald-600" />
-            </div>
-            <div class="flex-1">
-              <span class="font-medium text-slate-900">{{ server.alias || server.hostname }}</span>
-              <p class="text-sm text-slate-500">{{ server.ip }}</p>
-            </div>
-            <ChevronRight class="w-5 h-5 text-slate-400" />
-          </button>
-        </div>
-      </div>
+      <!--
+        ═══════════════════════════════════════════════════════════════════════════
+        CONTENU PRINCIPAL (CONDITIONNEL)
+        ═══════════════════════════════════════════════════════════════════════════
+        Affiche différents contenus selon l'état :
+        1. ServerSelect : Si aucun serveur n'est sélectionné
+        2. Loader : Pendant le chargement des BDD
+        3. DatabaseList : Une fois les BDD chargées
+      -->
 
-      <!-- Loading State -->
+      <!--
+        ÉTAPE 1 : SÉLECTION DU SERVEUR
+        Affiché quand aucun serveur n'est encore sélectionné et qu'on n'est pas
+        en train de charger.
+      -->
+      <ServerSelect
+        v-if="!selectedServer && !loading"
+        :servers="servers"
+        @select="selectServer"
+      />
+
+      <!--
+        ÉTAT DE CHARGEMENT
+        Spinner centré pendant qu'on récupère les infos des BDD du serveur.
+      -->
       <div v-else-if="loading" class="flex-1 flex items-center justify-center p-12">
         <div class="text-center">
           <Loader2 class="w-12 h-12 text-emerald-500 animate-spin mx-auto mb-4" />
@@ -73,158 +104,29 @@
         </div>
       </div>
 
-      <!-- Content -->
-      <div v-else class="flex-1 overflow-y-auto p-6">
-        <!-- Server Info Banner -->
-        <div class="flex items-center justify-between mb-6 p-4 bg-slate-50 rounded-xl">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
-              <Server class="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <span class="font-medium text-slate-900">{{ selectedServer?.alias || selectedServer?.hostname }}</span>
-              <p class="text-sm text-slate-500">{{ selectedServer?.ip }}</p>
-            </div>
-          </div>
-          <button
-            @click="refreshDatabaseInfo"
-            :disabled="refreshing"
-            class="px-3 py-1.5 text-sm text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors flex items-center gap-2"
-          >
-            <RefreshCw :class="['w-4 h-4', { 'animate-spin': refreshing }]" />
-            {{ t('common.refresh') }}
-          </button>
-        </div>
+      <!--
+        LISTE DES BASES DE DONNÉES
+        Affiche toutes les BDD du serveur sélectionné avec les actions possibles.
+      -->
+      <DatabaseList
+        v-else
+        :server="selectedServer!"
+        :databases="databases"
+        :refreshing="refreshing"
+        @refresh="refreshDatabaseInfo"
+        @create="showCreateModal = true"
+        @createForType="openCreateDatabase"
+        @viewConnection="viewConnectionInfo"
+        @resetPassword="openResetPassword"
+        @delete="openDeleteConfirm"
+      />
 
-        <!-- No Databases -->
-        <div v-if="databases.length === 0 && !loading" class="text-center py-12">
-          <Database class="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <h4 class="text-lg font-medium text-slate-900 mb-2">
-            {{ t('database.management.noDatabases') }}
-          </h4>
-          <p class="text-sm text-slate-500 mb-6">{{ t('database.management.noDatabasesDesc') }}</p>
-          <button
-            @click="showCreateModal = true"
-            class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors inline-flex items-center gap-2"
-          >
-            <Plus class="w-4 h-4" />
-            {{ t('database.management.createFirst') }}
-          </button>
-        </div>
-
-        <!-- Database List -->
-        <div v-else class="space-y-4">
-          <!-- Actions Bar -->
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-slate-900">
-              {{ t('database.management.installedDatabases') }}
-            </h3>
-            <button
-              @click="showCreateModal = true"
-              class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm rounded-lg transition-colors inline-flex items-center gap-2"
-            >
-              <Plus class="w-4 h-4" />
-              {{ t('database.management.createNew') }}
-            </button>
-          </div>
-
-          <!-- Database Cards -->
-          <div class="grid gap-4">
-            <div
-              v-for="db in databases"
-              :key="db.type"
-              class="border border-slate-200 rounded-xl overflow-hidden"
-            >
-              <!-- Database Header -->
-              <div class="p-4 bg-slate-50 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <div
-                    :class="[
-                      'w-10 h-10 rounded-xl flex items-center justify-center',
-                      getDatabaseColorClass(db.type),
-                    ]"
-                  >
-                    <span class="text-sm font-bold">{{ getDatabaseIcon(db.type) }}</span>
-                  </div>
-                  <div>
-                    <h4 class="font-semibold text-slate-900">{{ getDatabaseName(db.type) }}</h4>
-                    <p class="text-xs text-slate-500">
-                      {{ db.version || t('database.management.versionUnknown') }}
-                    </p>
-                  </div>
-                </div>
-                <div class="flex items-center gap-2">
-                  <span
-                    :class="[
-                      'px-2 py-1 text-xs rounded-full',
-                      db.running ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700',
-                    ]"
-                  >
-                    {{ db.running ? t('common.running') : t('common.stopped') }}
-                  </span>
-                </div>
-              </div>
-
-              <!-- Database Instances -->
-              <div class="divide-y divide-slate-100">
-                <div
-                  v-for="instance in db.instances"
-                  :key="instance.name"
-                  class="p-4 flex items-center justify-between"
-                >
-                  <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">
-                      <HardDrive class="w-4 h-4 text-slate-500" />
-                    </div>
-                    <div>
-                      <span class="font-medium text-slate-900">{{ instance.name }}</span>
-                      <p v-if="instance.user" class="text-xs text-slate-500">
-                        {{ t('database.management.user') }}: {{ instance.user }}
-                      </p>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <button
-                      @click="viewConnectionInfo(db.type, instance)"
-                      class="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                      :title="t('database.management.viewConnection')"
-                    >
-                      <Eye class="w-4 h-4" />
-                    </button>
-                    <button
-                      @click="openResetPassword(db.type, instance)"
-                      class="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                      :title="t('database.management.resetPassword')"
-                    >
-                      <Key class="w-4 h-4" />
-                    </button>
-                    <button
-                      @click="openDeleteConfirm(db.type, instance)"
-                      class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      :title="t('database.management.deleteDatabase')"
-                    >
-                      <Trash2 class="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <!-- No instances message -->
-                <div v-if="db.instances.length === 0" class="p-4 text-center text-sm text-slate-500">
-                  {{ t('database.management.noInstances') }}
-                  <button
-                    @click="openCreateDatabase(db.type)"
-                    class="text-emerald-600 hover:underline ml-1"
-                  >
-                    {{ t('database.management.createOne') }}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Footer -->
+      <!--
+        ═══════════════════════════════════════════════════════════════════════════
+        PIED DE PAGE
+        ═══════════════════════════════════════════════════════════════════════════
+        Bouton pour fermer le modal.
+      -->
       <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end">
         <button
           @click="$emit('close')"
@@ -235,589 +137,561 @@
       </div>
     </div>
 
-    <!-- Connection Info Modal -->
-    <div
+    <!--
+      ═══════════════════════════════════════════════════════════════════════════
+      MODALS SECONDAIRES
+      ═══════════════════════════════════════════════════════════════════════════
+      Ces modals s'affichent PAR-DESSUS le modal principal quand l'utilisateur
+      effectue une action spécifique.
+    -->
+
+    <!--
+      MODAL : INFORMATIONS DE CONNEXION
+      Affiche l'URL de connexion, host, port, user...
+    -->
+    <ConnectionModal
       v-if="connectionModal.visible"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-60 p-4"
-    >
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg">
-        <div class="p-4 border-b border-slate-200 flex items-center justify-between">
-          <h3 class="font-semibold text-slate-900">{{ t('database.management.connectionInfo') }}</h3>
-          <button @click="connectionModal.visible = false" class="text-slate-400 hover:text-slate-600">
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-        <div class="p-4 space-y-4">
-          <!-- Connection String -->
-          <div>
-            <label class="text-sm text-slate-500 block mb-1">{{ t('database.management.connectionString') }}</label>
-            <div class="flex items-center gap-2">
-              <code class="flex-1 p-2 bg-slate-100 rounded text-sm text-slate-700 break-all">
-                {{ connectionModal.connectionString }}
-              </code>
-              <button
-                @click="copyToClipboard(connectionModal.connectionString)"
-                class="p-2 text-slate-400 hover:text-emerald-600 transition-colors"
-              >
-                <Copy class="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-          <!-- Details -->
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="text-sm text-slate-500 block mb-1">{{ t('database.management.host') }}</label>
-              <span class="text-slate-900">localhost</span>
-            </div>
-            <div>
-              <label class="text-sm text-slate-500 block mb-1">{{ t('database.management.port') }}</label>
-              <span class="text-slate-900">{{ connectionModal.port }}</span>
-            </div>
-            <div>
-              <label class="text-sm text-slate-500 block mb-1">{{ t('database.management.database') }}</label>
-              <span class="text-slate-900">{{ connectionModal.database }}</span>
-            </div>
-            <div>
-              <label class="text-sm text-slate-500 block mb-1">{{ t('database.management.username') }}</label>
-              <span class="text-slate-900">{{ connectionModal.username }}</span>
-            </div>
-          </div>
-          <!-- Warning -->
-          <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <div class="flex items-start gap-2">
-              <AlertTriangle class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <p class="text-sm text-amber-700">{{ t('database.management.connectionWarning') }}</p>
-            </div>
-          </div>
-        </div>
-        <div class="p-4 border-t border-slate-200 flex justify-end">
-          <button
-            @click="connectionModal.visible = false"
-            class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg transition-colors"
-          >
-            {{ t('common.close') }}
-          </button>
-        </div>
-      </div>
-    </div>
+      :connectionString="connectionModal.connectionString"
+      :port="connectionModal.port"
+      :database="connectionModal.database"
+      :username="connectionModal.username"
+      @close="connectionModal.visible = false"
+      @copy="copyToClipboard"
+    />
 
-    <!-- Reset Password Modal -->
-    <div
+    <!--
+      MODAL : RÉINITIALISATION DU MOT DE PASSE
+      Demande confirmation avant de reset le password.
+    -->
+    <ResetPasswordModal
       v-if="resetPasswordModal.visible"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-60 p-4"
-    >
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
-        <div class="p-4 border-b border-slate-200 flex items-center justify-between">
-          <h3 class="font-semibold text-slate-900">{{ t('database.management.resetPasswordTitle') }}</h3>
-          <button @click="resetPasswordModal.visible = false" class="text-slate-400 hover:text-slate-600">
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-        <div class="p-4 space-y-4">
-          <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-            <div :class="['w-8 h-8 rounded-lg flex items-center justify-center', getDatabaseColorClass(resetPasswordModal.dbType)]">
-              <span class="text-xs font-bold">{{ getDatabaseIcon(resetPasswordModal.dbType) }}</span>
-            </div>
-            <div>
-              <span class="font-medium text-slate-900">{{ resetPasswordModal.instance?.name }}</span>
-              <p class="text-xs text-slate-500">{{ getDatabaseName(resetPasswordModal.dbType) }}</p>
-            </div>
-          </div>
+      :dbType="resetPasswordModal.dbType"
+      :instance="resetPasswordModal.instance"
+      :loading="resetPasswordModal.loading"
+      @close="resetPasswordModal.visible = false"
+      @confirm="executeResetPassword"
+    />
 
-          <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <div class="flex items-start gap-2">
-              <AlertTriangle class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <p class="text-sm text-amber-700">{{ t('database.management.resetPasswordWarning') }}</p>
-            </div>
-          </div>
-
-          <!-- New Password Preview (optional manual password) -->
-          <div>
-            <label class="flex items-center gap-2 mb-2">
-              <input type="checkbox" v-model="resetPasswordModal.useCustomPassword" class="rounded text-emerald-500" />
-              <span class="text-sm text-slate-700">{{ t('database.management.useCustomPassword') }}</span>
-            </label>
-            <input
-              v-if="resetPasswordModal.useCustomPassword"
-              v-model="resetPasswordModal.customPassword"
-              type="text"
-              :placeholder="t('database.management.enterPassword')"
-              class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-            />
-          </div>
-        </div>
-        <div class="p-4 border-t border-slate-200 flex justify-end gap-3">
-          <button
-            @click="resetPasswordModal.visible = false"
-            class="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
-          >
-            {{ t('common.cancel') }}
-          </button>
-          <button
-            @click="executeResetPassword"
-            :disabled="resetPasswordModal.loading"
-            class="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-300 text-white rounded-lg transition-colors flex items-center gap-2"
-          >
-            <Loader2 v-if="resetPasswordModal.loading" class="w-4 h-4 animate-spin" />
-            <Key v-else class="w-4 h-4" />
-            {{ t('database.management.resetPassword') }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Create Database Modal -->
-    <div
+    <!--
+      MODAL : CRÉATION DE BASE DE DONNÉES
+      Formulaire pour créer une nouvelle BDD.
+    -->
+    <CreateModal
       v-if="showCreateModal"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-60 p-4"
-    >
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
-        <div class="p-4 border-b border-slate-200 flex items-center justify-between">
-          <h3 class="font-semibold text-slate-900">{{ t('database.management.createNewDatabase') }}</h3>
-          <button @click="showCreateModal = false" class="text-slate-400 hover:text-slate-600">
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-        <div class="p-4 space-y-4">
-          <!-- Database Type Selection -->
-          <div>
-            <label class="text-sm font-medium text-slate-700 block mb-2">{{ t('database.management.selectType') }}</label>
-            <div class="grid grid-cols-2 gap-2">
-              <button
-                v-for="type in availableDbTypes"
-                :key="type.id"
-                @click="createModal.dbType = type.id"
-                :class="[
-                  'p-3 border rounded-lg text-left transition-all',
-                  createModal.dbType === type.id
-                    ? 'border-emerald-500 bg-emerald-50'
-                    : 'border-slate-200 hover:border-slate-300',
-                ]"
-              >
-                <div class="flex items-center gap-2">
-                  <div :class="['w-8 h-8 rounded-lg flex items-center justify-center', type.colorClass]">
-                    <span class="text-xs font-bold">{{ type.icon }}</span>
-                  </div>
-                  <span class="font-medium text-slate-900 text-sm">{{ type.name }}</span>
-                </div>
-              </button>
-            </div>
-          </div>
+      :loading="createModal.loading"
+      :preselectedType="createModal.dbType"
+      @close="showCreateModal = false"
+      @create="executeCreateDatabase"
+    />
 
-          <!-- Database Name -->
-          <div v-if="createModal.dbType !== 'redis'">
-            <label class="text-sm font-medium text-slate-700 block mb-1">{{ t('database.management.databaseName') }}</label>
-            <input
-              v-model="createModal.databaseName"
-              type="text"
-              placeholder="my_database"
-              class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-            />
-          </div>
-
-          <!-- Username -->
-          <div v-if="createModal.dbType !== 'redis'">
-            <label class="text-sm font-medium text-slate-700 block mb-1">{{ t('database.management.username') }}</label>
-            <input
-              v-model="createModal.username"
-              type="text"
-              :placeholder="createModal.databaseName ? `${createModal.databaseName}_user` : 'db_user'"
-              class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-            />
-          </div>
-
-          <!-- Info -->
-          <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-            <div class="flex items-start gap-2">
-              <Lock class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
-              <p class="text-sm text-emerald-700">{{ t('database.management.passwordAutoGenerated') }}</p>
-            </div>
-          </div>
-        </div>
-        <div class="p-4 border-t border-slate-200 flex justify-end gap-3">
-          <button
-            @click="showCreateModal = false"
-            class="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
-          >
-            {{ t('common.cancel') }}
-          </button>
-          <button
-            @click="executeCreateDatabase"
-            :disabled="createModal.loading || !isCreateFormValid"
-            class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white rounded-lg transition-colors flex items-center gap-2"
-          >
-            <Loader2 v-if="createModal.loading" class="w-4 h-4 animate-spin" />
-            <Plus v-else class="w-4 h-4" />
-            {{ t('database.management.create') }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- New Password Result Modal -->
-    <div
+    <!--
+      MODAL : NOUVEAU MOT DE PASSE
+      Affiche le mot de passe généré après un reset ou une création.
+      IMPORTANT : Ce mot de passe ne sera plus jamais affiché !
+    -->
+    <NewPasswordModal
       v-if="newPasswordModal.visible"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-60 p-4"
-    >
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
-        <div class="p-4 border-b border-slate-200 flex items-center justify-between">
-          <h3 class="font-semibold text-green-700 flex items-center gap-2">
-            <CheckCircle2 class="w-5 h-5" />
-            {{ t('database.management.passwordResetSuccess') }}
-          </h3>
-          <button @click="newPasswordModal.visible = false" class="text-slate-400 hover:text-slate-600">
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-        <div class="p-4 space-y-4">
-          <div class="p-4 bg-slate-100 rounded-lg">
-            <label class="text-sm text-slate-500 block mb-1">{{ t('database.management.newPassword') }}</label>
-            <div class="flex items-center gap-2">
-              <code class="flex-1 p-2 bg-white rounded text-lg font-mono text-slate-900 select-all">
-                {{ newPasswordModal.password }}
-              </code>
-              <button
-                @click="copyToClipboard(newPasswordModal.password)"
-                class="p-2 text-slate-400 hover:text-emerald-600 transition-colors"
-              >
-                <Copy class="w-5 h-5" />
-              </button>
-            </div>
-          </div>
+      :password="newPasswordModal.password"
+      @close="newPasswordModal.visible = false"
+      @copy="copyToClipboard"
+    />
 
-          <div class="p-3 bg-red-50 border border-red-200 rounded-lg">
-            <div class="flex items-start gap-2">
-              <AlertTriangle class="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-              <p class="text-sm text-red-700">{{ t('database.management.savePasswordWarning') }}</p>
-            </div>
-          </div>
-        </div>
-        <div class="p-4 border-t border-slate-200 flex justify-end">
-          <button
-            @click="newPasswordModal.visible = false"
-            class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors"
-          >
-            {{ t('database.management.understood') }}
-          </button>
-        </div>
-      </div>
-    </div>
+    <!--
+      MODAL : PROGRESSION DE L'OPÉRATION
+      Affiche les logs en temps réel pendant une opération (création, reset...).
+      C'est comme une console/terminal qui montre ce qui se passe sur le serveur.
+      Utile pour débugger si quelque chose ne fonctionne pas.
+    -->
+    <OperationProgressModal
+      v-if="operationProgressModal.visible"
+      :title="operationProgressModal.title"
+      :subtitle="operationProgressModal.subtitle"
+      :logs="infrastructureLogs || []"
+      :result="operationResult || null"
+      :loading="operationProgressModal.loading"
+      @close="closeOperationProgress"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
-import {
-  Settings,
-  X,
-  Server,
-  Database,
-  ChevronRight,
-  Loader2,
-  RefreshCw,
-  Plus,
-  HardDrive,
-  Eye,
-  Key,
-  Trash2,
-  Copy,
-  AlertTriangle,
-  Lock,
-  CheckCircle2,
-} from 'lucide-vue-next';
+import { ref, watch, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { Settings, X, Loader2 } from 'lucide-vue-next'
 
-const { t } = useI18n();
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * IMPORTS DES COMPOSANTS ENFANTS
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Chaque composant gère une partie spécifique de l'interface.
+ * Cela permet de garder ce fichier léger et maintenable.
+ */
+import ServerSelect from './management/ServerSelect.vue'
+import DatabaseList from './management/DatabaseList.vue'
+import ConnectionModal from './management/ConnectionModal.vue'
+import ResetPasswordModal from './management/ResetPasswordModal.vue'
+import CreateModal from './management/CreateModal.vue'
+import NewPasswordModal from './management/NewPasswordModal.vue'
+import OperationProgressModal from './management/OperationProgressModal.vue'
 
+const { t } = useI18n()
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * TYPES
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * **DatabaseInstance** - Une base de données individuelle
+ *
+ * Représente une BDD spécifique sur un serveur.
+ * Ex: "wordpress_db" sur PostgreSQL.
+ */
 interface DatabaseInstance {
-  name: string;
-  user?: string;
-  createdAt?: string;
+  /** Nom de la base de données */
+  name: string
+  /** Utilisateur propriétaire (optionnel) */
+  user?: string
+  /** Date de création (optionnel) */
+  createdAt?: string
 }
 
+/**
+ * **DatabaseInfo** - Informations sur un type de BDD installé
+ *
+ * Regroupe toutes les instances d'un même type.
+ * Ex: PostgreSQL version 15 avec 3 bases de données.
+ */
 interface DatabaseInfo {
-  type: 'postgresql' | 'mysql' | 'redis' | 'mongodb';
-  version?: string;
-  running: boolean;
-  instances: DatabaseInstance[];
+  /** Type de BDD : postgresql, mysql, redis, mongodb */
+  type: 'postgresql' | 'mysql' | 'redis' | 'mongodb'
+  /** Version installée (ex: "15.2") */
+  version?: string
+  /** Le service est-il en cours d'exécution ? */
+  running: boolean
+  /** Liste des bases de données de ce type */
+  instances: DatabaseInstance[]
 }
 
+/**
+ * **ServerInfo** - Informations sur un serveur
+ */
+interface ServerInfo {
+  /** Identifiant unique */
+  id: string
+  /** Nom d'hôte */
+  hostname: string
+  /** Adresse IP */
+  ip: string
+  /** Alias optionnel */
+  alias?: string
+  /** Est-il en ligne ? */
+  online: boolean
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ÉVÉNEMENTS ÉMIS
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Ces événements sont envoyés au composant parent pour qu'il
+ * effectue les actions côté API.
+ */
 const emit = defineEmits<{
-  (e: 'close'): void;
-  (e: 'getDatabaseInfo', serverId: string): void;
-  (e: 'resetDatabasePassword', serverId: string, dbType: string, dbName: string, customPassword?: string): void;
-  (e: 'createDatabase', serverId: string, dbType: string, dbName: string, username: string): void;
-}>();
+  /** Fermer le modal */
+  close: []
+  /** Demander les infos BDD d'un serveur */
+  getDatabaseInfo: [serverId: string]
+  /** Réinitialiser le mot de passe d'une BDD (mot de passe auto-généré) */
+  resetDatabasePassword: [serverId: string, dbType: string, dbName: string]
+  /** Créer une nouvelle BDD */
+  createDatabase: [serverId: string, dbType: string, dbName: string, username: string]
+}>()
 
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * PROPS
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
 const props = defineProps<{
-  servers: Array<{
-    id: string;
-    hostname: string;
-    ip: string;
-    alias?: string;
-    online: boolean;
-  }>;
-  preselectedServerId?: string;
-  databaseInfo?: DatabaseInfo[];
+  /** Liste des serveurs disponibles */
+  servers: ServerInfo[]
+  /** ID du serveur présélectionné (optionnel) */
+  preselectedServerId?: string
+  /** Infos BDD reçues du serveur (via l'API) */
+  databaseInfo?: DatabaseInfo[]
+  /**
+   * Résultat d'une opération (reset password ou création).
+   * Le parent met à jour cette prop après l'appel API.
+   */
   operationResult?: {
-    success: boolean;
-    operation: 'reset_password' | 'create_database';
-    connectionString?: string;
-    password?: string;
-    error?: string;
-  } | null;
-}>();
+    success: boolean
+    operation: 'reset_password' | 'create_database'
+    connectionString?: string
+    password?: string
+    error?: string
+  } | null
+  /**
+   * Logs d'infrastructure reçus en temps réel via WebSocket.
+   * Ces logs permettent de voir ce qui se passe sur le serveur
+   * pendant une opération (création de BDD, reset password...).
+   */
+  infrastructureLogs?: Array<{ message: string; stream: 'stdout' | 'stderr' }>
+}>()
 
-// State
-const loading = ref(false);
-const refreshing = ref(false);
-const selectedServer = ref<typeof props.servers[0] | null>(null);
-const databases = ref<DatabaseInfo[]>([]);
-const showCreateModal = ref(false);
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ÉTAT LOCAL
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
 
-// Connection Info Modal
+/** Chargement initial des BDD en cours ? */
+const loading = ref(false)
+
+/** Rafraîchissement des BDD en cours ? */
+const refreshing = ref(false)
+
+/** Serveur actuellement sélectionné */
+const selectedServer = ref<ServerInfo | null>(null)
+
+/** Liste des BDD du serveur sélectionné */
+const databases = ref<DatabaseInfo[]>([])
+
+/** Afficher le modal de création ? */
+const showCreateModal = ref(false)
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ÉTAT DES MODALS
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Chaque modal a son propre objet d'état avec toutes les données nécessaires.
+ */
+
+/** État du modal d'informations de connexion */
 const connectionModal = ref({
   visible: false,
   connectionString: '',
   port: '',
   database: '',
   username: '',
-});
+})
 
-// Reset Password Modal
+/** État du modal de réinitialisation de mot de passe */
 const resetPasswordModal = ref({
   visible: false,
   loading: false,
-  dbType: '' as string,
+  dbType: '',
   instance: null as DatabaseInstance | null,
-  useCustomPassword: false,
-  customPassword: '',
-});
+})
 
-// Create Database Modal
+/** État du modal de création */
 const createModal = ref({
   loading: false,
-  dbType: 'postgresql' as 'postgresql' | 'mysql' | 'redis' | 'mongodb',
-  databaseName: '',
-  username: '',
-});
+  dbType: 'postgresql',
+})
 
-// New Password Result Modal
+/** État du modal d'affichage du nouveau mot de passe */
 const newPasswordModal = ref({
   visible: false,
   password: '',
-});
+})
 
-// Computed
-const availableServers = computed(() => props.servers.filter((s) => s.online));
+/**
+ * État du modal de progression des opérations.
+ *
+ * Ce modal s'affiche pendant qu'une opération est en cours (création de BDD,
+ * reset password...) et montre les logs en temps réel comme une console.
+ * C'est utile pour débugger et voir ce qui se passe sur le serveur.
+ */
+const operationProgressModal = ref({
+  /** Afficher le modal ? */
+  visible: false,
+  /** Titre de l'opération (ex: "Création de base de données") */
+  title: '',
+  /** Sous-titre (ex: nom de la BDD) */
+  subtitle: '',
+  /** Type d'opération en cours */
+  operation: '' as 'reset_password' | 'create_database' | '',
+  /** Opération en cours ? */
+  loading: false,
+})
 
-const availableDbTypes = computed(() => [
-  { id: 'postgresql', name: 'PostgreSQL', icon: 'PG', colorClass: 'bg-blue-100 text-blue-600' },
-  { id: 'mysql', name: 'MySQL / MariaDB', icon: 'My', colorClass: 'bg-orange-100 text-orange-600' },
-  { id: 'redis', name: 'Redis', icon: 'Rd', colorClass: 'bg-red-100 text-red-600' },
-]);
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ACTIONS
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
 
-const isCreateFormValid = computed(() => {
-  if (createModal.value.dbType === 'redis') return true;
-  return createModal.value.databaseName.trim().length > 0;
-});
-
-// Methods
-function selectServer(server: typeof props.servers[0]) {
-  selectedServer.value = server;
-  loadDatabaseInfo();
+/**
+ * **selectServer()** - Sélectionne un serveur et charge ses BDD
+ *
+ * Appelé quand l'utilisateur clique sur un serveur dans la liste.
+ * Déclenche le chargement des informations BDD.
+ *
+ * @param server - Le serveur sélectionné
+ */
+function selectServer(server: ServerInfo) {
+  selectedServer.value = server
+  loadDatabaseInfo()
 }
 
+/**
+ * **loadDatabaseInfo()** - Charge les informations BDD du serveur
+ *
+ * Émet un événement pour que le parent récupère les infos via l'API.
+ * Affiche un spinner pendant le chargement.
+ */
 function loadDatabaseInfo() {
-  if (!selectedServer.value) return;
-  loading.value = true;
-  emit('getDatabaseInfo', selectedServer.value.id);
+  if (!selectedServer.value) return
+  loading.value = true
+  emit('getDatabaseInfo', selectedServer.value.id)
 }
 
+/**
+ * **refreshDatabaseInfo()** - Rafraîchit la liste des BDD
+ *
+ * Même chose que loadDatabaseInfo mais avec un indicateur différent
+ * (refreshing au lieu de loading) pour l'UX.
+ */
 function refreshDatabaseInfo() {
-  if (!selectedServer.value) return;
-  refreshing.value = true;
-  emit('getDatabaseInfo', selectedServer.value.id);
+  if (!selectedServer.value) return
+  refreshing.value = true
+  emit('getDatabaseInfo', selectedServer.value.id)
 }
 
-function getDatabaseColorClass(type: string): string {
-  const colors: Record<string, string> = {
-    postgresql: 'bg-blue-100 text-blue-600',
-    mysql: 'bg-orange-100 text-orange-600',
-    redis: 'bg-red-100 text-red-600',
-    mongodb: 'bg-green-100 text-green-600',
-  };
-  return colors[type] || 'bg-slate-100 text-slate-600';
+/**
+ * **generateConnectionString()** - Génère l'URL de connexion à une BDD
+ *
+ * Crée une URL au format standard pour se connecter à la base de données.
+ * Le mot de passe est remplacé par *** car on ne le connaît pas.
+ *
+ * @param dbType - Type de BDD (postgresql, mysql, redis, mongodb)
+ * @param instance - L'instance de BDD
+ * @returns L'URL de connexion (ex: postgresql://user:***@localhost:5432/dbname)
+ */
+function generateConnectionString(dbType: string, instance: DatabaseInstance): string {
+  const user = instance.user || 'root'
+  switch (dbType) {
+    case 'postgresql':
+      return `postgresql://${user}:***@localhost:5432/${instance.name}`
+    case 'mysql':
+      return `mysql://${user}:***@localhost:3306/${instance.name}`
+    case 'redis':
+      return `redis://:***@localhost:6379/0`
+    case 'mongodb':
+      return `mongodb://${user}:***@localhost:27017/${instance.name}`
+    default:
+      return ''
+  }
 }
 
-function getDatabaseIcon(type: string): string {
-  const icons: Record<string, string> = {
-    postgresql: 'PG',
-    mysql: 'My',
-    redis: 'Rd',
-    mongodb: 'Mg',
-  };
-  return icons[type] || 'DB';
-}
-
-function getDatabaseName(type: string): string {
-  const names: Record<string, string> = {
-    postgresql: 'PostgreSQL',
-    mysql: 'MySQL / MariaDB',
-    redis: 'Redis',
-    mongodb: 'MongoDB',
-  };
-  return names[type] || type;
-}
-
+/**
+ * **viewConnectionInfo()** - Ouvre le modal d'informations de connexion
+ *
+ * Prépare les données et affiche le modal avec les infos de connexion.
+ *
+ * @param dbType - Type de BDD
+ * @param instance - L'instance de BDD
+ */
 function viewConnectionInfo(dbType: string, instance: DatabaseInstance) {
+  // Ports par défaut de chaque type de BDD
   const ports: Record<string, string> = {
     postgresql: '5432',
     mysql: '3306',
     redis: '6379',
     mongodb: '27017',
-  };
-
+  }
   connectionModal.value = {
     visible: true,
     connectionString: generateConnectionString(dbType, instance),
     port: ports[dbType] || '0',
     database: instance.name,
     username: instance.user || '',
-  };
-}
-
-function generateConnectionString(dbType: string, instance: DatabaseInstance): string {
-  const user = instance.user || 'root';
-  switch (dbType) {
-    case 'postgresql':
-      return `postgresql://${user}:***@localhost:5432/${instance.name}`;
-    case 'mysql':
-      return `mysql://${user}:***@localhost:3306/${instance.name}`;
-    case 'redis':
-      return `redis://:***@localhost:6379/0`;
-    case 'mongodb':
-      return `mongodb://${user}:***@localhost:27017/${instance.name}`;
-    default:
-      return '';
   }
 }
 
+/**
+ * **openResetPassword()** - Ouvre le modal de reset password
+ *
+ * @param dbType - Type de BDD
+ * @param instance - L'instance concernée
+ */
 function openResetPassword(dbType: string, instance: DatabaseInstance) {
   resetPasswordModal.value = {
     visible: true,
     loading: false,
     dbType,
     instance,
-    useCustomPassword: false,
-    customPassword: '',
-  };
+  }
 }
 
+/**
+ * **executeResetPassword()** - Lance la réinitialisation du mot de passe
+ *
+ * Appelé quand l'utilisateur confirme dans le modal de reset.
+ * Ferme le modal de confirmation et ouvre le modal de progression
+ * qui montre les logs en temps réel.
+ *
+ * Le mot de passe est TOUJOURS généré automatiquement côté serveur.
+ */
 function executeResetPassword() {
-  if (!selectedServer.value || !resetPasswordModal.value.instance) return;
+  if (!selectedServer.value || !resetPasswordModal.value.instance) return
 
-  resetPasswordModal.value.loading = true;
-  const customPwd = resetPasswordModal.value.useCustomPassword
-    ? resetPasswordModal.value.customPassword
-    : undefined;
+  // Fermer le modal de confirmation
+  resetPasswordModal.value.visible = false
 
+  // Ouvrir le modal de progression avec les logs
+  operationProgressModal.value = {
+    visible: true,
+    title: 'Réinitialisation du mot de passe',
+    subtitle: resetPasswordModal.value.instance.name,
+    operation: 'reset_password',
+    loading: true,
+  }
+
+  // Émettre l'événement pour lancer l'opération (mot de passe auto-généré)
   emit(
     'resetDatabasePassword',
     selectedServer.value.id,
     resetPasswordModal.value.dbType,
     resetPasswordModal.value.instance.name,
-    customPwd,
-  );
+  )
 }
 
+/**
+ * **openCreateDatabase()** - Ouvre le modal de création de BDD
+ *
+ * @param dbType - Type de BDD présélectionné (optionnel)
+ */
 function openCreateDatabase(dbType?: string) {
   createModal.value = {
     loading: false,
-    dbType: (dbType as any) || 'postgresql',
-    databaseName: '',
-    username: '',
-  };
-  showCreateModal.value = true;
+    dbType: dbType || 'postgresql',
+  }
+  showCreateModal.value = true
 }
 
-function executeCreateDatabase() {
-  if (!selectedServer.value) return;
+/**
+ * **executeCreateDatabase()** - Lance la création d'une BDD
+ *
+ * Appelé quand l'utilisateur valide le formulaire de création.
+ * Ferme le modal de création et ouvre le modal de progression
+ * qui montre les logs en temps réel.
+ *
+ * @param dbType - Type de BDD
+ * @param databaseName - Nom de la nouvelle BDD
+ * @param username - Nom de l'utilisateur à créer
+ */
+function executeCreateDatabase(dbType: string, databaseName: string, username: string) {
+  if (!selectedServer.value) return
 
-  createModal.value.loading = true;
-  const username = createModal.value.username || `${createModal.value.databaseName}_user`;
+  // Fermer le modal de création
+  showCreateModal.value = false
 
-  emit(
-    'createDatabase',
-    selectedServer.value.id,
-    createModal.value.dbType,
-    createModal.value.databaseName,
-    username,
-  );
+  // Ouvrir le modal de progression avec les logs
+  operationProgressModal.value = {
+    visible: true,
+    title: 'Création de la base de données',
+    subtitle: `${databaseName} (${dbType})`,
+    operation: 'create_database',
+    loading: true,
+  }
+
+  // Émettre l'événement pour lancer l'opération
+  emit('createDatabase', selectedServer.value.id, dbType, databaseName, username)
 }
 
+/**
+ * **openDeleteConfirm()** - Ouvre la confirmation de suppression
+ *
+ * Fonctionnalité à venir - affiche juste un message pour l'instant.
+ */
 function openDeleteConfirm(_dbType: string, _instance: DatabaseInstance) {
-  // TODO: Implement delete confirmation
-  alert('Delete functionality coming soon');
+  alert('Delete functionality coming soon')
 }
 
+/**
+ * **copyToClipboard()** - Copie un texte dans le presse-papier
+ *
+ * Utilisé par les modals pour copier les URLs de connexion ou passwords.
+ *
+ * @param text - Le texte à copier
+ */
 function copyToClipboard(text: string) {
-  navigator.clipboard.writeText(text);
+  navigator.clipboard.writeText(text)
 }
 
-// Watch for database info updates
-watch(
-  () => props.databaseInfo,
-  (info) => {
-    if (info) {
-      databases.value = info;
-      loading.value = false;
-      refreshing.value = false;
-    }
-  },
-);
+/**
+ * **closeOperationProgress()** - Ferme le modal de progression
+ *
+ * Appelé quand l'utilisateur a fini de consulter le résultat de l'opération.
+ * Réinitialise l'état du modal pour la prochaine opération.
+ */
+function closeOperationProgress() {
+  operationProgressModal.value = {
+    visible: false,
+    title: '',
+    subtitle: '',
+    operation: '',
+    loading: false,
+  }
+}
 
-// Watch for operation results
-watch(
-  () => props.operationResult,
-  (result) => {
-    if (result) {
-      if (result.operation === 'reset_password') {
-        resetPasswordModal.value.loading = false;
-        resetPasswordModal.value.visible = false;
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * WATCHERS
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Les watchers observent les changements des props et réagissent en conséquence.
+ */
 
-        if (result.success && result.password) {
-          newPasswordModal.value = {
-            visible: true,
-            password: result.password,
-          };
-          // Refresh database info
-          refreshDatabaseInfo();
-        }
-      } else if (result.operation === 'create_database') {
-        createModal.value.loading = false;
-        showCreateModal.value = false;
+/**
+ * Quand les infos BDD sont reçues du parent (après appel API),
+ * on met à jour l'état local et on arrête les indicateurs de chargement.
+ */
+watch(() => props.databaseInfo, (info) => {
+  if (info) {
+    databases.value = info
+    loading.value = false
+    refreshing.value = false
+  }
+})
 
-        if (result.success && result.password) {
-          newPasswordModal.value = {
-            visible: true,
-            password: result.password,
-          };
-          // Refresh database info
-          refreshDatabaseInfo();
-        }
-      }
-    }
-  },
-);
+/**
+ * Quand le résultat d'une opération est reçu, on met à jour le modal de progression.
+ *
+ * Le modal de progression reste ouvert et affiche :
+ * - Le spinner disparaît (loading = false)
+ * - Le résultat (succès avec mot de passe, ou erreur)
+ * - Les logs restent visibles pour le debug
+ *
+ * L'utilisateur ferme le modal quand il a fini de consulter le résultat.
+ */
+watch(() => props.operationResult, (result) => {
+  if (result && operationProgressModal.value.visible) {
+    // Arrêter le spinner
+    operationProgressModal.value.loading = false
 
-// Initialize
-onMounted(() => {
-  if (props.preselectedServerId) {
-    const server = props.servers.find((s) => s.id === props.preselectedServerId);
-    if (server) {
-      selectServer(server);
+    // Si succès, rafraîchir la liste des BDD
+    if (result.success) {
+      refreshDatabaseInfo()
     }
   }
-});
+})
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * INITIALISATION
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * Au montage du composant, si un serveur est présélectionné (via prop),
+ * on le sélectionne automatiquement.
+ */
+onMounted(() => {
+  if (props.preselectedServerId) {
+    const server = props.servers.find(s => s.id === props.preselectedServerId)
+    if (server) selectServer(server)
+  }
+})
 </script>

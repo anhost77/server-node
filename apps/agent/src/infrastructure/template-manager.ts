@@ -23,6 +23,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execSync } from 'node:child_process';
 
 // ESM-compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -373,7 +374,6 @@ export class TemplateManager {
         if (options.owner && process.platform !== 'win32') {
             const [user, group] = options.owner.split(':');
             try {
-                const { execSync } = require('child_process');
                 execSync(`chown ${user}:${group || user} "${targetPath}"`);
             } catch {
                 // Ignorer si on n'a pas les permissions

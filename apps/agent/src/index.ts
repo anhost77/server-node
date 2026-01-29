@@ -879,7 +879,6 @@ WantedBy=multi-user.target
             if (raw.type === 'RESET_DATABASE_PASSWORD') {
                 const dbType = raw.dbType as DatabaseType;
                 const dbName = raw.dbName as string;
-                const customPassword = raw.customPassword as string | undefined;
                 const infraManager = new InfrastructureManager((message, stream) => {
                     if (ws.readyState === WebSocket.OPEN && currentServerId) {
                         ws.send(JSON.stringify({
@@ -890,7 +889,8 @@ WantedBy=multi-user.target
                         }));
                     }
                 });
-                infraManager.resetDatabasePassword(dbType, dbName, customPassword).then(result => {
+                // Le mot de passe est toujours auto-généré pour des raisons de sécurité
+                infraManager.resetDatabasePassword(dbType, dbName).then(result => {
                     ws.send(JSON.stringify({
                         type: 'DATABASE_PASSWORD_RESET',
                         serverId: currentServerId,

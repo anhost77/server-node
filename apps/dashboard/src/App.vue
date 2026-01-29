@@ -883,8 +883,11 @@ function connectWS() {
       }
       // Database Stack Configuration Response (Wizard)
       else if (msg.type === 'DATABASE_STACK_CONFIGURED') {
-        if (msg.serverId === selectedServerId.value) {
+        // Utiliser le serverId stocké lors de l'appel à configureDatabaseStack
+        // car activeServer.value?.id peut être null ou différent
+        if (msg.serverId === databaseStackTargetServerId.value) {
           configuringDatabaseStack.value = false
+          databaseStackTargetServerId.value = null // Réinitialiser
           databaseStackResult.value = {
             success: msg.success,
             connectionString: msg.connectionString,
@@ -908,6 +911,40 @@ function connectWS() {
           stoppingDatabase.value = null
           if (msg.success) {
             requestServerStatus()
+          }
+        }
+      }
+      // Database Info Response (Management Wizard)
+      else if (msg.type === 'DATABASE_INFO_RESPONSE') {
+        if (msg.serverId === selectedServerId.value) {
+          databaseInfo.value = msg.databases || []
+        }
+      }
+      // Database Password Reset Response
+      else if (msg.type === 'DATABASE_PASSWORD_RESET') {
+        if (msg.serverId === selectedServerId.value) {
+          databaseOperationResult.value = {
+            success: msg.success,
+            operation: 'reset_password',
+            connectionString: msg.connectionString,
+            password: msg.password,
+            error: msg.error
+          }
+        }
+      }
+      // Database Instance Created Response
+      else if (msg.type === 'DATABASE_INSTANCE_CREATED') {
+        if (msg.serverId === selectedServerId.value) {
+          databaseOperationResult.value = {
+            success: msg.success,
+            operation: 'create_database',
+            connectionString: msg.connectionString,
+            password: msg.password,
+            error: msg.error
+          }
+          // Refresh database info after creating a new instance
+          if (msg.success) {
+            getDatabaseInfo(selectedServerId.value)
           }
         }
       }
@@ -1849,17 +1886,64 @@ function configureDnsStack(serverId: string, config: any) {
 // Database Stack Configuration (Wizard)
 const configuringDatabaseStack = ref(false)
 const databaseStackResult = ref<{ success: boolean; connectionString?: string; error?: string } | null>(null)
+// Stocker le serverId de la configuration en cours pour la comparaison lors de la réception du résultat
+const databaseStackTargetServerId = ref<string | null>(null)
 
 function configureDatabaseStack(serverId: string, config: any) {
   if (configuringDatabaseStack.value) return
 
   configuringDatabaseStack.value = true
   databaseStackResult.value = null
+  databaseStackTargetServerId.value = serverId // Stocker le serverId cible
   infrastructureLogs.value = []
   ws?.send(JSON.stringify({
     type: 'CONFIGURE_DATABASE_STACK',
     serverId,
     config
+  }))
+}
+
+// Database Management (for DatabaseManagementWizard)
+const databaseInfo = ref<Array<{
+  type: 'postgresql' | 'mysql' | 'redis' | 'mongodb';
+  version?: string;
+  running: boolean;
+  instances: Array<{ name: string; user?: string; createdAt?: string }>;
+}>>([])
+const databaseOperationResult = ref<{
+  success: boolean;
+  operation: 'reset_password' | 'create_database';
+  connectionString?: string;
+  password?: string;
+  error?: string;
+} | null>(null)
+
+function getDatabaseInfo(serverId: string) {
+  databaseInfo.value = []
+  ws?.send(JSON.stringify({
+    type: 'GET_DATABASE_INFO',
+    serverId
+  }))
+}
+
+function resetDatabasePassword(serverId: string, dbType: string, dbName: string) {
+  databaseOperationResult.value = null
+  ws?.send(JSON.stringify({
+    type: 'RESET_DATABASE_PASSWORD',
+    serverId,
+    dbType,
+    dbName,
+  }))
+}
+
+function createDatabaseInstance(serverId: string, dbType: string, dbName: string, username?: string) {
+  databaseOperationResult.value = null
+  ws?.send(JSON.stringify({
+    type: 'CREATE_DATABASE_INSTANCE',
+    serverId,
+    dbType,
+    dbName,
+    username
   }))
 }
 
@@ -4431,6 +4515,9 @@ function openNewCannedResponse() {
              :fetching-remote-logs="fetchingRemoteLogs"
              :remote-log-file-path="remoteLogFilePath"
              :mail-stack-result="mailStackResult"
+             :database-stack-result="databaseStackResult"
+             :database-info="databaseInfo"
+             :database-operation-result="databaseOperationResult"
              @back="closeServerSettings"
              @refresh="requestServerStatus"
              @install-runtime="installRuntime"
@@ -4452,6 +4539,9 @@ function openNewCannedResponse() {
              @configure-mail-stack="configureMailStack"
              @configure-dns-stack="configureDnsStack"
              @configure-database-stack="configureDatabaseStack"
+             @get-database-info="getDatabaseInfo"
+             @reset-database-password="resetDatabasePassword"
+             @create-database-instance="createDatabaseInstance"
            />
 
         </div>

@@ -22,7 +22,7 @@ import os from 'node:os';
 import crypto from 'node:crypto';
 import type { LogFn, DatabaseType, DbSecurityOptions } from '../types.js';
 import { runCommand, runCommandSilent, commandExists, sleep, runAsUser } from '../helpers.js';
-import { storeDbCredentials, getDbCredentials } from '../credentials.js';
+import { storeDbCredentials, getDbCredentials, deleteDbCredentials } from '../credentials.js';
 
 type DatabaseConfigurator = (dbName: string, opts: DbSecurityOptions, onLog: LogFn) => Promise<string>;
 
@@ -171,6 +171,12 @@ async function configureMysql(
         await sleep(2000);
 
         // Apply security options
+        storedCreds = await applyMysqlSecurity(opts, onLog);
+    } else if (!storedCreds) {
+        // MySQL est installé mais pas de credentials stockées
+        // Cela peut arriver après une désinstallation/réinstallation
+        // On applique la sécurité pour définir un nouveau mot de passe root
+        onLog(`🔐 MySQL déjà installé mais pas de credentials. Application de la sécurité...\n`, 'stdout');
         storedCreds = await applyMysqlSecurity(opts, onLog);
     }
 
@@ -343,6 +349,10 @@ export async function removeDatabase(
                 onLog(`Deleting /var/lib/postgresql...\n`, 'stderr');
                 await runCommand('rm', ['-rf', '/var/lib/postgresql'], onLog);
             }
+            // Supprimer les credentials stockés pour éviter les problèmes lors d'une réinstallation
+            if (deleteDbCredentials('postgresql')) {
+                onLog(`🗑️ Credentials PostgreSQL supprimés\n`, 'stdout');
+            }
             break;
 
         case 'mysql':
@@ -355,6 +365,10 @@ export async function removeDatabase(
                 onLog(`Deleting /var/lib/mysql...\n`, 'stderr');
                 await runCommand('rm', ['-rf', '/var/lib/mysql'], onLog);
             }
+            // Supprimer les credentials stockés pour éviter les problèmes lors d'une réinstallation
+            if (deleteDbCredentials('mysql')) {
+                onLog(`🗑️ Credentials MySQL supprimés\n`, 'stdout');
+            }
             break;
 
         case 'redis':
@@ -363,6 +377,10 @@ export async function removeDatabase(
             if (removeData && fs.existsSync('/var/lib/redis')) {
                 onLog(`Deleting /var/lib/redis...\n`, 'stderr');
                 await runCommand('rm', ['-rf', '/var/lib/redis'], onLog);
+            }
+            // Supprimer les credentials stockés pour éviter les problèmes lors d'une réinstallation
+            if (deleteDbCredentials('redis')) {
+                onLog(`🗑️ Credentials Redis supprimés\n`, 'stdout');
             }
             break;
 
