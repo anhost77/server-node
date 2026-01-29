@@ -196,8 +196,21 @@ async function configureMysql(
 
         if (!storedCreds) {
             // MySQL est installé mais pas de credentials valides
-            // On applique la sécurité pour définir un nouveau mot de passe root
-            onLog(`🔐 MySQL déjà installé mais pas de credentials valides. Application de la sécurité...\n`, 'stdout');
+            // On ne peut pas reconfigurer sans se connecter, donc on fait un nuclearCleanup et on réinstalle
+            onLog(`🔄 MySQL installé mais credentials invalides. Réinstallation complète...\n`, 'stdout');
+
+            // Nettoyage nucléaire complet (supprime packages, données, configs)
+            await nuclearCleanup('mysql', onLog);
+
+            // Réinstallation propre
+            onLog(`📥 Réinstallation de MariaDB...\n`, 'stdout');
+            await runCommand('apt-get', ['update'], onLog);
+            await runCommand('apt-get', ['install', '-y', 'default-mysql-server', 'default-mysql-client'], onLog);
+            await runCommand('systemctl', ['enable', 'mariadb'], onLog);
+            await runCommand('systemctl', ['start', 'mariadb'], onLog);
+            await sleep(2000);
+
+            // Appliquer la sécurité sur l'installation fraîche
             storedCreds = await applyMysqlSecurity(opts, onLog);
         }
     }
