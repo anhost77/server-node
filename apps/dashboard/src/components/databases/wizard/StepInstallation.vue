@@ -80,6 +80,10 @@ const props = defineProps<{
   installing: boolean
   /** L'installation est-elle terminée (avec succès) ? */
   installComplete: boolean
+  /** L'installation a-t-elle échoué ? */
+  installFailed?: boolean
+  /** Message d'erreur en cas d'échec */
+  installError?: string
   /** Liste des étapes avec leur statut */
   steps: InstallStep[]
   /** Liste des logs en temps réel */
@@ -149,7 +153,7 @@ watch(() => props.logs.length, () => {
       EN-TÊTE DE L'ÉTAPE
       Affiché uniquement pendant l'installation (pas après la fin)
     -->
-    <div v-if="!installComplete">
+    <div v-if="!installComplete && !installFailed">
       <h3 class="text-lg font-semibold text-slate-900 mb-2">
         {{ t('database.wizard.install.title') }}
       </h3>
@@ -157,12 +161,26 @@ watch(() => props.logs.length, () => {
     </div>
 
     <!--
-      ═══════════════════════════════════════════════════════════════════════════
-      AFFICHAGE PENDANT L'INSTALLATION
-      ═══════════════════════════════════════════════════════════════════════════
-      Montre les étapes et les logs pendant que l'installation est en cours
+      EN-TÊTE EN CAS D'ERREUR
+      Affiché quand l'installation a échoué
     -->
-    <div v-if="installing" class="space-y-4">
+    <div v-if="installFailed" class="mb-4">
+      <h3 class="text-lg font-semibold text-red-600 mb-2">
+        Installation échouée
+      </h3>
+      <p class="text-sm text-slate-600">
+        L'installation a rencontré une erreur. Consultez les logs ci-dessous pour comprendre le problème.
+      </p>
+    </div>
+
+    <!--
+      ═══════════════════════════════════════════════════════════════════════════
+      AFFICHAGE PENDANT L'INSTALLATION OU EN CAS D'ERREUR
+      ═══════════════════════════════════════════════════════════════════════════
+      Montre les étapes et les logs pendant l'installation ou après un échec
+      pour que le sys admin puisse comprendre le problème.
+    -->
+    <div v-if="installing || installFailed" class="space-y-4">
       <!--
         LISTE DES ÉTAPES D'INSTALLATION
         Chaque étape a un indicateur visuel de son statut
@@ -249,6 +267,23 @@ watch(() => props.logs.length, () => {
           <!-- Message si aucun log n'est encore arrivé -->
           <div v-if="!logs.length" class="text-slate-500 italic">
             {{ t('database.wizard.install.waitingLogs') }}
+          </div>
+        </div>
+      </div>
+
+      <!--
+        ENCADRÉ D'ERREUR
+        Affiché en cas d'échec de l'installation avec le message d'erreur
+      -->
+      <div v-if="installFailed" class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div class="flex items-start gap-3">
+          <XCircle class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <h4 class="text-sm font-semibold text-red-800 mb-1">Erreur d'installation</h4>
+            <p class="text-sm text-red-700">{{ installError }}</p>
+            <p class="text-xs text-red-600 mt-2">
+              Consultez les logs ci-dessus pour plus de détails sur l'erreur.
+            </p>
           </div>
         </div>
       </div>

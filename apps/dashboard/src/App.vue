@@ -943,7 +943,7 @@ function connectWS() {
             error: msg.error
           }
           // Refresh database info after creating a new instance
-          if (msg.success) {
+          if (msg.success && selectedServerId.value) {
             getDatabaseInfo(selectedServerId.value)
           }
         }

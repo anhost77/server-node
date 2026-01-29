@@ -205,7 +205,10 @@ async function applyMysqlSecurity(
 
     if (opts.setRootPassword) {
         onLog(`🔒 Setting root password...\n`, 'stdout');
-        await runCommand('mariadb-admin', ['-u', 'root', 'password', rootPassword], onLog);
+        // Sur MariaDB 10.4+, l'authentification par défaut est unix_socket
+        // On utilise mysql directement (qui fonctionne via unix_socket en root)
+        // pour changer le mot de passe avec ALTER USER
+        await runCommand('mysql', ['-e', `ALTER USER 'root'@'localhost' IDENTIFIED BY '${rootPassword}';`], onLog);
     }
 
     const mysqlAuthInit = opts.setRootPassword ? ['-u', 'root', `-p${rootPassword}`] : ['-u', 'root'];

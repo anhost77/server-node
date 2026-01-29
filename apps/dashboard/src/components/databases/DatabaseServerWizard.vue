@@ -163,6 +163,8 @@
           v-if="currentStep === 6"
           :installing="installing"
           :installComplete="installComplete"
+          :installFailed="installFailed"
+          :installError="installError"
           :steps="installationSteps"
           :logs="installationLogs || []"
           :connectionString="connectionString"
@@ -216,7 +218,7 @@
             À l'étape finale, avant de lancer l'installation
           -->
           <button
-            v-else-if="!installing && !installComplete"
+            v-else-if="!installing && !installComplete && !installFailed"
             @click="startInstallation"
             class="px-6 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg flex items-center gap-2 transition-colors"
           >
@@ -235,6 +237,19 @@
             class="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
           >
             {{ t('common.done') }}
+          </button>
+
+          <!--
+            BOUTON FERMER (ERREUR)
+            Après un échec d'installation pour fermer le wizard.
+            Le sys admin a pu voir les logs et comprendre le problème.
+          -->
+          <button
+            v-else-if="installFailed"
+            @click="$emit('close')"
+            class="px-6 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors"
+          >
+            {{ t('common.close') }}
           </button>
         </div>
       </div>
@@ -422,6 +437,12 @@ const installing = ref(false)
 
 /** Installation terminée avec succès ? */
 const installComplete = ref(false)
+
+/** Installation échouée ? */
+const installFailed = ref(false)
+
+/** Message d'erreur de l'installation */
+const installError = ref('')
 
 /** Connection string générée après installation */
 const connectionString = ref('')
@@ -640,6 +661,8 @@ watch(() => props.installationResult, (result) => {
         runningStep.message = result.error
       }
       installing.value = false
+      installFailed.value = true
+      installError.value = result.error || 'Installation failed'
     }
   }
 })
