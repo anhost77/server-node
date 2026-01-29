@@ -351,6 +351,32 @@ export const NUCLEAR_CLEANUP_CONFIG: Record<string, {
         dataDirs: ['/var/lib/redis', '/var/log/redis', '/var/run/redis'],
         user: 'redis',
         group: 'redis'
+    },
+    mysql: {
+        packages: [
+            'default-mysql-server', 'default-mysql-client',
+            'mariadb-server', 'mariadb-client', 'mariadb-common',
+            'mariadb-server-*', 'mariadb-client-*',
+            'mysql-server', 'mysql-client', 'mysql-common',
+            'mysql-*', 'mariadb-*'
+        ],
+        services: ['mariadb', 'mysql', 'mysqld'],
+        configDirs: ['/etc/mysql'],
+        dataDirs: ['/var/lib/mysql', '/var/log/mysql', '/var/run/mysqld'],
+        user: 'mysql',
+        group: 'mysql'
+    },
+    postgresql: {
+        packages: [
+            'postgresql', 'postgresql-contrib', 'postgresql-common',
+            'postgresql-client-common', 'postgresql-client',
+            'postgresql-*'
+        ],
+        services: ['postgresql'],
+        configDirs: ['/etc/postgresql'],
+        dataDirs: ['/var/lib/postgresql', '/var/log/postgresql', '/var/run/postgresql'],
+        user: 'postgres',
+        group: 'postgres'
     }
 };
 

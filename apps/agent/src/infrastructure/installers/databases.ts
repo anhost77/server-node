@@ -21,7 +21,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import crypto from 'node:crypto';
 import type { LogFn, DatabaseType, DbSecurityOptions } from '../types.js';
-import { runCommand, runCommandSilent, commandExists, sleep, runAsUser } from '../helpers.js';
+import { runCommand, runCommandSilent, commandExists, sleep, runAsUser, nuclearCleanup } from '../helpers.js';
 import { storeDbCredentials, getDbCredentials, deleteDbCredentials } from '../credentials.js';
 
 type DatabaseConfigurator = (dbName: string, opts: DbSecurityOptions, onLog: LogFn) => Promise<string>;
@@ -59,6 +59,9 @@ async function configurePostgresql(
     // Install if not present
     const isInstalled = await commandExists('psql');
     if (!isInstalled) {
+        // Nettoyage nucléaire pour éliminer toute trace d'une ancienne installation
+        await nuclearCleanup('postgresql', onLog);
+
         await runCommand('apt-get', ['update'], onLog);
         await runCommand('apt-get', ['install', '-y', 'postgresql', 'postgresql-contrib'], onLog);
         await runCommand('systemctl', ['enable', 'postgresql'], onLog);
@@ -163,6 +166,10 @@ async function configureMysql(
     // Install if not present
     const isInstalled = await commandExists('mysql');
     if (!isInstalled) {
+        // Nettoyage nucléaire pour éliminer toute trace d'une ancienne installation
+        // (fichiers de données, configs résiduelles, utilisateurs système, etc.)
+        await nuclearCleanup('mysql', onLog);
+
         onLog(`📥 Installing MariaDB (MySQL-compatible)...\n`, 'stdout');
         await runCommand('apt-get', ['update'], onLog);
         await runCommand('apt-get', ['install', '-y', 'default-mysql-server', 'default-mysql-client'], onLog);
@@ -283,6 +290,9 @@ async function configureRedis(opts: DbSecurityOptions, onLog: LogFn): Promise<st
     // Install if not present
     const isInstalled = await commandExists('redis-server');
     if (!isInstalled) {
+        // Nettoyage nucléaire pour éliminer toute trace d'une ancienne installation
+        await nuclearCleanup('redis', onLog);
+
         onLog(`📥 Installing Redis...\n`, 'stdout');
         await runCommand('apt-get', ['update'], onLog);
         await runCommand('apt-get', ['install', '-y', 'redis-server'], onLog);
@@ -325,6 +335,10 @@ async function configureRedis(opts: DbSecurityOptions, onLog: LogFn): Promise<st
 /**
  * **removeDatabase()** - Supprime une base de données
  *
+ * Si purge ET removeData sont true, on utilise nuclearCleanup pour une
+ * suppression TOTALE (packages, configs, données, utilisateurs système).
+ * Sinon, on fait une suppression partielle.
+ *
  * @param type - Type de base de données
  * @param purge - Si true, supprime aussi les fichiers de configuration
  * @param removeData - Si true, supprime les données (IRREVERSIBLE !)
@@ -336,6 +350,29 @@ export async function removeDatabase(
     removeData: boolean,
     onLog: LogFn
 ): Promise<void> {
+    // Mapping des types de DB vers les noms de config nucléaire
+    const nuclearConfigMap: Record<DatabaseType, string> = {
+        postgresql: 'postgresql',
+        mysql: 'mysql',
+        redis: 'redis',
+        mongodb: 'mongodb' // Non supporté pour l'instant
+    };
+
+    const nuclearKey = nuclearConfigMap[type];
+
+    // Si purge ET removeData, on fait un nettoyage NUCLÉAIRE complet
+    if (purge && removeData) {
+        onLog(`⚠️ NETTOYAGE NUCLÉAIRE: Suppression TOTALE de ${type}!\n`, 'stderr');
+        await nuclearCleanup(nuclearKey, onLog);
+        // Supprimer aussi les credentials stockés
+        if (deleteDbCredentials(type)) {
+            onLog(`🗑️ Credentials ${type} supprimés\n`, 'stdout');
+        }
+        await runCommand('apt-get', ['autoremove', '-y'], onLog);
+        return;
+    }
+
+    // Sinon, suppression partielle (ancienne logique)
     if (removeData) {
         onLog(`⚠️ WARNING: Data directory will be PERMANENTLY deleted!\n`, 'stderr');
     }
@@ -352,7 +389,6 @@ export async function removeDatabase(
                 onLog(`Deleting /var/lib/postgresql...\n`, 'stderr');
                 await runCommand('rm', ['-rf', '/var/lib/postgresql'], onLog);
             }
-            // Supprimer les credentials stockés pour éviter les problèmes lors d'une réinstallation
             if (deleteDbCredentials('postgresql')) {
                 onLog(`🗑️ Credentials PostgreSQL supprimés\n`, 'stdout');
             }
@@ -368,7 +404,6 @@ export async function removeDatabase(
                 onLog(`Deleting /var/lib/mysql...\n`, 'stderr');
                 await runCommand('rm', ['-rf', '/var/lib/mysql'], onLog);
             }
-            // Supprimer les credentials stockés pour éviter les problèmes lors d'une réinstallation
             if (deleteDbCredentials('mysql')) {
                 onLog(`🗑️ Credentials MySQL supprimés\n`, 'stdout');
             }
@@ -381,7 +416,6 @@ export async function removeDatabase(
                 onLog(`Deleting /var/lib/redis...\n`, 'stderr');
                 await runCommand('rm', ['-rf', '/var/lib/redis'], onLog);
             }
-            // Supprimer les credentials stockés pour éviter les problèmes lors d'une réinstallation
             if (deleteDbCredentials('redis')) {
                 onLog(`🗑️ Credentials Redis supprimés\n`, 'stdout');
             }
