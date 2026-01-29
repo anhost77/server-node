@@ -179,12 +179,27 @@ async function configureMysql(
 
         // Apply security options
         storedCreds = await applyMysqlSecurity(opts, onLog);
-    } else if (!storedCreds) {
-        // MySQL est installé mais pas de credentials stockées
-        // Cela peut arriver après une désinstallation/réinstallation
-        // On applique la sécurité pour définir un nouveau mot de passe root
-        onLog(`🔐 MySQL déjà installé mais pas de credentials. Application de la sécurité...\n`, 'stdout');
-        storedCreds = await applyMysqlSecurity(opts, onLog);
+    } else {
+        // MySQL est installé, vérifier si les credentials stockées sont valides
+        if (storedCreds) {
+            onLog(`🔍 Vérification des credentials MySQL stockées...\n`, 'stdout');
+            try {
+                await runCommandSilent('mysql', ['-u', 'root', `-p${storedCreds.rootPassword}`, '-e', 'SELECT 1;']);
+                onLog(`   ✅ Credentials valides\n`, 'stdout');
+            } catch {
+                // Credentials obsolètes, on les supprime
+                onLog(`   ⚠️ Credentials obsolètes, suppression et reconfiguration...\n`, 'stdout');
+                deleteDbCredentials('mysql');
+                storedCreds = null;
+            }
+        }
+
+        if (!storedCreds) {
+            // MySQL est installé mais pas de credentials valides
+            // On applique la sécurité pour définir un nouveau mot de passe root
+            onLog(`🔐 MySQL déjà installé mais pas de credentials valides. Application de la sécurité...\n`, 'stdout');
+            storedCreds = await applyMysqlSecurity(opts, onLog);
+        }
     }
 
     // Use stored root credentials for operations
