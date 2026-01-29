@@ -1,0 +1,98 @@
+<!-- Pricing Page -->
+<section class="page-header">
+    <div class="container">
+        <h1 class="animate-fade-in">{{nav.pricing}}</h1>
+        <p class="animate-fade-in" style="animation-delay: 0.1s; max-width: 600px; margin: 0 auto;">
+            {{pricingPage.subtitle}}
+        </p>
+    </div>
+</section>
+
+<section class="section pricing-section">
+    <div class="container">
+        <div class="pricing-grid">
+            <!-- Free Tier -->
+            <div class="pricing-card">
+                <div class="pricing-header">
+                    <h3>{{pricingPage.free.name}}</h3>
+                    <div class="price">
+                        <span class="currency">$</span>
+                        <span class="amount">0</span>
+                        <span class="period">{{pricingPage.perMonth}}</span>
+                    </div>
+                    <p class="pricing-desc">{{pricingPage.free.desc}}</p>
+                </div>
+                <ul class="pricing-features">
+                    {{#each pricingPage.free.features}}
+                    <li><span class="check">&#x2713;</span> {{this}}</li>
+                    {{/each}}
+                </ul>
+                <a href="https://app.serverflow.io/signup" class="btn btn-secondary btn-block">{{pricingPage.free.cta}}</a>
+            </div>
+
+            <!-- Pro Tier -->
+            <div class="pricing-card featured">
+                <div class="pricing-badge">{{pricingPage.pro.badge}}</div>
+                <div class="pricing-header">
+                    <h3>{{pricingPage.pro.name}}</h3>
+                    <div class="price">
+                        <span class="currency">$</span>
+                        <span class="amount">9</span>
+                        <span class="period">{{pricingPage.perMonth}}</span>
+                    </div>
+                    <p class="pricing-desc">{{pricingPage.pro.desc}}</p>
+                </div>
+                <ul class="pricing-features">
+                    {{#each pricingPage.pro.features}}
+                    <li><span class="check">&#x2713;</span> {{this}}</li>
+                    {{/each}}
+                </ul>
+                <a href="https://app.serverflow.io/signup?plan=pro" class="btn btn-primary btn-block cta-glow">{{pricingPage.pro.cta}}</a>
+            </div>
+
+            <!-- Team Tier -->
+            <div class="pricing-card">
+                <div class="pricing-header">
+                    <h3>{{pricingPage.team.name}}</h3>
+                    <div class="price">
+                        <span class="currency">$</span>
+                        <span class="amount">29</span>
+                        <span class="period">{{pricingPage.perMonth}}</span>
+                    </div>
+                    <p class="pricing-desc">{{pricingPage.team.desc}}</p>
+                </div>
+                <ul class="pricing-features">
+                    {{#each pricingPage.team.features}}
+                    <li><span class="check">&#x2713;</span> {{this}}</li>
+                    {{/each}}
+                </ul>
+                <a href="https://app.serverflow.io/signup?plan=team" class="btn btn-secondary btn-block">{{pricingPage.team.cta}}</a>
+            </div>
+        </div>
+
+        <!-- FAQ Section -->
+        <div class="pricing-faq reveal">
+            <h2 style="text-align: center; margin-bottom: 3rem;">{{pricingPage.faq.title}}</h2>
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <h4>{{pricingPage.faq.q1}}</h4>
+                    <p>{{pricingPage.faq.a1}}</p>
+                </div>
+                <div class="faq-item">
+                    <h4>{{pricingPage.faq.q2}}</h4>
+                    <p>{{pricingPage.faq.a2}}</p>
+                </div>
+                <div class="faq-item">
+                    <h4>{{pricingPage.faq.q3}}</h4>
+                    <p>{{pricingPage.faq.a3}}</p>
+                </div>
+                <div class="faq-item">
+                    <h4>{{pricingPage.faq.q4}}</h4>
+                    <p>{{pricingPage.faq.a4}}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{{> sections/cta}}

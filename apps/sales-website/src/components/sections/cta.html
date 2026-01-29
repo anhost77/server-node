@@ -1,0 +1,50 @@
+<!-- IMMERSIVE FINAL CTA -->
+<section class="final-cta">
+    <!-- Background animate -->
+    <div class="cta-bg">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="grid-pattern"></div>
+    </div>
+
+    <div class="cta-content">
+        <!-- Main headline -->
+        <h2 class="reveal">
+            {{cta.title}}<br>
+            <span class="text-gradient-animate">{{cta.titleGradient}}</span>
+        </h2>
+
+        <!-- Emotional subtitle -->
+        <p class="reveal">
+            {{cta.subtitle}}<br>
+            {{cta.subtitleSecond}}
+        </p>
+
+        <!-- Double CTA -->
+        <div class="cta-buttons reveal">
+            <a href="/{{lang}}/pricing/" class="btn btn-primary cta-glow btn-large">
+                <span>{{cta.primary}}</span>
+                <span class="btn-subtext">{{cta.primarySubtext}}</span>
+            </a>
+            <a href="#how-it-works" class="btn btn-ghost">
+                <span>{{cta.secondary}}</span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polygon points="10 8 16 12 10 16 10 8" fill="currentColor"></polygon>
+                </svg>
+            </a>
+        </div>
+
+        <!-- Guarantees -->
+        <div class="guarantees reveal">
+            {{#each cta.guarantees}}
+            <span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                {{this}}
+            </span>
+            {{/each}}
+        </div>
+    </div>
+</section>

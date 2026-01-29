@@ -1,0 +1,325 @@
+{
+  "meta": {
+    "title": "ServerFlow - Deploy AI Agents to Your Own Infrastructure",
+    "description": "Deploy code to your own VPS in 5 minutes. ServerFlow bridges AI agents and real infrastructure with zero-trust security.",
+    "keywords": "deploy, vps, ai agent, devops, zero-trust, nginx, ssl, mcp, claude, cursor"
+  },
+  "nav": {
+    "howItWorks": "How it Works",
+    "features": "Features",
+    "pricing": "Pricing",
+    "github": "GitHub",
+    "login": "Log in",
+    "getStarted": "Get Started"
+  },
+  "hero": {
+    "title": "Deploy to your own servers.",
+    "titleGradient": "In 5 minutes. Zero DevOps.",
+    "subtitle": "The secure bridge between AI coding agents and your VPS.",
+    "subtitleSecond": "Stop copying code. Start shipping to production.",
+    "cta": "Start Deploying",
+    "ctaSecondary": "See how it works"
+  },
+  "terminal": {
+    "command": "serverflow connect --profile production",
+    "line1": "> Authenticating with secure bridge... OK",
+    "line2": "> Detecting project type... Node.js detected",
+    "line3": "> Provisioning Nginx + SSL... Done (0.8s)",
+    "line4": "> App deployed to https://api.myserver.com"
+  },
+  "howItWorks": {
+    "step1": {
+      "number": "01",
+      "title": "One Command. Full Server.",
+      "description": "No Plesk. No cPanel. No bloated panels eating your RAM. Just the essentials, configured perfectly.",
+      "badges": ["Nginx", "SSL Auto", "Firewall", "Monitoring", "PM2"],
+      "quote": "\"47 seconds vs 2 hours of manual config. Your RAM stays free for your apps, not for cPanel.\"",
+      "terminalTitle": "root@my-vps:~",
+      "lines": [
+        "$ curl -fsSL https://get.serverflow.io | sh",
+        "Installing ServerFlow Agent...",
+        "Configuring Nginx reverse proxy...",
+        "Setting up UFW firewall (22, 80, 443)...",
+        "Enabling Let's Encrypt auto-SSL...",
+        "Starting PM2 process manager...",
+        "Connected to dashboard!",
+        "Server ready in 47 seconds"
+      ]
+    },
+    "step2": {
+      "number": "02",
+      "title": "Connect GitHub. Push. Live.",
+      "description": "Link your repo once. Every git push triggers auto-deploy. Zero CI/CD yaml to write.",
+      "badges": ["Auto-detect Stack", "Git push = deploy", "Hot reload < 2s", "One-click rollback"],
+      "connectRepo": "Connect Repository",
+      "detected": "Detected:",
+      "deployNow": "Deploy Now",
+      "deployedIn": "Deployed in"
+    },
+    "step3": {
+      "number": "03",
+      "title": "Talk to Deploy.",
+      "description": "MCP integration. Ask Claude or Cursor to deploy, rollback, or check logs. In plain English.",
+      "commands": [
+        "\"Deploy the fix I just pushed\"",
+        "\"Restart the API\"",
+        "\"Add SSL to blog.mysite.com\"",
+        "\"Why is the site slow?\""
+      ],
+      "footer": "Your AI assistant is now your DevOps team. No terminal. No context switching. Just ship.",
+      "mcpConnected": "MCP Connected",
+      "placeholder": "Ask Claude anything about your servers..."
+    }
+  },
+  "security": {
+    "hook": {
+      "title": "We Can't Access Your Servers.",
+      "titleFaded": "Even If We Wanted To.",
+      "subtitle": "Zero SSH keys. Zero root passwords. Zero backdoors. Built on math, not trust.",
+      "scrollHint": "Scroll to see the proof"
+    },
+    "comparison": {
+      "title": "The \"Trust Me\" Risk",
+      "legacy": {
+        "title": "Legacy Cloud",
+        "text": "\"You have my keys. Please don't look at my data. If you get hacked, I'm finished.\"",
+        "quote": "The provider is a liability."
+      },
+      "serverflow": {
+        "title": "ServerFlow Model",
+        "text": "\"My keys stay on my server. Even if you disappear tomorrow, my site stays live.\"",
+        "quote": "The provider is just a bridge."
+      }
+    },
+    "mechanics": {
+      "badge": "Proof: Outbound Only",
+      "title": "One-Way Communication.",
+      "diagram": {
+        "yourVps": "Your VPS",
+        "agentActive": "AGENT ACTIVE",
+        "serverflow": "ServerFlow",
+        "connection": "ENCRYPTED OUTBOUND WEBSOCKET",
+        "details": "NO SSH NEEDED • NO PORTS OPEN • TOTAL PRIVACY"
+      },
+      "description": "We can't login to your system. We can't see your data.",
+      "descriptionHighlight": "Our orchestrator only hears what your agent allows."
+    },
+    "benefits": {
+      "title": "Sleep Better Tonight.",
+      "cards": [
+        {
+          "icon": "lock",
+          "title": "Ed25519 Crypto",
+          "description": "Mathematical proof that we can't spoof commands. The same protocol used by Signal and OpenSSH."
+        },
+        {
+          "icon": "trash",
+          "title": "Nothing to Steal",
+          "description": "We store ZERO credentials. If ServerFlow is breached, hackers find an empty room. No keys to take."
+        },
+        {
+          "icon": "skull",
+          "title": "We Die, You Live",
+          "description": "If we vanish tomorrow, your business continues. No kill-switch, no phone-home, no vendor lock-in."
+        },
+        {
+          "icon": "eye",
+          "title": "Audit the Agent",
+          "description": "Our agent is 100% Open Source. Verify every line of code before you install. Trust the math."
+        }
+      ],
+      "cta": "Secure My Infrastructure"
+    }
+  },
+  "features": {
+    "title": "Why ServerFlow?",
+    "viewAll": "View all features",
+    "list": [
+      {
+        "icon": "shield",
+        "title": "Zero-Trust Security",
+        "description": "We never access your servers. Agent initiates outbound connections only. No SSH keys stored, ever."
+      },
+      {
+        "icon": "zap",
+        "title": "Hot Patching",
+        "description": "Deploy code changes in < 2 seconds. Auto-rollback if crash detected within 10s. Perfect for AI iteration loops."
+      },
+      {
+        "icon": "cloud",
+        "title": "Multi-Cloud Native",
+        "description": "Hetzner, DigitalOcean, OVH, Vultr, AWS, Scaleway... Your VPS, your rules. Zero vendor lock-in."
+      },
+      {
+        "icon": "chat",
+        "title": "MCP Integration",
+        "description": "Deploy via natural language with Claude or Cursor. \"Deploy my app to production\" just works."
+      },
+      {
+        "icon": "ssl",
+        "title": "Auto SSL & Nginx",
+        "description": "Let's Encrypt certificates generated automatically. Nginx configured in seconds. HTTPS by default."
+      },
+      {
+        "icon": "heart",
+        "title": "Self-Healing",
+        "description": "Services auto-restart on failure. PM2 process management. Your apps stay online even if we don't."
+      }
+    ]
+  },
+  "testimonials": {
+    "title": "Loved by",
+    "titleGradient": "Modern Builders",
+    "list": [
+      {
+        "name": "Alex Chen",
+        "role": "Indie Hacker, @alexbuilds",
+        "text": "I used to spend 3 hours configuring Nginx and Let's Encrypt for each new project. Now I paste one command and I'm live on my $5 Hetzner VPS in under 5 minutes. Game changer for shipping fast."
+      },
+      {
+        "name": "Sarah Miller",
+        "role": "Full Stack Developer, Freelance",
+        "text": "Finally something that bridges local AI coding and real production without the Vercel markup. I keep my infrastructure, I keep my money. ServerFlow just handles the deployment magic."
+      },
+      {
+        "name": "Thomas Dubois",
+        "role": "CTO, StartupLab.io",
+        "text": "The MCP integration is insane. I literally told Claude 'deploy the new feature to staging' and it happened. No context switching, no terminal, just shipping. My team's velocity doubled."
+      },
+      {
+        "name": "Emma Rodriguez",
+        "role": "DevOps Engineer, TechCorp",
+        "text": "I was skeptical about the Zero-Trust claims. After auditing the agent code, I'm impressed. Outbound connections only, Ed25519 signing, no credentials stored. This is how it should be done."
+      },
+      {
+        "name": "Marcus Johnson",
+        "role": "Solopreneur",
+        "text": "I manage 12 side projects across 4 different VPS providers. ServerFlow unified everything in one dashboard. Hot patching means I can iterate with Claude and see changes in 2 seconds. Addictive."
+      }
+    ]
+  },
+  "pricingPage": {
+    "subtitle": "Simple, transparent pricing. Start free, scale as you grow.",
+    "perMonth": "/month",
+    "free": {
+      "name": "Free",
+      "desc": "Perfect for side projects and learning",
+      "features": [
+        "1 server",
+        "3 applications",
+        "Auto SSL (Let's Encrypt)",
+        "GitHub integration",
+        "Community support"
+      ],
+      "cta": "Get Started Free"
+    },
+    "pro": {
+      "name": "Pro",
+      "badge": "Most Popular",
+      "desc": "For serious builders and small teams",
+      "features": [
+        "5 servers",
+        "Unlimited applications",
+        "MCP Integration (Claude, Cursor)",
+        "Hot patching (< 2s deploys)",
+        "Automatic rollbacks",
+        "Priority support"
+      ],
+      "cta": "Start 14-day Trial"
+    },
+    "team": {
+      "name": "Team",
+      "desc": "For growing teams with multiple projects",
+      "features": [
+        "Unlimited servers",
+        "Team collaboration",
+        "Role-based access control",
+        "Audit logs",
+        "Custom domains",
+        "24/7 support"
+      ],
+      "cta": "Start 14-day Trial"
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "q1": "Can I cancel anytime?",
+      "a1": "Yes, you can cancel your subscription at any time. No questions asked, no hidden fees.",
+      "q2": "What happens to my servers if I cancel?",
+      "a2": "Your servers continue to run normally. ServerFlow never has access to your servers, so nothing changes on your infrastructure.",
+      "q3": "Do you offer refunds?",
+      "a3": "Yes, we offer a 14-day money-back guarantee. If you're not satisfied, contact us for a full refund.",
+      "q4": "What's included in \"priority support\"?",
+      "a4": "Priority support includes email response within 4 hours, and access to our private Discord channel for real-time help."
+    }
+  },
+  "cta": {
+    "title": "Stop Configuring.",
+    "titleGradient": "Start Shipping.",
+    "subtitle": "Your next project is 47 seconds away from production.",
+    "subtitleSecond": "One command. Full server. Zero excuses.",
+    "primary": "Deploy Your First App",
+    "primarySubtext": "Free forever • No credit card",
+    "secondary": "Watch 2-min Demo",
+    "guarantees": [
+      "Free tier forever",
+      "No credit card required",
+      "Cancel anytime",
+      "Your data stays yours"
+    ]
+  },
+  "footer": {
+    "tagline": "The Zero-Trust Bridge for AI-Native Deployment.",
+    "product": {
+      "title": "Product",
+      "features": "Features",
+      "pricing": "Pricing",
+      "howItWorks": "How it Works",
+      "security": "Security",
+      "changelog": "Changelog",
+      "new": "New"
+    },
+    "resources": {
+      "title": "Resources",
+      "documentation": "Documentation",
+      "apiReference": "API Reference",
+      "blog": "Blog",
+      "status": "Status",
+      "openSource": "Open Source"
+    },
+    "company": {
+      "title": "Company",
+      "about": "About",
+      "careers": "Careers",
+      "hiring": "Hiring",
+      "contact": "Contact",
+      "pressKit": "Press Kit"
+    },
+    "legal": {
+      "title": "Legal",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service",
+      "dpa": "DPA",
+      "security": "Security",
+      "gdpr": "GDPR"
+    },
+    "copyright": "© {{currentYear}} ServerFlow Inc. All rights reserved.",
+    "badges": {
+      "zeroTrust": "Zero-Trust Architecture",
+      "openSource": "Open Source Agent",
+      "gdpr": "GDPR Compliant",
+      "encryption": "Ed25519 Encryption"
+    }
+  },
+  "languages": {
+    "en": "English",
+    "fr": "Français",
+    "de": "Deutsch",
+    "es": "Español",
+    "it": "Italiano"
+  },
+  "common": {
+    "learnMore": "Learn more",
+    "getStarted": "Get Started",
+    "backToHome": "Back to Home"
+  }
+}

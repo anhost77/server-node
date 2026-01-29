@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Variante A - Style OVH</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Specific overrides for OVH style (Technical, Feature-focused) */
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f5f9fc;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            background-color: #fff;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #00509d 0%, #003b73 100%);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: -3rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 4px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-top: 4px solid #00509d;
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: #00bfb3;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <div class="logo">ServerFlow</div>
+        <nav>
+            <a href="/">Retour</a>
+        </nav>
+    </header>
+
+    <div class="hero">
+        <h1>Solutions d'Hébergement Haute Performance</h1>
+        <p>Déployez vos applications en quelques clics avec une infrastructure robutste.</p>
+    </div>
+
+    <div class="container">
+        <div class="pricing-grid">
+            <div class="card">
+                <h2>VPS Essential</h2>
+                <div class="price">5€ / mois</div>
+                <ul>
+                    <li>1 vCore</li>
+                    <li>2 Go RAM</li>
+                    <li>40 Go SSD</li>
+                </ul>
+                <a href="#" class="btn">Commander</a>
+            </div>
+            <div class="card">
+                <h2>VPS Comfort</h2>
+                <div class="price">10€ / mois</div>
+                <ul>
+                    <li>2 vCore</li>
+                    <li>4 Go RAM</li>
+                    <li>80 Go SSD</li>
+                </ul>
+                <a href="#" class="btn">Commander</a>
+            </div>
+            <div class="card">
+                <h2>VPS Elite</h2>
+                <div class="price">20€ / mois</div>
+                <ul>
+                    <li>4 vCore</li>
+                    <li>8 Go RAM</li>
+                    <li>160 Go SSD</li>
+                </ul>
+                <a href="#" class="btn">Commander</a>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

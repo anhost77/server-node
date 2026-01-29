@@ -1,0 +1,15 @@
+{
+  "name": "@server-flow/sales-website",
+  "version": "1.0.0",
+  "description": "ServerFlow Sales Website",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "build": "node build.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "chokidar": "^3.5.3",
+    "ws": "^8.14.2"
+  }
+}

@@ -1,0 +1,197 @@
+<!-- How it Works Section -->
+<div class="how-it-works-wrapper" id="how-it-works">
+
+    <!-- Step 1: Install -->
+    <div class="how-step reveal">
+        <div class="step-content">
+            <div class="step-number">{{howItWorks.step1.number}}</div>
+            <h2>{{howItWorks.step1.title}}</h2>
+            <p>{{howItWorks.step1.description}}</p>
+
+            <div class="install-badges">
+                {{#each howItWorks.step1.badges}}
+                <span class="badge">{{this}}</span>
+                {{/each}}
+            </div>
+
+            <p style="margin-top: 2rem; font-size: 0.9rem; color: #888; border-left: 2px solid #333; padding-left: 1rem;">
+                {{howItWorks.step1.quote}}
+            </p>
+        </div>
+        <div class="step-visual">
+            <div class="terminal-mockup">
+                <div class="terminal-header">
+                    <span class="dot red"></span>
+                    <span class="dot yellow"></span>
+                    <span class="dot green"></span>
+                    <span class="terminal-title">{{howItWorks.step1.terminalTitle}}</span>
+                </div>
+                <div class="terminal-body">
+                    <div class="line typing">{{howItWorks.step1.lines.0}}</div>
+                    <div class="line fade-in delay-1">
+                        <span class="success">&#x2713;</span> {{howItWorks.step1.lines.1}}
+                    </div>
+                    <div class="line fade-in delay-2">
+                        <span class="success">&#x2713;</span> {{howItWorks.step1.lines.2}}
+                    </div>
+                    <div class="line fade-in delay-3">
+                        <span class="success">&#x2713;</span> {{howItWorks.step1.lines.3}}
+                    </div>
+                    <div class="line fade-in delay-4">
+                        <span class="success">&#x2713;</span> {{howItWorks.step1.lines.4}}
+                    </div>
+                    <div class="line fade-in delay-5">
+                        <span class="success">&#x2713;</span> {{howItWorks.step1.lines.5}}
+                    </div>
+                    <div class="line fade-in delay-6">
+                        <span class="success">&#x2713;</span> {{howItWorks.step1.lines.6}}
+                    </div>
+                    <div class="line fade-in delay-7 highlight">
+                        &#x1F680; {{howItWorks.step1.lines.7}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: Deploy -->
+    <div class="how-step reveal">
+        <div class="step-content">
+            <div class="step-number">{{howItWorks.step2.number}}</div>
+            <h2>{{howItWorks.step2.title}}</h2>
+            <p>{{howItWorks.step2.description}}</p>
+
+            <div class="deploy-features">
+                {{#each howItWorks.step2.badges}}
+                <span class="badge">{{this}}</span>
+                {{/each}}
+            </div>
+        </div>
+        <div class="step-visual">
+            <div class="dashboard-mockup">
+                <div class="dash-header">
+                    <span class="logo">ServerFlow</span>
+                    <span class="user">alexchen <div class="avatar-sm"></div></span>
+                </div>
+
+                <div class="dash-body">
+                    <div class="connect-github-card">
+                        <div class="github-icon">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                            </svg>
+                        </div>
+                        <h3>{{howItWorks.step2.connectRepo}}</h3>
+
+                        <div class="repo-selector">
+                            <div class="repo-item selected">
+                                <span style="margin-right:0.5rem">&#x1F4C1;</span>
+                                <span>alexchen/my-saas-app</span>
+                                <span class="check">&#x2713;</span>
+                            </div>
+                            <div class="repo-item">
+                                <span style="margin-right:0.5rem">&#x1F4C1;</span>
+                                <span>alexchen/landing-page</span>
+                            </div>
+                        </div>
+
+                        <div class="auto-detect">
+                            <span>&#x1F50D; {{howItWorks.step2.detected}} <strong>Next.js 14</strong></span>
+                        </div>
+
+                        <button class="btn-deploy">{{howItWorks.step2.deployNow}} &#x2192;</button>
+                    </div>
+
+                    <div class="deploy-success">
+                        <span style="font-size:1.2rem">&#x2705;</span>
+                        <div>
+                            <span style="display:block; font-weight:bold; font-size:0.9rem">https://my-saas-app.com</span>
+                            <span style="font-size:0.8rem; opacity:0.8">{{howItWorks.step2.deployedIn}} 1.8s</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Chat -->
+    <div class="how-step reveal">
+        <div class="step-content">
+            <div class="step-number">{{howItWorks.step3.number}}</div>
+            <h2>{{howItWorks.step3.title}}</h2>
+            <p>{{howItWorks.step3.description}}</p>
+
+            <div class="command-examples">
+                {{#each howItWorks.step3.commands}}
+                <span class="badge">{{this}}</span>
+                {{/each}}
+            </div>
+
+            <p style="margin-top: 2rem; font-size: 1.1rem; color: #fff; font-weight: 500;">
+                {{howItWorks.step3.footer}}
+            </p>
+        </div>
+        <div class="step-visual">
+            <div class="chat-mockup">
+                <div class="chat-header">
+                    <div class="ai-avatar"></div>
+                    <span>Claude</span>
+                    <span class="status online">&#x25CF; {{howItWorks.step3.mcpConnected}}</span>
+                </div>
+
+                <div class="chat-messages">
+                    <div class="message user">
+                        <p>Deploy the latest changes to production</p>
+                    </div>
+
+                    <div class="message assistant">
+                        <p>Deploying to <strong>srv_7xK2mP9</strong>...</p>
+                        <div class="deploy-status">
+                            <span class="success">&#x2705;</span> Deployed in 1.8s
+                            <br>
+                            <a href="#" style="color:#3b82f6; text-decoration:none">&#x1F30D; https://my-app.com</a>
+                        </div>
+                    </div>
+
+                    <div class="message user">
+                        <p>Something's wrong, rollback to yesterday</p>
+                    </div>
+
+                    <div class="message assistant">
+                        <p>Rolling back to commit <code>a3f2c1b</code>...</p>
+                        <div class="deploy-status">
+                            <span class="success">&#x2705;</span> Rollback complete
+                            <br>
+                            <span class="muted" style="color:#888; font-size:0.8rem">Previous version restored</span>
+                        </div>
+                    </div>
+
+                    <div class="message user">
+                        <p>Show me the CPU usage</p>
+                    </div>
+
+                    <div class="message assistant">
+                        <div class="stats-mini">
+                            <div class="stat">
+                                <span class="label">CPU</span>
+                                <span class="value">12%</span>
+                                <div class="bar" style="width: 12%"></div>
+                            </div>
+                            <div class="stat">
+                                <span class="label">RAM</span>
+                                <span class="value">847 MB</span>
+                                <div class="bar" style="width: 42%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input">
+                    <input type="text" placeholder="{{howItWorks.step3.placeholder}}">
+                    <button>&#x21B5;</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

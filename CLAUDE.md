@@ -1,5 +1,33 @@
 # Claude Code Instructions
 
+## Documentation Spécifique par Module
+
+**IMPORTANT** : Avant de travailler sur un module spécifique, Claude DOIT lire la documentation correspondante :
+
+| Module        | Fichier de Documentation              | Quand le lire                        |
+| ------------- | ------------------------------------- | ------------------------------------ |
+| Site de Vente | `apps/sales-website/SALES-WEBSITE.md` | Toute modification du site marketing |
+| Agent         | `docs/AGENT-UPDATE-MECHANISM.md`      | Modification du bundle agent         |
+| Agent         | `docs/AGENT-GOTCHAS.md`               | Code exécuté sur le VPS client       |
+
+### Site de Vente (`apps/sales-website/`)
+
+**OBLIGATOIRE** : Avant toute modification sur le site de vente, lire `apps/sales-website/SALES-WEBSITE.md`.
+
+Ce fichier contient :
+
+- Règles SEO (meta tags, structured data, sitemap)
+- Système i18n (5 langues : EN, FR, DE, ES, IT)
+- Design system (couleurs, typography, spacing)
+- Règles de performance (Core Web Vitals)
+- Accessibilité (WCAG 2.1 AA)
+- Structure des composants
+- Checklist avant mise en prod
+
+**Port de développement** : 4500
+
+---
+
 ## BMAD Framework Documentation
 
 **IMPORTANT**: Before starting any implementation task, Claude MUST read the relevant BMAD documentation in `_bmad-output/`:

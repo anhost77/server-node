@@ -1,0 +1,330 @@
+{
+  "meta": {
+    "title": "ServerFlow - KI-Agenten auf Ihrer Eigenen Infrastruktur Bereitstellen",
+    "description": "Stellen Sie Code in 5 Minuten auf Ihrem VPS bereit. ServerFlow verbindet KI-Agenten und echte Infrastruktur mit Zero-Trust-Sicherheit.",
+    "keywords": "bereitstellung, vps, ki agent, devops, zero-trust, nginx, ssl, mcp, claude, cursor"
+  },
+  "nav": {
+    "howItWorks": "So funktioniert's",
+    "features": "Funktionen",
+    "pricing": "Preise",
+    "github": "GitHub",
+    "login": "Anmelden",
+    "getStarted": "Loslegen"
+  },
+  "hero": {
+    "title": "Auf Ihren eigenen Servern bereitstellen.",
+    "titleGradient": "In 5 Minuten. Null DevOps.",
+    "subtitle": "Die sichere Brücke zwischen KI-Coding-Agenten und Ihrem VPS.",
+    "subtitleSecond": "Hören Sie auf, Code zu kopieren. Beginnen Sie mit der Produktion.",
+    "cta": "Jetzt bereitstellen",
+    "ctaSecondary": "So funktioniert's"
+  },
+  "terminal": {
+    "command": "serverflow connect --profile production",
+    "line1": "> Authentifizierung mit sicherer Brücke... OK",
+    "line2": "> Projekttyp wird erkannt... Node.js erkannt",
+    "line3": "> Nginx + SSL konfigurieren... Fertig (0.8s)",
+    "line4": "> App bereitgestellt auf https://api.meinserver.com"
+  },
+  "howItWorks": {
+    "step1": {
+      "number": "01",
+      "title": "Ein Befehl. Vollständiger Server.",
+      "description": "Kein Plesk. Kein cPanel. Keine aufgeblähten Panels, die Ihren RAM fressen. Nur das Wesentliche, perfekt konfiguriert.",
+      "badges": ["Nginx", "SSL Auto", "Firewall", "Monitoring", "PM2"],
+      "quote": "\"47 Sekunden vs 2 Stunden manuelle Konfiguration. Ihr RAM bleibt frei für Ihre Apps, nicht für cPanel.\"",
+      "terminalTitle": "root@mein-vps:~",
+      "lines": [
+        "$ curl -fsSL https://get.serverflow.io | sh",
+        "ServerFlow Agent wird installiert...",
+        "Nginx Reverse Proxy wird konfiguriert...",
+        "UFW Firewall wird eingerichtet (22, 80, 443)...",
+        "Let's Encrypt auto-SSL wird aktiviert...",
+        "PM2 Prozess-Manager wird gestartet...",
+        "Mit Dashboard verbunden!",
+        "Server bereit in 47 Sekunden"
+      ]
+    },
+    "step2": {
+      "number": "02",
+      "title": "GitHub verbinden. Push. Live.",
+      "description": "Verknüpfen Sie Ihr Repo einmal. Jeder Git-Push löst Auto-Deploy aus. Null CI/CD-YAML zu schreiben.",
+      "badges": [
+        "Stack automatisch erkennen",
+        "Git push = deploy",
+        "Hot reload < 2s",
+        "Ein-Klick Rollback"
+      ],
+      "connectRepo": "Repository verbinden",
+      "detected": "Erkannt:",
+      "deployNow": "Jetzt bereitstellen",
+      "deployedIn": "Bereitgestellt in"
+    },
+    "step3": {
+      "number": "03",
+      "title": "Sprechen zum Bereitstellen.",
+      "description": "MCP-Integration. Bitten Sie Claude oder Cursor um Bereitstellung, Rollback oder Log-Prüfung. In natürlicher Sprache.",
+      "commands": [
+        "\"Stelle den Fix bereit, den ich gerade gepusht habe\"",
+        "\"Starte die API neu\"",
+        "\"Füge SSL zu blog.meineseite.com hinzu\"",
+        "\"Warum ist die Seite langsam?\""
+      ],
+      "footer": "Ihr KI-Assistent ist jetzt Ihr DevOps-Team. Kein Terminal. Kein Kontextwechsel. Einfach ausliefern.",
+      "mcpConnected": "MCP Verbunden",
+      "placeholder": "Fragen Sie Claude alles über Ihre Server..."
+    }
+  },
+  "security": {
+    "hook": {
+      "title": "Wir Können Nicht auf Ihre Server Zugreifen.",
+      "titleFaded": "Selbst Wenn Wir Wollten.",
+      "subtitle": "Null SSH-Schlüssel. Null Root-Passwörter. Null Hintertüren. Gebaut auf Mathematik, nicht auf Vertrauen.",
+      "scrollHint": "Scrollen Sie für den Beweis"
+    },
+    "comparison": {
+      "title": "Das \"Vertrau Mir\" Risiko",
+      "legacy": {
+        "title": "Legacy Cloud",
+        "text": "\"Du hast meine Schlüssel. Bitte schau nicht auf meine Daten. Wenn du gehackt wirst, bin ich erledigt.\"",
+        "quote": "Der Anbieter ist ein Risiko."
+      },
+      "serverflow": {
+        "title": "ServerFlow Modell",
+        "text": "\"Meine Schlüssel bleiben auf meinem Server. Selbst wenn du morgen verschwindest, bleibt meine Seite online.\"",
+        "quote": "Der Anbieter ist nur eine Brücke."
+      }
+    },
+    "mechanics": {
+      "badge": "Beweis: Nur Ausgehend",
+      "title": "Einweg-Kommunikation.",
+      "diagram": {
+        "yourVps": "Ihr VPS",
+        "agentActive": "AGENT AKTIV",
+        "serverflow": "ServerFlow",
+        "connection": "VERSCHLÜSSELTER AUSGEHENDER WEBSOCKET",
+        "details": "KEIN SSH NÖTIG • KEINE OFFENEN PORTS • TOTALE PRIVATSPHÄRE"
+      },
+      "description": "Wir können uns nicht in Ihr System einloggen. Wir können Ihre Daten nicht sehen.",
+      "descriptionHighlight": "Unser Orchestrator hört nur, was Ihr Agent erlaubt."
+    },
+    "benefits": {
+      "title": "Schlafen Sie Heute Nacht Besser.",
+      "cards": [
+        {
+          "icon": "lock",
+          "title": "Ed25519 Krypto",
+          "description": "Mathematischer Beweis, dass wir keine Befehle fälschen können. Das gleiche Protokoll wie Signal und OpenSSH."
+        },
+        {
+          "icon": "trash",
+          "title": "Nichts zu Stehlen",
+          "description": "Wir speichern NULL Anmeldedaten. Wenn ServerFlow gehackt wird, finden Hacker einen leeren Raum. Keine Schlüssel zu nehmen."
+        },
+        {
+          "icon": "skull",
+          "title": "Wir Sterben, Sie Leben",
+          "description": "Wenn wir morgen verschwinden, läuft Ihr Geschäft weiter. Kein Kill-Switch, kein Phone-Home, kein Vendor Lock-in."
+        },
+        {
+          "icon": "eye",
+          "title": "Agent Überprüfen",
+          "description": "Unser Agent ist 100% Open Source. Überprüfen Sie jede Codezeile vor der Installation. Vertrauen Sie der Mathematik."
+        }
+      ],
+      "cta": "Meine Infrastruktur Sichern"
+    }
+  },
+  "features": {
+    "title": "Warum ServerFlow?",
+    "viewAll": "Alle Funktionen anzeigen",
+    "list": [
+      {
+        "icon": "shield",
+        "title": "Zero-Trust Sicherheit",
+        "description": "Wir greifen nie auf Ihre Server zu. Agent initiiert nur ausgehende Verbindungen. Niemals SSH-Schlüssel gespeichert."
+      },
+      {
+        "icon": "zap",
+        "title": "Hot Patching",
+        "description": "Code-Änderungen in < 2 Sekunden bereitstellen. Auto-Rollback bei Crash innerhalb von 10s. Perfekt für KI-Iterationsschleifen."
+      },
+      {
+        "icon": "cloud",
+        "title": "Multi-Cloud Nativ",
+        "description": "Hetzner, DigitalOcean, OVH, Vultr, AWS, Scaleway... Ihr VPS, Ihre Regeln. Null Vendor Lock-in."
+      },
+      {
+        "icon": "chat",
+        "title": "MCP Integration",
+        "description": "Bereitstellung in natürlicher Sprache mit Claude oder Cursor. \"Meine App in Produktion bereitstellen\" funktioniert einfach."
+      },
+      {
+        "icon": "ssl",
+        "title": "Auto SSL & Nginx",
+        "description": "Let's Encrypt Zertifikate automatisch generiert. Nginx in Sekunden konfiguriert. HTTPS standardmäßig."
+      },
+      {
+        "icon": "heart",
+        "title": "Selbstheilung",
+        "description": "Dienste starten bei Fehler automatisch neu. PM2 Prozessmanagement. Ihre Apps bleiben online, auch wenn wir es nicht sind."
+      }
+    ]
+  },
+  "testimonials": {
+    "title": "Geliebt von",
+    "titleGradient": "Modernen Buildern",
+    "list": [
+      {
+        "name": "Alex Chen",
+        "role": "Indie Hacker, @alexbuilds",
+        "text": "Ich habe 3 Stunden damit verbracht, Nginx und Let's Encrypt für jedes neue Projekt zu konfigurieren. Jetzt füge ich einen Befehl ein und bin in unter 5 Minuten auf meinem 5€ Hetzner VPS live. Gamechanger für schnelles Shipping."
+      },
+      {
+        "name": "Sarah Miller",
+        "role": "Full Stack Entwicklerin, Freelance",
+        "text": "Endlich etwas, das lokales KI-Coding und echte Produktion ohne den Vercel-Aufpreis verbindet. Ich behalte meine Infrastruktur, ich behalte mein Geld. ServerFlow kümmert sich um die Deployment-Magie."
+      },
+      {
+        "name": "Thomas Dubois",
+        "role": "CTO, StartupLab.io",
+        "text": "Die MCP-Integration ist verrückt. Ich habe Claude buchstäblich gesagt 'stelle das neue Feature auf Staging bereit' und es passierte. Kein Kontextwechsel, kein Terminal, einfach nur Shipping. Die Geschwindigkeit meines Teams hat sich verdoppelt."
+      },
+      {
+        "name": "Emma Rodriguez",
+        "role": "DevOps Ingenieurin, TechCorp",
+        "text": "Ich war skeptisch gegenüber den Zero-Trust-Behauptungen. Nach Überprüfung des Agent-Codes bin ich beeindruckt. Nur ausgehende Verbindungen, Ed25519-Signierung, keine gespeicherten Anmeldedaten. So sollte es gemacht werden."
+      },
+      {
+        "name": "Marcus Johnson",
+        "role": "Solopreneur",
+        "text": "Ich verwalte 12 Nebenprojekte bei 4 verschiedenen VPS-Anbietern. ServerFlow hat alles in einem Dashboard vereint. Hot Patching bedeutet, dass ich mit Claude iterieren und Änderungen in 2 Sekunden sehen kann. Süchtig machend."
+      }
+    ]
+  },
+  "pricingPage": {
+    "subtitle": "Einfache, transparente Preise. Starten Sie kostenlos, skalieren Sie nach Bedarf.",
+    "perMonth": "/Monat",
+    "free": {
+      "name": "Kostenlos",
+      "desc": "Perfekt für Nebenprojekte und zum Lernen",
+      "features": [
+        "1 Server",
+        "3 Anwendungen",
+        "Auto SSL (Let's Encrypt)",
+        "GitHub Integration",
+        "Community Support"
+      ],
+      "cta": "Kostenlos Starten"
+    },
+    "pro": {
+      "name": "Pro",
+      "badge": "Am Beliebtesten",
+      "desc": "Für ernsthafte Entwickler und kleine Teams",
+      "features": [
+        "5 Server",
+        "Unbegrenzte Anwendungen",
+        "MCP Integration (Claude, Cursor)",
+        "Hot Patching (< 2s)",
+        "Automatische Rollbacks",
+        "Prioritäts-Support"
+      ],
+      "cta": "14-Tage-Test"
+    },
+    "team": {
+      "name": "Team",
+      "desc": "Für wachsende Teams mit mehreren Projekten",
+      "features": [
+        "Unbegrenzte Server",
+        "Team-Zusammenarbeit",
+        "Rollenbasierte Zugriffskontrolle",
+        "Audit-Logs",
+        "Custom Domains",
+        "24/7 Support"
+      ],
+      "cta": "14-Tage-Test"
+    },
+    "faq": {
+      "title": "Häufig Gestellte Fragen",
+      "q1": "Kann ich jederzeit kündigen?",
+      "a1": "Ja, Sie können Ihr Abonnement jederzeit kündigen. Ohne Fragen, ohne versteckte Gebühren.",
+      "q2": "Was passiert mit meinen Servern wenn ich kündige?",
+      "a2": "Ihre Server laufen normal weiter. ServerFlow hat nie Zugang zu Ihren Servern, also ändert sich an Ihrer Infrastruktur nichts.",
+      "q3": "Bieten Sie Rückerstattungen an?",
+      "a3": "Ja, wir bieten eine 14-tägige Geld-zurück-Garantie. Kontaktieren Sie uns für eine vollständige Rückerstattung.",
+      "q4": "Was beinhaltet der Prioritäts-Support?",
+      "a4": "Prioritäts-Support beinhaltet E-Mail-Antwort innerhalb von 4 Stunden und Zugang zu unserem privaten Discord-Kanal für Echtzeit-Hilfe."
+    }
+  },
+  "cta": {
+    "title": "Hören Sie auf zu Konfigurieren.",
+    "titleGradient": "Beginnen Sie zu Liefern.",
+    "subtitle": "Ihr nächstes Projekt ist 47 Sekunden von der Produktion entfernt.",
+    "subtitleSecond": "Ein Befehl. Vollständiger Server. Null Ausreden.",
+    "primary": "Erste App Bereitstellen",
+    "primarySubtext": "Für immer kostenlos • Keine Kreditkarte",
+    "secondary": "2-Min Demo Ansehen",
+    "guarantees": [
+      "Kostenloses Tier für immer",
+      "Keine Kreditkarte erforderlich",
+      "Jederzeit kündbar",
+      "Ihre Daten bleiben Ihre"
+    ]
+  },
+  "footer": {
+    "tagline": "Die Zero-Trust Brücke für KI-Native Bereitstellung.",
+    "product": {
+      "title": "Produkt",
+      "features": "Funktionen",
+      "pricing": "Preise",
+      "howItWorks": "So funktioniert's",
+      "security": "Sicherheit",
+      "changelog": "Changelog",
+      "new": "Neu"
+    },
+    "resources": {
+      "title": "Ressourcen",
+      "documentation": "Dokumentation",
+      "apiReference": "API Referenz",
+      "blog": "Blog",
+      "status": "Status",
+      "openSource": "Open Source"
+    },
+    "company": {
+      "title": "Unternehmen",
+      "about": "Über Uns",
+      "careers": "Karriere",
+      "hiring": "Wir stellen ein",
+      "contact": "Kontakt",
+      "pressKit": "Pressekit"
+    },
+    "legal": {
+      "title": "Rechtliches",
+      "privacy": "Datenschutzerklärung",
+      "terms": "Nutzungsbedingungen",
+      "dpa": "DPA",
+      "security": "Sicherheit",
+      "gdpr": "DSGVO"
+    },
+    "copyright": "© {{currentYear}} ServerFlow Inc. Alle Rechte vorbehalten.",
+    "badges": {
+      "zeroTrust": "Zero-Trust Architektur",
+      "openSource": "Open Source Agent",
+      "gdpr": "DSGVO Konform",
+      "encryption": "Ed25519 Verschlüsselung"
+    }
+  },
+  "languages": {
+    "en": "English",
+    "fr": "Français",
+    "de": "Deutsch",
+    "es": "Español",
+    "it": "Italiano"
+  },
+  "common": {
+    "learnMore": "Mehr erfahren",
+    "getStarted": "Loslegen",
+    "backToHome": "Zurück zur Startseite"
+  }
+}

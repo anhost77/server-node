@@ -1,0 +1,107 @@
+/* Global Vars & Reset */
+:root {
+    --ovh-blue: #0050d2;
+    --ovh-dark: #121d59;
+    --ovh-bg: #f5f6fa;
+    --apple-text: #1d1d1f;
+    --apple-gray: #86868b;
+    --apple-bg: #fbfbfd;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Utils */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.btn {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+/* Landing Page Styles */
+.landing-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: #f0f2f5;
+    text-align: center;
+}
+
+.landing-title {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    color: #333;
+}
+
+.variant-selector {
+    display: flex;
+    gap: 2rem;
+}
+
+.variant-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    width: 300px;
+    transition: transform 0.2s;
+}
+
+.variant-card:hover {
+    transform: translateY(-5px);
+}
+
+.variant-name {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.variant-desc {
+    color: #666;
+    margin-bottom: 1.5rem;
+}
+
+.btn-primary {
+    background: #333;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 6px;
+}
+
+.btn-ovh {
+    background: var(--ovh-blue);
+    color: white;
+}
+
+.btn-apple {
+    background: #0071e3;
+    color: white;
+    border-radius: 980px; /* Pill shape */
+}

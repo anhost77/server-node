@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="{{lang}}">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{meta.title}}</title>
+    <meta name="description" content="{{meta.description}}">
+    <meta name="keywords" content="{{meta.keywords}}">
+    <link rel="canonical" href="https://serverflow.io/{{lang}}/{{#unless page}}{{/unless}}{{#if page}}{{page}}/{{/if}}">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="{{meta.title}}">
+    <meta property="og:description" content="{{meta.description}}">
+    <meta property="og:image" content="https://serverflow.io/assets/og/{{page}}.png">
+    <meta property="og:url" content="https://serverflow.io/{{lang}}/{{page}}/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="ServerFlow">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@serverflow">
+    <meta name="twitter:title" content="{{meta.title}}">
+    <meta name="twitter:description" content="{{meta.description}}">
+    <meta name="twitter:image" content="https://serverflow.io/assets/og/{{page}}.png">
+
+    <!-- hreflang -->
+    {{#each alternateUrls}}
+    <link rel="alternate" hreflang="{{lang}}" href="{{url}}">
+    {{/each}}
+    <link rel="alternate" hreflang="x-default" href="https://serverflow.io/en/">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="/css/style.css">
+
+    <!-- JSON-LD -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "ServerFlow",
+        "url": "https://serverflow.io",
+        "logo": "https://serverflow.io/assets/logo.png",
+        "description": "{{meta.description}}",
+        "sameAs": [
+            "https://twitter.com/serverflow",
+            "https://github.com/serverflow",
+            "https://linkedin.com/company/serverflow"
+        ]
+    }
+    </script>
+</head>
+
+<body>
+    <!-- Skip to content (a11y) -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <!-- Scroll Progress -->
+    <div class="scroll-progress">
+        <div class="scroll-progress-bar"></div>
+    </div>
+
+    {{> layout/header}}
+
+    <main id="main-content" role="main">
+        {{> content}}
+    </main>
+
+    {{> layout/footer}}
+
+    <!-- JS -->
+    <script src="/js/main.js" defer></script>
+</body>
+
+</html>

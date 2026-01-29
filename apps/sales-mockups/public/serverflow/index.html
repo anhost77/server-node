@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ServerFlow - Deploy AI Agents to Your Own Infrastructure</title>
+    <meta name="description"
+        content="Deploy code to your own VPS in 5 minutes. serverFlow bridges AI agents and real infrastructure with zero-trust security.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="security-deck.css">
+    <script src="script.js" defer></script>
+</head>
+
+<body>
+    <div class="scroll-progress">
+        <div class="scroll-progress-bar"></div>
+    </div>
+
+    <nav class="navbar">
+        <div class="container nav-content">
+            <a href="index.html" class="logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 17l6-6-6-6M12 19h8" stroke="white" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                ServerFlow
+            </a>
+            <div class="nav-links">
+                <a href="#how-it-works">How it Works</a>
+                <a href="features.html">Features</a>
+                <a href="pricing.html">Pricing</a>
+                <a href="https://github.com/serverflow" target="_blank">GitHub</a>
+            </div>
+
+            <!-- Actions (droite) -->
+            <div class="nav-actions">
+                <!-- Sélecteur de langue -->
+                <div class="language-selector">
+                    <button class="lang-trigger">
+                        <svg class="globe-icon" viewBox="0 0 24 24" width="18" height="18">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" fill="none" stroke-width="2" />
+                            <path
+                                d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+                                stroke="currentColor" fill="none" stroke-width="2" />
+                        </svg>
+                        <span class="current-lang">EN</span>
+                        <svg class="chevron" viewBox="0 0 24 24" width="14" height="14">
+                            <path d="M6 9l6 6 6-6" stroke="currentColor" fill="none" stroke-width="2" />
+                        </svg>
+                    </button>
+
+                    <!-- Dropdown -->
+                    <div class="lang-dropdown">
+                        <a href="?lang=en" class="lang-option active">
+                            <span class="flag">🇬🇧</span>
+                            <span>English</span>
+                            <svg class="check" viewBox="0 0 24 24" width="16" height="16">
+                                <path d="M20 6L9 17l-5-5" stroke="currentColor" fill="none" stroke-width="2" />
+                            </svg>
+                        </a>
+                        <a href="?lang=fr" class="lang-option">
+                            <span class="flag">🇫🇷</span>
+                            <span>Français</span>
+                        </a>
+                        <a href="?lang=de" class="lang-option">
+                            <span class="flag">🇩🇪</span>
+                            <span>Deutsch</span>
+                        </a>
+                        <a href="?lang=es" class="lang-option">
+                            <span class="flag">🇪🇸</span>
+                            <span>Español</span>
+                        </a>
+                        <a href="?lang=it" class="lang-option">
+                            <span class="flag">🇮🇹</span>
+                            <span>Italiano</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Bouton Login -->
+                <a href="https://app.serverflow.io/login" class="btn-ghost-sm">
+                    Log in
+                </a>
+
+                <!-- Bouton Get Started -->
+                <a href="pricing.html" class="btn btn-primary btn-sm">
+                    Get Started
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="container">
+            <h1 class="animate-fade-in">
+                Deploy to your own servers.<br>
+                <span class="text-gradient-animate">In 5 minutes. Zero DevOps.</span>
+            </h1>
+            <p class="animate-fade-in" style="animation-delay: 0.1s">
+                The secure bridge between AI coding agents and your VPS.
+                Stop copying code. Start shipping to production.
+            </p>
+            <div class="hero-actions animate-fade-in" style="animation-delay: 0.2s">
+                <a href="pricing.html" class="btn btn-primary cta-glow">Start Deploying</a>
+                <a href="#how-it-works" class="btn btn-secondary">See how it works</a>
+            </div>
+
+            <!-- Parallax Hero Image -->
+            <div class="terminal animate-fade-in parallax" data-speed="0.2"
+                style="animation-delay: 0.4s; position: relative; z-index: 10;">
+                <div class="terminal-header">
+                    <div class="dot" style="background: #ef4444"></div>
+                    <div class="dot" style="background: #eab308"></div>
+                    <div class="dot" style="background: #22c55e"></div>
+                </div>
+                <div class="terminal-content">
+                    <div class="command">
+                        <span class="prompt">$</span> serverflow connect --profile production
+                    </div>
+                    <div style="color: #a1a1aa; margin-top: 0.5rem">
+                        > Authenticating with secure bridge... OK<br>
+                        > Detecting project type... Node.js detected<br>
+                        > Provisioning Nginx + SSL... Done (0.8s)<br>
+                        > <span style="color: var(--success)">App deployed to https://api.myserver.com</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Revamped How it Works Section -->
+    <div class="how-it-works-wrapper" id="how-it-works">
+
+        <!-- Step 1: Install -->
+        <div class="how-step reveal">
+            <div class="step-content">
+                <div class="step-number">01</div>
+                <h2>One Command. Full Server.</h2>
+                <p>No Plesk. No cPanel. No bloated panels eating your RAM. Just the essentials, configured perfectly.
+                </p>
+
+                <div class="install-badges">
+                    <span class="badge"><span class="icon">🌐</span> Nginx</span>
+                    <span class="badge"><span class="icon">🔒</span> SSL Auto</span>
+                    <span class="badge"><span class="icon">🛡️</span> Firewall</span>
+                    <span class="badge"><span class="icon">📊</span> Monitoring</span>
+                    <span class="badge"><span class="icon">⚡</span> PM2</span>
+                </div>
+
+                <p
+                    style="margin-top: 2rem; font-size: 0.9rem; color: #888; border-left: 2px solid #333; padding-left: 1rem;">
+                    "47 seconds vs 2 hours of manual config. Your RAM stays free for your apps, not for cPanel."
+                </p>
+            </div>
+            <div class="step-visual">
+                <div class="terminal-mockup">
+                    <div class="terminal-header">
+                        <span class="dot red"></span>
+                        <span class="dot yellow"></span>
+                        <span class="dot green"></span>
+                        <span class="terminal-title">root@my-vps:~</span>
+                    </div>
+                    <div class="terminal-body">
+                        <div class="line typing">$ curl -fsSL https://get.serverflow.io | sh</div>
+                        <div class="line fade-in delay-1">
+                            <span class="success">✓</span> Installing ServerFlow Agent...
+                        </div>
+                        <div class="line fade-in delay-2">
+                            <span class="success">✓</span> Configuring Nginx reverse proxy...
+                        </div>
+                        <div class="line fade-in delay-3">
+                            <span class="success">✓</span> Setting up UFW firewall (22, 80, 443)...
+                        </div>
+                        <div class="line fade-in delay-4">
+                            <span class="success">✓</span> Enabling Let's Encrypt auto-SSL...
+                        </div>
+                        <div class="line fade-in delay-5">
+                            <span class="success">✓</span> Starting PM2 process manager...
+                        </div>
+                        <div class="line fade-in delay-6">
+                            <span class="success">✓</span> Connected to dashboard!
+                        </div>
+                        <div class="line fade-in delay-7 highlight">
+                            🚀 Server ready in 47 seconds
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Deploy -->
+        <div class="how-step reveal">
+            <div class="step-content">
+                <div class="step-number">02</div>
+                <h2>Connect GitHub. Push. Live.</h2>
+                <p>Link your repo once. Every git push triggers auto-deploy. Zero CI/CD yaml to write.</p>
+
+                <div class="deploy-features">
+                    <span class="badge">🔍 Auto-detect Stack</span>
+                    <span class="badge">🔄 Git push = deploy</span>
+                    <span class="badge">⚡ Hot reload < 2s</span>
+                            <span class="badge">🔙 One-click rollback</span>
+                </div>
+            </div>
+            <div class="step-visual">
+                <div class="dashboard-mockup">
+                    <!-- Header -->
+                    <div class="dash-header">
+                        <span class="logo">ServerFlow</span>
+                        <span class="user">alexchen <div class="avatar-sm"></div></span>
+                    </div>
+
+                    <!-- Main content -->
+                    <div class="dash-body">
+                        <div class="connect-github-card">
+                            <div class="github-icon">
+                                <svg viewBox="0 0 24 24">
+                                    <path
+                                        d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                                </svg>
+                            </div>
+                            <h3>Connect Repository</h3>
+
+                            <div class="repo-selector">
+                                <div class="repo-item selected">
+                                    <span style="margin-right:0.5rem">📁</span>
+                                    <span>alexchen/my-saas-app</span>
+                                    <span class="check">✓</span>
+                                </div>
+                                <div class="repo-item">
+                                    <span style="margin-right:0.5rem">📁</span>
+                                    <span>alexchen/landing-page</span>
+                                </div>
+                            </div>
+
+                            <div class="auto-detect">
+                                <span>🔍 Detected: <strong>Next.js 14</strong></span>
+                            </div>
+
+                            <button class="btn-deploy">Deploy Now →</button>
+                        </div>
+
+                        <!-- Deploy success popup -->
+                        <div class="deploy-success">
+                            <span style="font-size:1.2rem">✅</span>
+                            <div>
+                                <span
+                                    style="display:block; font-weight:bold; font-size:0.9rem">https://my-saas-app.com</span>
+                                <span style="font-size:0.8rem; opacity:0.8">Deployed in 1.8s</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Chat -->
+        <div class="how-step reveal">
+            <div class="step-content">
+                <div class="step-number">03</div>
+                <h2>Talk to Deploy.</h2>
+                <p>MCP integration. Ask Claude or Cursor to deploy, rollback, or check logs. In plain English.</p>
+
+                <div class="command-examples">
+                    <span class="badge">"Deploy the fix I just pushed"</span>
+                    <span class="badge">"Restart the API"</span>
+                    <span class="badge">"Add SSL to blog.mysite.com"</span>
+                    <span class="badge">"Why is the site slow?"</span>
+                </div>
+
+                <p style="margin-top: 2rem; font-size: 1.1rem; color: #fff; font-weight: 500;">
+                    Your AI assistant is now your DevOps team. No terminal. No context switching. Just ship.
+                </p>
+            </div>
+            <div class="step-visual">
+                <div class="chat-mockup">
+                    <div class="chat-header">
+                        <img src="assets/ai-avatar.png" class="ai-avatar">
+                        <span>Claude</span>
+                        <span class="status online">● MCP Connected</span>
+                    </div>
+
+                    <div class="chat-messages">
+                        <!-- User message 1 -->
+                        <div class="message user">
+                            <p>Deploy the latest changes to production</p>
+                        </div>
+
+                        <!-- Claude response 1 -->
+                        <div class="message assistant">
+                            <p>Deploying to <strong>srv_7xK2mP9</strong>...</p>
+                            <div class="deploy-status">
+                                <span class="success">✅</span> Deployed in 1.8s
+                                <br>
+                                <a href="#" style="color:#3b82f6; text-decoration:none">🌍 https://my-app.com</a>
+                            </div>
+                        </div>
+
+                        <!-- User message 2 -->
+                        <div class="message user">
+                            <p>Something's wrong, rollback to yesterday</p>
+                        </div>
+
+                        <!-- Claude response 2 -->
+                        <div class="message assistant">
+                            <p>Rolling back to commit <code>a3f2c1b</code>...</p>
+                            <div class="deploy-status">
+                                <span class="success">✅</span> Rollback complete
+                                <br>
+                                <span class="muted" style="color:#888; font-size:0.8rem">Previous version
+                                    restored</span>
+                            </div>
+                        </div>
+
+                        <!-- User message 3 -->
+                        <div class="message user">
+                            <p>Show me the CPU usage</p>
+                        </div>
+
+                        <!-- Claude response 3 -->
+                        <div class="message assistant">
+                            <div class="stats-mini">
+                                <div class="stat">
+                                    <span class="label">CPU</span>
+                                    <span class="value">12%</span>
+                                    <div class="bar" style="width: 12%"></div>
+                                </div>
+                                <div class="stat">
+                                    <span class="label">RAM</span>
+                                    <span class="value">847 MB</span>
+                                    <div class="bar" style="width: 42%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input -->
+                    <div class="chat-input">
+                        <input type="text" placeholder="Ask Claude anything about your servers...">
+                        <button>↵</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- IMMERSIVE SECURITY DECK (Sticky Presentation) -->
+    <div id="security" class="security-deck">
+
+        <!-- Slide 1: The Hook (High Impact Typography) -->
+        <section class="security-slide slide-hook">
+            <div class="reveal">
+                <h2 class="text-gradient-animate" style="max-width: 1200px;">
+                    We Can't Access Your Servers.<br>
+                    <span style="opacity: 0.4;">Even If We Wanted To.</span>
+                </h2>
+                <p
+                    style="font-size: 1.75rem; color: var(--text-secondary); margin-top: 2rem; text-align: center; max-width: 800px; margin-left: auto; margin-right: auto;">
+                    Zero SSH keys. Zero root passwords. Zero backdoors.
+                    Built on math, not trust.
+                </p>
+            </div>
+            <div class="reveal" style="margin-top: 6rem; animation-delay: 0.3s">
+                <div class="floating"
+                    style="color: var(--text-secondary); opacity: 0.6; font-size: 0.9rem; letter-spacing: 0.2em; text-transform: uppercase;">
+                    Scroll to see the proof ↓
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 2: The Emotional Conflict (Tension vs Relief) -->
+        <section class="security-slide slide-comparison">
+            <h3 class="reveal" style="font-size: 4rem; margin-bottom: 4rem; font-weight: 800; letter-spacing: -0.02em;">
+                The "Trust Me" Risk</h3>
+            <div class="split-screen reveal">
+                <div class="split-pane pane-bad">
+                    <div class="split-icon">😰</div>
+                    <h4 class="pane-title" style="color: #ef4444;">Legacy Cloud</h4>
+                    <p class="pane-text">"You have my keys. Please don't look at my data. If you get hacked, I'm
+                        finished."</p>
+                    <div class="quote-bubble" style="color: #ef4444;">The provider is a liability.</div>
+                </div>
+                <div class="split-pane pane-good">
+                    <div class="split-icon">😌</div>
+                    <h4 class="pane-title" style="color: #10b981;">ServerFlow Model</h4>
+                    <p class="pane-text">"My keys stay on my server. Even if you disappear tomorrow, my site stays
+                        live."</p>
+                    <div class="quote-bubble" style="color: #10b981;">The provider is just a bridge.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: The Mechanics (Proof through Visual Evidence) -->
+        <section class="security-slide slide-mechanics">
+            <div class="diagram-stage reveal">
+                <div class="status-badge">Proof: Outbound Only</div>
+                <h3 style="font-size: 3rem; margin-bottom: 3rem; text-align: center; font-weight: 800;">One-Way
+                    Communication.</h3>
+
+                <div class="security-diagram-container" style="border: none; background: transparent; padding: 0;">
+                    <svg class="security-diagram-svg" viewBox="0 0 800 240" fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        style="filter: drop-shadow(0 0 30px rgba(16, 185, 129, 0.1));">
+                        <!-- Entities -->
+                        <rect x="50" y="70" width="140" height="100" rx="20" fill="rgba(255,255,255,0.03)"
+                            stroke="rgba(255,255,255,0.1)" stroke-width="2" />
+                        <text x="120" y="125" text-anchor="middle" fill="#fff" font-size="16" font-weight="600">Your
+                            VPS</text>
+                        <text x="120" y="145" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700"
+                            letter-spacing="0.1em">AGENT ACTIVE</text>
+
+                        <rect x="610" y="70" width="140" height="100" rx="20" fill="rgba(139, 92, 246, 0.05)"
+                            stroke="rgba(139, 92, 246, 0.2)" stroke-width="2" />
+                        <text x="680" y="125" text-anchor="middle" fill="#fff" font-size="16"
+                            font-weight="600">ServerFlow</text>
+
+                        <!-- Connection Line (Outbound) -->
+                        <path class="diagram-path" d="M190 120 L610 120" stroke="#10b981" stroke-width="6"
+                            stroke-linecap="round" />
+                        <polygon points="600,112 615,120 600,128" fill="#10b981" />
+
+                        <!-- Data Packets -->
+                        <circle cx="260" cy="120" r="6" fill="#fff" class="pulse-icon" style="animation-delay: 0s" />
+                        <circle cx="400" cy="120" r="6" fill="#fff" class="pulse-icon" style="animation-delay: 0.6s" />
+                        <circle cx="540" cy="120" r="6" fill="#fff" class="pulse-icon" style="animation-delay: 1.2s" />
+
+                        <!-- Dynamic Labels -->
+                        <text x="400" y="90" text-anchor="middle" fill="#10b981" font-size="14"
+                            font-weight="800">ENCRYPTED OUTBOUND WEBSOCKET</text>
+                        <text x="400" y="180" text-anchor="middle" fill="#888" font-size="12">NO SSH NEEDED • NO PORTS
+                            OPEN • TOTAL PRIVACY</text>
+                    </svg>
+                </div>
+            </div>
+
+            <p class="reveal"
+                style="margin-top: 4rem; font-size: 1.4rem; color: var(--text-secondary); max-width: 700px; text-align: center; font-weight: 500;">
+                We can't login to your system. We can't see your data.<br>
+                <span style="color: #fff">Our orchestrator only hears what your agent allows.</span>
+            </p>
+        </section>
+
+        <!-- Slide 4: Benefits Grid (The "Sleep Better" Result) -->
+        <section class="security-slide slide-benefits">
+            <h3 class="reveal"
+                style="font-size: 4.5rem; margin-bottom: 5rem; font-weight: 800; letter-spacing: -0.04em; text-align: center;">
+                Sleep Better Tonight.</h3>
+
+            <div class="glass-grid reveal">
+                <div class="glass-card">
+                    <span class="icon">🔐</span>
+                    <h3>Ed25519 Crypto</h3>
+                    <p>Mathematical proof that we can't spoof commands. The same protocol used by Signal and OpenSSH.
+                    </p>
+                </div>
+                <div class="glass-card">
+                    <span class="icon">🗑️</span>
+                    <h3>Nothing to Steal</h3>
+                    <p>We store ZERO credentials. If ServerFlow is breached, hackers find an empty room. No keys to
+                        take.</p>
+                </div>
+                <div class="glass-card">
+                    <span class="icon">💀</span>
+                    <h3>We Die, You Live</h3>
+                    <p>If we vanish tomorrow, your business continues. No kill-switch, no phone-home, no vendor lock-in.
+                    </p>
+                </div>
+                <div class="glass-card">
+                    <span class="icon">👁️</span>
+                    <h3>Audit the Agent</h3>
+                    <p>Our agent is 100% Open Source. Verify every line of code before you install. Trust the math.</p>
+                </div>
+            </div>
+
+            <div class="reveal" style="margin-top: 6rem;">
+                <a href="pricing.html" class="btn btn-primary cta-glow"
+                    style="padding: 1.8rem 5rem; font-size: 1.6rem; border-radius: 100px;">Secure My Infrastructure
+                    →</a>
+            </div>
+        </section>
+
+    </div>
+    <!-- END IMMERSIVE DECK -->
+
+    <!-- Features Grid Staggered -->
+    <section class="section">
+        <div class="container">
+            <h2 class="reveal" style="text-align: center; font-size: 2.5rem; margin-bottom: 4rem;">Why ServerFlow?</h2>
+
+            <div class="grid grid-3 stagger-parent reveal">
+                <!-- 1. Zero-Trust Security -->
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <rect x="10" y="8" width="4" height="6" rx="1" />
+                            <circle cx="12" cy="11" r="1" fill="currentColor" />
+                        </svg>
+                    </div>
+                    <h3>Zero-Trust Security</h3>
+                    <p style="color: var(--text-secondary);">
+                        We never access your servers. Agent initiates outbound connections only. No SSH keys stored,
+                        ever.
+                    </p>
+                </div>
+
+                <!-- 2. Hot Patching -->
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <h3>Hot Patching</h3>
+                    <p style="color: var(--text-secondary);">
+                        Deploy code changes in < 2 seconds. Auto-rollback if crash detected within 10s. Perfect for AI
+                            iteration loops. </p>
+                </div>
+
+                <!-- 3. Multi-Cloud Native -->
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path d="M8 10a5 5 0 0 1 5-5" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <h3>Multi-Cloud Native</h3>
+                    <p style="color: var(--text-secondary);">
+                        Hetzner, DigitalOcean, OVH, Vultr, AWS, Scaleway... Your VPS, your rules. Zero vendor lock-in.
+                    </p>
+                </div>
+
+                <!-- 4. MCP Integration -->
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            <path d="M12 9h.01"></path>
+                            <path d="M8 9h.01"></path>
+                            <path d="M16 9h.01"></path>
+                        </svg>
+                    </div>
+                    <h3>MCP Integration</h3>
+                    <p style="color: var(--text-secondary);">
+                        Deploy via natural language with Claude or Cursor. "Deploy my app to production" just works.
+                    </p>
+                </div>
+
+                <!-- 5. Auto SSL & Nginx -->
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                            <path d="M9 16l2 2 4-4"></path>
+                        </svg>
+                    </div>
+                    <h3>Auto SSL & Nginx</h3>
+                    <p style="color: var(--text-secondary);">
+                        Let's Encrypt certificates generated automatically. Nginx configured in seconds. HTTPS by
+                        default.
+                    </p>
+                </div>
+
+                <!-- 6. Self-Healing -->
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path
+                                d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z">
+                            </path>
+                            <path d="M12 5.5v2"></path>
+                            <path d="M12 11.5v2"></path>
+                        </svg>
+                    </div>
+                    <h3>Self-Healing</h3>
+                    <p style="color: var(--text-secondary);">
+                        Services auto-restart on failure. PM2 process management. Your apps stay online even if we
+                        don't.
+                    </p>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 4rem;">
+                <a href="features.html" class="btn btn-secondary reveal">View all features →</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Carousel -->
+    <section class="testimonials-section reveal"
+        style="background: linear-gradient(to bottom, transparent, rgba(139, 92, 246, 0.05));">
+        <div class="container" style="text-align: center; margin-bottom: 4rem;">
+            <h2 style="font-size: 2.5rem;">Loved by <span class="text-gradient-animate">Modern Builders</span></h2>
+        </div>
+
+        <div class="testimonial-track">
+            <!-- 1. Alex Chen -->
+            <div class="testimonial-card">
+                <div class="stars">★★★★★</div>
+                <p class="testimonial-text">"I used to spend 3 hours configuring Nginx and Let's Encrypt for each new
+                    project. Now I paste one command and I'm live on my $5 Hetzner VPS in under 5 minutes. Game changer
+                    for shipping fast."</p>
+                <div class="author">
+                    <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Alex Chen" class="avatar">
+                    <div class="author-info">
+                        <strong>Alex Chen</strong>
+                        <span>Indie Hacker, @alexbuilds</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Sarah Miller -->
+            <div class="testimonial-card">
+                <div class="stars">★★★★★</div>
+                <p class="testimonial-text">"Finally something that bridges local AI coding and real production without
+                    the Vercel markup. I keep my infrastructure, I keep my money. ServerFlow just handles the deployment
+                    magic."</p>
+                <div class="author">
+                    <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Sarah Miller" class="avatar">
+                    <div class="author-info">
+                        <strong>Sarah Miller</strong>
+                        <span>Full Stack Developer, Freelance</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Thomas Dubois -->
+            <div class="testimonial-card">
+                <div class="stars">★★★★★</div>
+                <p class="testimonial-text">"The MCP integration is insane. I literally told Claude 'deploy the new
+                    feature to staging' and it happened. No context switching, no terminal, just shipping. My team's
+                    velocity doubled."</p>
+                <div class="author">
+                    <img src="https://randomuser.me/api/portraits/men/67.jpg" alt="Thomas Dubois" class="avatar">
+                    <div class="author-info">
+                        <strong>Thomas Dubois</strong>
+                        <span>CTO, StartupLab.io</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Emma Rodriguez -->
+            <div class="testimonial-card">
+                <div class="stars">★★★★★</div>
+                <p class="testimonial-text">"I was skeptical about the Zero-Trust claims. After auditing the agent code,
+                    I'm impressed. Outbound connections only, Ed25519 signing, no credentials stored. This is how it
+                    should be done."</p>
+                <div class="author">
+                    <img src="https://randomuser.me/api/portraits/women/17.jpg" alt="Emma Rodriguez" class="avatar">
+                    <div class="author-info">
+                        <strong>Emma Rodriguez</strong>
+                        <span>DevOps Engineer, TechCorp</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Marcus Johnson -->
+            <div class="testimonial-card">
+                <div class="stars">★★★★★</div>
+                <p class="testimonial-text">"I manage 12 side projects across 4 different VPS providers. ServerFlow
+                    unified everything in one dashboard. Hot patching means I can iterate with Claude and see changes in
+                    2 seconds. Addictive."</p>
+                <div class="author">
+                    <img src="https://randomuser.me/api/portraits/men/91.jpg" alt="Marcus Johnson" class="avatar">
+                    <div class="author-info">
+                        <strong>Marcus Johnson</strong>
+                        <span>Solopreneur</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. Léa Martin -->
+            <div class="testimonial-card">
+                <div class="stars">★★★★★</div>
+                <p class="testimonial-text">"Je ne suis pas dev à la base. Avec Cursor et ServerFlow, je peux enfin
+                    mettre mes projets en ligne sans demander de l'aide. L'install en une commande, c'est exactement ce
+                    qu'il me fallait."</p>
+                <div class="author">
+                    <img src="https://randomuser.me/api/portraits/women/63.jpg" alt="Léa Martin" class="avatar">
+                    <div class="author-info">
+                        <strong>Léa Martin</strong>
+                        <span>Web Designer</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Duplicate first few for seamless loop -->
+            <div class="testimonial-card">
+                <div class="stars">★★★★★</div>
+                <p class="testimonial-text">"I used to spend 3 hours configuring Nginx and Let's Encrypt for each new
+                    project. Now I paste one command and I'm live on my $5 Hetzner VPS in under 5 minutes. Game changer
+                    for shipping fast."</p>
+                <div class="author">
+                    <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="Alex Chen" class="avatar">
+                    <div class="author-info">
+                        <strong>Alex Chen</strong>
+                        <span>Indie Hacker, @alexbuilds</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- IMMERSIVE FINAL CTA -->
+    <section class="final-cta">
+        <!-- Background animé -->
+        <div class="cta-bg">
+            <div class="gradient-orb orb-1"></div>
+            <div class="gradient-orb orb-2"></div>
+            <div class="grid-pattern"></div>
+        </div>
+
+        <div class="cta-content">
+            <!-- Headline principale -->
+            <h2 class="reveal">
+                Stop Configuring.<br>
+                <span class="text-gradient-animate">Start Shipping.</span>
+            </h2>
+
+            <!-- Sous-titre émotionnel -->
+            <p class="reveal">
+                Your next project is 47 seconds away from production.<br>
+                One command. Full server. Zero excuses.
+            </p>
+
+            <!-- Double CTA -->
+            <div class="cta-buttons reveal">
+                <a href="pricing.html" class="btn btn-primary cta-glow btn-large">
+                    <span>Deploy Your First App</span>
+                    <span class="btn-subtext">Free forever • No credit card</span>
+                </a>
+                <a href="#how-it-works" class="btn btn-ghost">
+                    <span>Watch 2-min Demo</span>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polygon points="10 8 16 12 10 16 10 8" fill="currentColor"></polygon>
+                    </svg>
+                </a>
+            </div>
+
+            <!-- Garanties -->
+            <div class="guarantees reveal">
+                <span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg> Free tier forever
+                </span>
+                <span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg> No credit card required
+                </span>
+                <span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg> Cancel anytime
+                </span>
+                <span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg> Your data stays yours
+                </span>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+
+            <!-- Section principale -->
+            <div class="footer-main">
+
+                <!-- Colonne Brand -->
+                <div class="footer-brand">
+                    <a href="index.html" class="logo">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M4 17l6-6-6-6M12 19h8" stroke="white" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                        ServerFlow
+                    </a>
+                    <p class="tagline">The Zero-Trust Bridge for AI-Native Deployment.</p>
+
+                    <!-- Social links -->
+                    <div class="social-links">
+                        <a href="https://twitter.com/serverflow" aria-label="Twitter">
+                            <svg viewBox="0 0 24 24" width="20" height="20">
+                                <path
+                                    d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
+                                    fill="currentColor" />
+                            </svg>
+                        </a>
+                        <a href="https://github.com/serverflow" aria-label="GitHub">
+                            <svg viewBox="0 0 24 24" width="20" height="20">
+                                <path
+                                    d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
+                                    fill="currentColor" />
+                            </svg>
+                        </a>
+                        <a href="https://discord.gg/serverflow" aria-label="Discord">
+                            <svg viewBox="0 0 24 24" width="20" height="20">
+                                <path
+                                    d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"
+                                    fill="currentColor" />
+                            </svg>
+                        </a>
+                        <a href="https://linkedin.com/company/serverflow" aria-label="LinkedIn">
+                            <svg viewBox="0 0 24 24" width="20" height="20">
+                                <path
+                                    d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"
+                                    fill="currentColor" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Colonnes de liens -->
+                <div class="footer-links">
+
+                    <div class="footer-col">
+                        <h4>Product</h4>
+                        <ul>
+                            <li><a href="features.html">Features</a></li>
+                            <li><a href="pricing.html">Pricing</a></li>
+                            <li><a href="#how-it-works">How it Works</a></li>
+                            <li><a href="#security">Security</a></li>
+                            <li>
+                                <a href="changelog.html">
+                                    Changelog
+                                    <span class="badge-new">New</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="footer-col">
+                        <h4>Resources</h4>
+                        <ul>
+                            <li><a href="https://docs.serverflow.io">Documentation</a></li>
+                            <li><a href="https://docs.serverflow.io/api">API Reference</a></li>
+                            <li><a href="https://blog.serverflow.io">Blog</a></li>
+                            <li><a href="https://status.serverflow.io">Status</a></li>
+                            <li><a href="https://github.com/serverflow">Open Source</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="footer-col">
+                        <h4>Company</h4>
+                        <ul>
+                            <li><a href="about.html">About</a></li>
+                            <li><a href="careers.html">Careers <span class="badge-hiring">Hiring</span></a></li>
+                            <li><a href="contact.html">Contact</a></li>
+                            <li><a href="press.html">Press Kit</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="footer-col">
+                        <h4>Legal</h4>
+                        <ul>
+                            <li><a href="privacy.html">Privacy Policy</a></li>
+                            <li><a href="terms.html">Terms of Service</a></li>
+                            <li><a href="dpa.html">DPA</a></li>
+                            <li><a href="security.html">Security</a></li>
+                            <li><a href="gdpr.html">GDPR</a></li>
+                        </ul>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Barre du bas -->
+            <div class="footer-bottom">
+                <div class="copyright">
+                    © 2025 ServerFlow Inc. All rights reserved.
+                </div>
+
+                <div class="footer-badges">
+                    <span class="badge-trust">
+                        🔐 Zero-Trust Architecture
+                    </span>
+                    <span class="badge-trust">
+                        📖 Open Source Agent
+                    </span>
+                    <span class="badge-trust">
+                        🇪🇺 GDPR Compliant
+                    </span>
+                    <span class="badge-trust">
+                        🔑 Ed25519 Encryption
+                    </span>
+                </div>
+
+                <!-- Sélecteur de langue dans le footer aussi -->
+                <div class="footer-lang">
+                    <select class="lang-select">
+                        <option value="en">🇬🇧 English</option>
+                        <option value="fr">🇫🇷 Français</option>
+                        <option value="de">🇩🇪 Deutsch</option>
+                        <option value="es">🇪🇸 Español</option>
+                        <option value="it">🇮🇹 Italiano</option>
+                    </select>
+                </div>
+            </div>
+
+        </div>
+    </footer>
+</body>
+
+</html>
