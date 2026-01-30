@@ -36,6 +36,7 @@ const PAGES = [
   { name: 'index', priority: 1.0 },
   { name: 'features', priority: 0.9 },
   { name: 'pricing', priority: 0.9 },
+  { name: 'deployments', priority: 0.9 },
   { name: 'about', priority: 0.7 },
   { name: 'contact', priority: 0.6 },
   { name: 'security', priority: 0.8 },
@@ -262,9 +263,9 @@ ${urls.map(url => `  <url>
     <changefreq>${url.changefreq}</changefreq>
     <priority>${url.priority}</priority>
 ${LANGUAGES.map(lang => {
-  const altLoc = url.loc.replace(/\/(en|fr|de|es|it)\//, `/${lang}/`);
-  return `    <xhtml:link rel="alternate" hreflang="${lang}" href="${altLoc}" />`;
-}).join('\n')}
+    const altLoc = url.loc.replace(/\/(en|fr|de|es|it)\//, `/${lang}/`);
+    return `    <xhtml:link rel="alternate" hreflang="${lang}" href="${altLoc}" />`;
+  }).join('\n')}
   </url>`).join('\n')}
 </urlset>`;
 

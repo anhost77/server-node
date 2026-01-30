@@ -1,0 +1,295 @@
+<link rel="stylesheet" href="/css/deployments.css">
+
+<main class="deployments-page">
+  <!-- 1. Hero Sticky -->
+  <section class="hero-sticky" data-scroll-section>
+    <div class="sticky-content">
+      <div class="badge-container reveal">
+        <span class="badge">{{deployments.badge}}</span>
+      </div>
+      <h1 class="hero-title">
+        <span class="word">{{deployments.title}}</span>
+        <span class="word gradient">{{deployments.titleGradient}}</span>
+      </h1>
+      <p class="subtitle reveal">{{deployments.subtitle}}</p>
+    </div>
+    <div id="particle-canvas-container"></div>
+    <div class="scroll-indicator">
+      <div class="mouse"></div>
+    </div>
+  </section>
+
+  <!-- 2. Runtimes Horizontal -->
+  <section class="horizontal-scroll" id="runtimes-section" data-scroll-section>
+    <div class="section-header container">
+       <h2 class="section-title reveal">{{deployments.runtimes.title}}</h2>
+       <p class="section-desc reveal">{{deployments.runtimes.description}}</p>
+    </div>
+    <div class="horizontal-container">
+      <div class="track">
+        <div class="card card-3d runtime-card" data-runtime="nodejs">
+          <div class="card-glow"></div>
+          <img src="/assets/runtime-nodejs.png" alt="Node.js" class="card-icon">
+          <h3>Node.js</h3>
+          <p>{{deployments.runtimes.nodejs}}</p>
+        </div>
+        <div class="card card-3d runtime-card" data-runtime="python">
+          <div class="card-glow"></div>
+          <img src="/assets/runtime-python.png" alt="Python" class="card-icon">
+          <h3>Python</h3>
+          <p>{{deployments.runtimes.python}}</p>
+        </div>
+        <div class="card card-3d runtime-card" data-runtime="php">
+          <div class="card-glow"></div>
+          <img src="/assets/runtime-php.png" alt="PHP" class="card-icon">
+          <h3>PHP</h3>
+          <p>{{deployments.runtimes.php}}</p>
+        </div>
+        <div class="card card-3d runtime-card" data-runtime="go">
+          <div class="card-glow"></div>
+          <img src="/assets/runtime-go.png" alt="Go" class="card-icon">
+          <h3>Go</h3>
+          <p>{{deployments.runtimes.go}}</p>
+        </div>
+        <div class="card card-3d runtime-card" data-runtime="rust">
+          <div class="card-glow"></div>
+          <img src="/assets/runtime-rust.png" alt="Rust" class="card-icon">
+          <h3>Rust</h3>
+          <p>{{deployments.runtimes.rust}}</p>
+        </div>
+        <div class="card card-3d runtime-card" data-runtime="ruby">
+          <div class="card-glow"></div>
+          <img src="/assets/runtime-ruby.png" alt="Ruby" class="card-icon">
+          <h3>Ruby</h3>
+          <p>{{deployments.runtimes.ruby}}</p>
+        </div>
+        <div class="card card-3d runtime-card" data-runtime="docker">
+          <div class="card-glow"></div>
+          <img src="/assets/runtime-docker.png" alt="Docker" class="card-icon">
+          <h3>Docker</h3>
+          <p>{{deployments.runtimes.docker}}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Databases Stack -->
+  <section class="card-stack-section" id="databases-section" data-scroll-section>
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title reveal">{{deployments.databases.title}}</h2>
+        <p class="section-desc reveal">{{deployments.databases.description}}</p>
+      </div>
+      <div class="stack-container">
+        <div class="stack-card database-card" id="db-postgres">
+          <div class="card-content">
+            <img src="/assets/database-postgresql.png" alt="PostgreSQL" class="card-icon">
+            <h3>PostgreSQL</h3>
+            <p>{{deployments.databases.postgresql}}</p>
+            <span class="badge green">{{deployments.badges.protected}}</span>
+          </div>
+        </div>
+        <div class="stack-card database-card" id="db-mysql">
+          <div class="card-content">
+            <img src="/assets/database-mysql.png" alt="MySQL" class="card-icon">
+            <h3>MySQL / MariaDB</h3>
+            <p>{{deployments.databases.mysql}}</p>
+            <span class="badge green">{{deployments.badges.protected}}</span>
+          </div>
+        </div>
+        <div class="stack-card database-card" id="db-redis">
+          <div class="card-content">
+            <img src="/assets/database-redis.png" alt="Redis" class="card-icon">
+            <h3>Redis</h3>
+            <p>{{deployments.databases.redis}}</p>
+            <span class="badge green">{{deployments.badges.protected}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="connection-lines">
+      <svg width="100%" height="100%" viewBox="0 0 1200 400">
+        <path class="line-path" d="M200,200 L1000,200" fill="none" stroke="rgba(139, 92, 246, 0.2)" stroke-width="2" />
+      </svg>
+    </div>
+  </section>
+
+  <!-- 4. Web & Security - Split Screen -->
+  <section class="split-screen" id="web-security-section" data-scroll-section>
+    <div class="split-side left" id="web-side">
+      <div class="side-content">
+        <h2 class="reveal">{{deployments.webProxy.title}}</h2>
+        <div class="service-list">
+          <div class="service-item reveal">
+            <img src="/assets/web-nginx.png" alt="Nginx" class="small-icon">
+            <div>
+              <h4>Nginx</h4>
+              <p>{{deployments.webProxy.nginx}}</p>
+            </div>
+          </div>
+          <div class="service-item reveal">
+             <img src="/assets/web-haproxy.png" alt="HAProxy" class="small-icon">
+            <div>
+              <h4>HAProxy</h4>
+              <p>{{deployments.webProxy.haproxy}}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="split-side right" id="security-side">
+      <div class="side-content">
+        <h2 class="reveal">{{deployments.security.title}}</h2>
+        <div class="service-list">
+          <div class="service-item reveal">
+            <div class="icon-placeholder green">F2B</div>
+            <div>
+              <h4>Fail2ban</h4>
+              <p>{{deployments.security.fail2ban}}</p>
+            </div>
+          </div>
+          <div class="service-item reveal">
+            <div class="icon-placeholder green">UFW</div>
+            <div>
+              <h4>UFW Firewall</h4>
+              <p>{{deployments.security.ufw}}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="merge-center">
+       <div class="shield-container">
+          <div class="shield-icon">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+             </svg>
+          </div>
+          <span class="shield-text">Zero Trust Architecture</span>
+       </div>
+    </div>
+  </section>
+
+  <!-- 5. Email Stack Pipeline -->
+  <section class="email-pipeline" id="email-section" data-scroll-section>
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title reveal">{{deployments.email.title}}</h2>
+        <p class="section-desc reveal">{{deployments.email.description}}</p>
+      </div>
+      <div class="pipeline-visualization">
+        <div class="pipeline-blueprint"></div>
+        <div class="pipeline-track">
+           <div class="pipeline-node" id="node-postfix">
+             <div class="node-icon">SMTP</div>
+             <span class="node-label">Postfix</span>
+           </div>
+           <div class="pipeline-arrow"></div>
+           <div class="pipeline-node" id="node-rspamd">
+             <div class="node-icon">SPAM</div>
+             <span class="node-label">Rspamd</span>
+           </div>
+           <div class="pipeline-arrow"></div>
+           <div class="pipeline-node" id="node-clamav">
+             <div class="node-icon">AV</div>
+             <span class="node-label">ClamAV</span>
+           </div>
+           <div class="pipeline-arrow"></div>
+           <div class="pipeline-node" id="node-dovecot">
+             <div class="node-icon">IMAP</div>
+             <span class="node-label">Dovecot</span>
+           </div>
+        </div>
+        <div class="pipeline-particles"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Monitoring Dashboard -->
+  <section class="monitoring-dashboard" id="monitoring-section" data-scroll-section>
+    <div class="container side-by-side">
+      <div class="dashboard-text">
+        <h2 class="reveal">{{deployments.monitoring.title}}</h2>
+        <p class="reveal">{{deployments.monitoring.description}}</p>
+        <ul class="features-list">
+           <li class="reveal"><strong>PM2:</strong> {{deployments.monitoring.pm2}}</li>
+           <li class="reveal"><strong>Netdata:</strong> {{deployments.monitoring.netdata}}</li>
+           <li class="reveal"><strong>Loki:</strong> {{deployments.monitoring.loki}}</li>
+        </ul>
+      </div>
+      <div class="dashboard-preview">
+        <div class="device-frame">
+          <div class="dashboard-grid">
+            <div class="chart-card">
+              <div class="chart-header">CPU Usage</div>
+              <div class="chart-body"><canvas id="cpu-chart"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-header">Memory</div>
+              <div class="chart-body"><canvas id="mem-chart"></canvas></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Uptime</div>
+              <div class="stat-value" data-target="99.99">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Latency</div>
+              <div class="stat-value" data-target="24">0</div><span>ms</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. Backup Cloud -->
+  <section class="backup-cloud" id="backup-section" data-scroll-section>
+    <div class="container">
+      <div class="section-header centered">
+        <h2 class="section-title reveal">{{deployments.backup.title}}</h2>
+        <p class="section-desc reveal">{{deployments.backup.description}}</p>
+      </div>
+      <div class="backup-animation-container">
+        <div class="data-file">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <div class="clouds-grid">
+          <div class="cloud-provider" id="cloud-s3">S3</div>
+          <div class="cloud-provider" id="cloud-gdrive">Drive</div>
+          <div class="cloud-provider" id="cloud-dropbox">Dropbox</div>
+        </div>
+        <div class="shield-lock">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. CTA Convergence -->
+  <section class="cta-convergence" id="cta-section" data-scroll-section>
+    <div class="convergence-background">
+       <canvas id="convergence-canvas"></canvas>
+    </div>
+    <div class="cta-content container">
+      <h2 class="reveal">{{deployments.cta.text}}</h2>
+      <div class="cta-actions reveal">
+        <a href="/pricing" class="btn btn-primary btn-glow">
+          {{deployments.cta.button}}
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Scripts -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.19/bundled/lenis.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script src="/js/deployments.js" defer></script>

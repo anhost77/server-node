@@ -169,11 +169,11 @@
       () => {
         const currentScroll = window.scrollY;
 
-        // Add shadow when scrolled
+        // Add intense style when scrolled
         if (currentScroll > 50) {
-          navbar.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.3)';
+          navbar.classList.add('scrolled');
         } else {
-          navbar.style.boxShadow = 'none';
+          navbar.classList.remove('scrolled');
         }
 
         lastScroll = currentScroll;

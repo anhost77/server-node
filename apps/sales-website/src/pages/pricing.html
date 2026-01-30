@@ -1,98 +1,442 @@
-<!-- Pricing Page -->
-<section class="page-header">
+<link rel="stylesheet" href="/css/pricing.css">
+
+<!-- Pricing Page - Optimized for Conversions -->
+
+<!-- Hero Section -->
+<section class="pricing-hero">
     <div class="container">
-        <h1 class="animate-fade-in">{{nav.pricing}}</h1>
-        <p class="animate-fade-in" style="animation-delay: 0.1s; max-width: 600px; margin: 0 auto;">
-            {{pricingPage.subtitle}}
+        <h1 class="animate-fade-in">
+            {{pricingPage.hero.title}}
+            <span class="gradient-text">{{pricingPage.hero.titleGradient}}</span>
+        </h1>
+        <p class="subtitle animate-fade-in" style="animation-delay: 0.1s;">
+            {{pricingPage.hero.subtitle}}
         </p>
     </div>
 </section>
 
+<!-- Trust Strip - Security Features -->
+<div class="trust-strip">
+    <div class="trust-item">
+        <span class="trust-icon">💻</span>
+        <span class="trust-text">{{pricingPage.trust.item1}}</span>
+    </div>
+    <div class="trust-item">
+        <span class="trust-icon">🔑</span>
+        <span class="trust-text">{{pricingPage.trust.item2}}</span>
+    </div>
+    <div class="trust-item">
+        <span class="trust-icon">🔐</span>
+        <span class="trust-text">{{pricingPage.trust.item3}}</span>
+    </div>
+    <div class="trust-item">
+        <span class="trust-icon">🛡️</span>
+        <span class="trust-text">{{pricingPage.trust.item4}}</span>
+    </div>
+</div>
+
+<!-- Pricing Section -->
 <section class="section pricing-section">
     <div class="container">
-        <div class="pricing-grid">
-            <!-- Free Tier -->
-            <div class="pricing-card">
-                <div class="pricing-header">
-                    <h3>{{pricingPage.free.name}}</h3>
-                    <div class="price">
-                        <span class="currency">$</span>
-                        <span class="amount">0</span>
-                        <span class="period">{{pricingPage.perMonth}}</span>
-                    </div>
-                    <p class="pricing-desc">{{pricingPage.free.desc}}</p>
-                </div>
-                <ul class="pricing-features">
-                    {{#each pricingPage.free.features}}
-                    <li><span class="check">&#x2713;</span> {{this}}</li>
-                    {{/each}}
-                </ul>
-                <a href="https://app.serverflow.io/signup" class="btn btn-secondary btn-block">{{pricingPage.free.cta}}</a>
-            </div>
 
-            <!-- Pro Tier -->
-            <div class="pricing-card featured">
-                <div class="pricing-badge">{{pricingPage.pro.badge}}</div>
-                <div class="pricing-header">
-                    <h3>{{pricingPage.pro.name}}</h3>
-                    <div class="price">
-                        <span class="currency">$</span>
-                        <span class="amount">9</span>
-                        <span class="period">{{pricingPage.perMonth}}</span>
-                    </div>
-                    <p class="pricing-desc">{{pricingPage.pro.desc}}</p>
-                </div>
-                <ul class="pricing-features">
-                    {{#each pricingPage.pro.features}}
-                    <li><span class="check">&#x2713;</span> {{this}}</li>
-                    {{/each}}
-                </ul>
-                <a href="https://app.serverflow.io/signup?plan=pro" class="btn btn-primary btn-block cta-glow">{{pricingPage.pro.cta}}</a>
+        <!-- Billing Toggle -->
+        <div class="billing-toggle-wrapper">
+            <div class="billing-toggle">
+                <button class="billing-option active" data-billing="monthly">
+                    {{pricingPage.billing.monthly}}
+                </button>
+                <button class="billing-option" data-billing="annually">
+                    {{pricingPage.billing.annually}}
+                </button>
             </div>
-
-            <!-- Team Tier -->
-            <div class="pricing-card">
-                <div class="pricing-header">
-                    <h3>{{pricingPage.team.name}}</h3>
-                    <div class="price">
-                        <span class="currency">$</span>
-                        <span class="amount">29</span>
-                        <span class="period">{{pricingPage.perMonth}}</span>
-                    </div>
-                    <p class="pricing-desc">{{pricingPage.team.desc}}</p>
-                </div>
-                <ul class="pricing-features">
-                    {{#each pricingPage.team.features}}
-                    <li><span class="check">&#x2713;</span> {{this}}</li>
-                    {{/each}}
-                </ul>
-                <a href="https://app.serverflow.io/signup?plan=team" class="btn btn-secondary btn-block">{{pricingPage.team.cta}}</a>
+            <div class="savings-badge" id="savings-badge" style="display: none;">
+                <span>💰</span>
+                <span>{{pricingPage.billing.savings}}</span>
             </div>
         </div>
 
-        <!-- FAQ Section -->
-        <div class="pricing-faq reveal">
-            <h2 style="text-align: center; margin-bottom: 3rem;">{{pricingPage.faq.title}}</h2>
-            <div class="faq-grid">
-                <div class="faq-item">
-                    <h4>{{pricingPage.faq.q1}}</h4>
-                    <p>{{pricingPage.faq.a1}}</p>
+        <!-- Pricing Cards -->
+        <div class="pricing-grid-enhanced">
+            <!-- Free Tier -->
+            <div class="pricing-card-enhanced">
+                <h3 class="pricing-plan-name">{{pricingPage.free.name}}</h3>
+                <p class="pricing-plan-desc">{{pricingPage.free.desc}}</p>
+
+                <div class="price-display">
+                    <span class="price-currency">€</span>
+                    <span class="price-amount" data-monthly="0" data-annually="0">0</span>
+                    <span class="price-period">{{pricingPage.perMonth}}</span>
                 </div>
-                <div class="faq-item">
-                    <h4>{{pricingPage.faq.q2}}</h4>
-                    <p>{{pricingPage.faq.a2}}</p>
+
+                <ul class="pricing-features-enhanced">
+                    {{#each pricingPage.free.features}}
+                    <li>
+                        <span class="feature-check">✓</span>
+                        <span>{{this}}</span>
+                    </li>
+                    {{/each}}
+                </ul>
+
+                <a href="https://app.serverflow.io/signup" class="pricing-cta pricing-cta-secondary">
+                    {{pricingPage.free.cta}}
+                </a>
+            </div>
+
+            <!-- Pro Tier - Featured -->
+            <div class="pricing-card-enhanced featured">
+                <div class="pricing-badge-enhanced">{{pricingPage.pro.badge}}</div>
+
+                <h3 class="pricing-plan-name">{{pricingPage.pro.name}}</h3>
+                <p class="pricing-plan-desc">{{pricingPage.pro.desc}}</p>
+
+                <div class="price-display">
+                    <span class="price-currency">€</span>
+                    <span class="price-amount" data-monthly="9" data-annually="7">9</span>
+                    <span class="price-period" data-monthly="{{pricingPage.perMonth}}" data-annually="{{pricingPage.perMonth}}">{{pricingPage.perMonth}}</span>
                 </div>
-                <div class="faq-item">
-                    <h4>{{pricingPage.faq.q3}}</h4>
-                    <p>{{pricingPage.faq.a3}}</p>
+                <div class="price-old" id="price-old-pro" style="display: none;">€9{{pricingPage.perMonth}} → €84{{pricingPage.billing.perYear}}</div>
+
+                <ul class="pricing-features-enhanced">
+                    {{#each pricingPage.pro.features}}
+                    <li>
+                        <span class="feature-check">✓</span>
+                        <span class="feature-highlight">{{this}}</span>
+                    </li>
+                    {{/each}}
+                </ul>
+
+                <a href="https://app.serverflow.io/signup?plan=pro" class="pricing-cta pricing-cta-primary">
+                    {{pricingPage.pro.cta}}
+                </a>
+            </div>
+
+            <!-- Team Tier -->
+            <div class="pricing-card-enhanced">
+                <h3 class="pricing-plan-name">{{pricingPage.team.name}}</h3>
+                <p class="pricing-plan-desc">{{pricingPage.team.desc}}</p>
+
+                <div class="price-display">
+                    <span class="price-currency">€</span>
+                    <span class="price-amount" data-monthly="29" data-annually="23">29</span>
+                    <span class="price-period">{{pricingPage.perMonth}}</span>
                 </div>
-                <div class="faq-item">
-                    <h4>{{pricingPage.faq.q4}}</h4>
-                    <p>{{pricingPage.faq.a4}}</p>
-                </div>
+                <div class="price-old" id="price-old-team" style="display: none;">€29{{pricingPage.perMonth}} → €276{{pricingPage.billing.perYear}}</div>
+
+                <ul class="pricing-features-enhanced">
+                    {{#each pricingPage.team.features}}
+                    <li>
+                        <span class="feature-check">✓</span>
+                        <span>{{this}}</span>
+                    </li>
+                    {{/each}}
+                </ul>
+
+                <a href="https://app.serverflow.io/signup?plan=team" class="pricing-cta pricing-cta-secondary">
+                    {{pricingPage.team.cta}}
+                </a>
+            </div>
+        </div>
+
+        <!-- Guarantees / Risk Reversal -->
+        <div class="guarantees-section">
+            <div class="guarantee-item">
+                <div class="guarantee-icon">📖</div>
+                <span>{{pricingPage.guarantees.openSource}}</span>
+            </div>
+            <div class="guarantee-item">
+                <div class="guarantee-icon">🔐</div>
+                <span>{{pricingPage.guarantees.yourData}}</span>
+            </div>
+            <div class="guarantee-item">
+                <div class="guarantee-icon">🚪</div>
+                <span>{{pricingPage.guarantees.cancelAnytime}}</span>
+            </div>
+            <div class="guarantee-item">
+                <div class="guarantee-icon">🔓</div>
+                <span>{{pricingPage.guarantees.noLockIn}}</span>
             </div>
         </div>
     </div>
 </section>
 
+<!-- Comparison Section -->
+<section class="comparison-section">
+    <div class="container">
+        <div class="comparison-header reveal">
+            <h2>{{pricingPage.comparison.title}}</h2>
+            <p>{{pricingPage.comparison.subtitle}}</p>
+        </div>
+
+        <div class="comparison-table-wrapper reveal">
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>{{pricingPage.comparison.feature}}</th>
+                        <th>Vercel</th>
+                        <th>Railway</th>
+                        <th>Render</th>
+                        <th class="highlight">ServerFlow</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="has-tooltip">
+                            {{pricingPage.comparison.pricePerMonth}}
+                            <span class="tooltip">{{pricingPage.comparison.tooltips.price}}</span>
+                        </td>
+                        <td class="comp-price">€20 <small>{{pricingPage.comparison.priceNote}}</small></td>
+                        <td class="comp-price">€5 <small>{{pricingPage.comparison.priceNote}}</small></td>
+                        <td class="comp-price">€7 <small>{{pricingPage.comparison.priceNote}}</small></td>
+                        <td class="highlight comp-price" style="color: #22c55e;">€9 <small>HT</small></td>
+                    </tr>
+                    <tr>
+                        <td class="has-tooltip">
+                            {{pricingPage.comparison.mcpIntegration}}
+                            <span class="tooltip">{{pricingPage.comparison.tooltips.mcp}}</span>
+                        </td>
+                        <td class="comp-cross">✗</td>
+                        <td class="comp-cross">✗</td>
+                        <td class="comp-cross">✗</td>
+                        <td class="highlight comp-check">✓</td>
+                    </tr>
+                    <tr>
+                        <td class="has-tooltip">
+                            {{pricingPage.comparison.hotPatching}}
+                            <span class="tooltip">{{pricingPage.comparison.tooltips.hotPatch}}</span>
+                        </td>
+                        <td class="comp-cross">✗</td>
+                        <td class="comp-cross">✗</td>
+                        <td class="comp-cross">✗</td>
+                        <td class="highlight comp-check">✓</td>
+                    </tr>
+                    <tr>
+                        <td class="has-tooltip">
+                            {{pricingPage.comparison.zeroTrust}}
+                            <span class="tooltip">{{pricingPage.comparison.tooltips.zeroTrust}}</span>
+                        </td>
+                        <td class="comp-cross">✗</td>
+                        <td class="comp-cross">✗</td>
+                        <td class="comp-cross">✗</td>
+                        <td class="highlight comp-check">✓</td>
+                    </tr>
+                    <tr>
+                        <td class="has-tooltip">
+                            {{pricingPage.comparison.noUsageFees}}
+                            <span class="tooltip">{{pricingPage.comparison.tooltips.noFees}}</span>
+                        </td>
+                        <td class="comp-cross">✗</td>
+                        <td class="comp-cross">✗</td>
+                        <td class="comp-cross">✗</td>
+                        <td class="highlight comp-check">✓</td>
+                    </tr>
+                    <tr>
+                        <td class="has-tooltip">
+                            {{pricingPage.comparison.yourInfra}}
+                            <span class="tooltip">{{pricingPage.comparison.tooltips.yourInfra}}</span>
+                        </td>
+                        <td class="comp-cross">✗</td>
+                        <td class="comp-cross">✗</td>
+                        <td class="comp-cross">✗</td>
+                        <td class="highlight comp-check">✓</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- Testimonial Quote -->
+<div class="pricing-testimonial reveal">
+    <blockquote>
+        {{pricingPage.testimonial.quote}}
+    </blockquote>
+    <div class="testimonial-author">
+        <div class="testimonial-avatar">MK</div>
+        <div class="testimonial-info">
+            <div class="testimonial-name">{{pricingPage.testimonial.author}}</div>
+            <div class="testimonial-role">{{pricingPage.testimonial.role}}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Feature Comparison Table -->
+<section class="features-table-section">
+    <div class="container">
+        <h2 class="reveal">{{pricingPage.featureTable.title}}</h2>
+
+        <div class="features-table-wrapper reveal">
+            <table class="features-table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>{{pricingPage.free.name}}</th>
+                        <th>{{pricingPage.pro.name}}</th>
+                        <th>{{pricingPage.team.name}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="has-tooltip">
+                            {{pricingPage.featureTable.servers}}
+                            <span class="tooltip">{{pricingPage.featureTable.tooltips.servers}}</span>
+                        </td>
+                        <td>1</td>
+                        <td>5</td>
+                        <td>{{pricingPage.featureTable.unlimited}}</td>
+                    </tr>
+                    <tr>
+                        <td class="has-tooltip">
+                            {{pricingPage.featureTable.apps}}
+                            <span class="tooltip">{{pricingPage.featureTable.tooltips.apps}}</span>
+                        </td>
+                        <td>3</td>
+                        <td>{{pricingPage.featureTable.unlimited}}</td>
+                        <td>{{pricingPage.featureTable.unlimited}}</td>
+                    </tr>
+                    <tr>
+                        <td class="has-tooltip">
+                            {{pricingPage.featureTable.mcp}}
+                            <span class="tooltip">{{pricingPage.featureTable.tooltips.mcp}}</span>
+                        </td>
+                        <td class="cross-icon">—</td>
+                        <td class="check-icon">✓</td>
+                        <td class="check-icon">✓</td>
+                    </tr>
+                    <tr>
+                        <td class="has-tooltip">
+                            {{pricingPage.featureTable.hotPatch}}
+                            <span class="tooltip">{{pricingPage.featureTable.tooltips.hotPatch}}</span>
+                        </td>
+                        <td class="cross-icon">—</td>
+                        <td class="check-icon">✓</td>
+                        <td class="check-icon">✓</td>
+                    </tr>
+                    <tr>
+                        <td class="has-tooltip">
+                            {{pricingPage.featureTable.rollback}}
+                            <span class="tooltip">{{pricingPage.featureTable.tooltips.rollback}}</span>
+                        </td>
+                        <td class="cross-icon">—</td>
+                        <td class="check-icon">✓</td>
+                        <td class="check-icon">✓</td>
+                    </tr>
+                    <tr>
+                        <td class="has-tooltip">
+                            {{pricingPage.featureTable.team}}
+                            <span class="tooltip">{{pricingPage.featureTable.tooltips.team}}</span>
+                        </td>
+                        <td class="cross-icon">—</td>
+                        <td class="cross-icon">—</td>
+                        <td class="check-icon">✓</td>
+                    </tr>
+                    <tr>
+                        <td class="has-tooltip">
+                            {{pricingPage.featureTable.rbac}}
+                            <span class="tooltip">{{pricingPage.featureTable.tooltips.rbac}}</span>
+                        </td>
+                        <td class="cross-icon">—</td>
+                        <td class="cross-icon">—</td>
+                        <td class="check-icon">✓</td>
+                    </tr>
+                    <tr>
+                        <td class="has-tooltip">
+                            {{pricingPage.featureTable.audit}}
+                            <span class="tooltip">{{pricingPage.featureTable.tooltips.audit}}</span>
+                        </td>
+                        <td class="cross-icon">—</td>
+                        <td class="cross-icon">—</td>
+                        <td class="check-icon">✓</td>
+                    </tr>
+                    <tr>
+                        <td class="has-tooltip">
+                            {{pricingPage.featureTable.support}}
+                            <span class="tooltip">{{pricingPage.featureTable.tooltips.support}}</span>
+                        </td>
+                        <td>{{pricingPage.featureTable.community}}</td>
+                        <td>{{pricingPage.featureTable.priority}}</td>
+                        <td>{{pricingPage.featureTable.dedicated}}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="faq-section-enhanced">
+    <div class="container">
+        <h2 class="reveal">{{pricingPage.faq.title}}</h2>
+
+        <div class="faq-grid-enhanced reveal">
+            <div class="faq-item-enhanced">
+                <h4>{{pricingPage.faq.q1}}</h4>
+                <p>{{pricingPage.faq.a1}}</p>
+            </div>
+            <div class="faq-item-enhanced">
+                <h4>{{pricingPage.faq.q2}}</h4>
+                <p>{{pricingPage.faq.a2}}</p>
+            </div>
+            <div class="faq-item-enhanced">
+                <h4>{{pricingPage.faq.q3}}</h4>
+                <p>{{pricingPage.faq.a3}}</p>
+            </div>
+            <div class="faq-item-enhanced">
+                <h4>{{pricingPage.faq.q4}}</h4>
+                <p>{{pricingPage.faq.a4}}</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Final CTA -->
 {{> sections/cta}}
+
+<!-- Pricing Page Script -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Billing Toggle
+    const billingOptions = document.querySelectorAll('.billing-option');
+    const priceAmounts = document.querySelectorAll('.price-amount');
+    const savingsBadge = document.getElementById('savings-badge');
+    const priceOldPro = document.getElementById('price-old-pro');
+    const priceOldTeam = document.getElementById('price-old-team');
+
+    billingOptions.forEach(option => {
+        option.addEventListener('click', () => {
+            // Update active state
+            billingOptions.forEach(opt => opt.classList.remove('active'));
+            option.classList.add('active');
+
+            const billing = option.dataset.billing;
+
+            // Update prices
+            priceAmounts.forEach(amount => {
+                const price = amount.dataset[billing];
+                amount.textContent = price;
+            });
+
+            // Show/hide savings badge and old prices
+            if (billing === 'annually') {
+                savingsBadge.style.display = 'inline-flex';
+                if (priceOldPro) priceOldPro.style.display = 'block';
+                if (priceOldTeam) priceOldTeam.style.display = 'block';
+            } else {
+                savingsBadge.style.display = 'none';
+                if (priceOldPro) priceOldPro.style.display = 'none';
+                if (priceOldTeam) priceOldTeam.style.display = 'none';
+            }
+        });
+    });
+
+    // Reveal on scroll
+    const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+});
+</script>
