@@ -687,13 +687,16 @@
     const chatInput = mockup.querySelector('.chat-input');
     const inputField = mockup.querySelector('#chat-input-field');
 
-    // Auto-scroll to bottom of messages container
-    function scrollToBottom() {
-      if (messagesContainer) {
-        messagesContainer.scrollTo({
-          top: messagesContainer.scrollHeight,
-          behavior: 'smooth'
-        });
+    // Scroll to show a specific message (only if needed)
+    function scrollToMessage(message) {
+      if (messagesContainer && message) {
+        // Only scroll if the message is below the visible area
+        const containerRect = messagesContainer.getBoundingClientRect();
+        const messageRect = message.getBoundingClientRect();
+
+        if (messageRect.bottom > containerRect.bottom) {
+          message.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
       }
     }
 
@@ -750,7 +753,7 @@
                 chatInput?.classList.remove('active');
                 // Bubble appears with text already inside (was hidden by CSS)
                 msg.classList.add('visible');
-                scrollToBottom();
+                scrollToMessage(msg);
               }, 200);
             });
           }, delay);
@@ -761,12 +764,12 @@
           // Step 3: Show thinking dots
           setTimeout(() => {
             msg.classList.add('visible', 'thinking');
-            scrollToBottom();
+            scrollToMessage(msg);
 
             // Step 4: Show response after "thinking"
             setTimeout(() => {
               msg.classList.remove('thinking');
-              scrollToBottom();
+              scrollToMessage(msg);
             }, 1200);
           }, delay);
 
