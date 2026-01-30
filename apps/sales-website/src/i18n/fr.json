@@ -419,6 +419,37 @@
     "getStarted": "Commencer",
     "backToHome": "Retour à l'accueil"
   },
+  "aboutPage": {
+    "subtitle": "Nous construisons le futur du déploiement AI-native.",
+    "mission": {
+      "title": "Notre Mission",
+      "p1": "ServerFlow est né d'une frustration simple : déployer du code ne devrait pas nécessiter un doctorat en DevOps. Alors que les assistants IA comme Claude et Cursor deviennent plus puissants, l'écart entre « le code qui marche en local » et « le code en production » devient le plus gros goulot d'étranglement.",
+      "p2": "Nous croyons que le déploiement devrait être aussi simple que de parler à votre assistant IA. Dites « déploie en production » et regardez ça se faire. Pas de fichiers YAML. Pas de configuration CI/CD. Pas de tunnels SSH. Juste livrer."
+    },
+    "values": {
+      "title": "Nos Valeurs",
+      "zeroTrust": {
+        "title": "Zero Trust par Défaut",
+        "description": "Nous avons conçu ServerFlow pour qu'il nous soit littéralement impossible d'accéder à vos serveurs. Vos clés restent sur votre infrastructure. Point."
+      },
+      "simplicity": {
+        "title": "Simplicité Avant les Fonctionnalités",
+        "description": "Nous préférons faire 10 choses parfaitement que 100 mal. Chaque fonctionnalité doit simplifier le déploiement, pas le complexifier."
+      },
+      "open": {
+        "title": "Ouvert par Conception",
+        "description": "Notre agent est open source. Auditez chaque ligne. Nous n'avons rien à cacher car nous ne stockons rien à voler."
+      },
+      "aiNative": {
+        "title": "Pensée AI-Native",
+        "description": "Nous n'adaptons pas de vieux outils pour l'IA. Nous construisons de zéro pour un monde où l'IA écrit la plupart du code."
+      }
+    },
+    "team": {
+      "title": "L'Équipe",
+      "description": "Nous sommes une petite équipe d'ingénieurs concentrée, frustrée par la complexité du déploiement depuis trop longtemps. Nous avons construit et fait évoluer des systèmes dans des entreprises grandes et petites, et nous mettons toute cette expérience pour faire de ServerFlow le moyen le plus simple de passer du code à la production."
+    }
+  },
   "featuresPage": {
     "cicd": {
       "badge": "Déploiement Simplifié",

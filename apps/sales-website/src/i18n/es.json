@@ -412,6 +412,37 @@
     "getStarted": "Empezar",
     "backToHome": "Volver al inicio"
   },
+  "aboutPage": {
+    "subtitle": "Estamos construyendo el futuro del despliegue AI-native.",
+    "mission": {
+      "title": "Nuestra Misión",
+      "p1": "ServerFlow nació de una frustración simple: desplegar código no debería requerir un doctorado en DevOps. A medida que los asistentes de código IA como Claude y Cursor se vuelven más potentes, la brecha entre \"código que funciona en local\" y \"código en producción\" se está convirtiendo en el mayor cuello de botella.",
+      "p2": "Creemos que el despliegue debería ser tan simple como hablar con tu asistente IA. Di \"despliega a producción\" y mira cómo sucede. Sin archivos YAML. Sin configuración CI/CD. Sin túneles SSH. Solo entregar."
+    },
+    "values": {
+      "title": "Nuestros Valores",
+      "zeroTrust": {
+        "title": "Zero Trust por Defecto",
+        "description": "Construimos ServerFlow para que literalmente no podamos acceder a tus servidores. Tus claves se quedan en tu infraestructura. Punto."
+      },
+      "simplicity": {
+        "title": "Simplicidad Sobre Funcionalidades",
+        "description": "Preferimos hacer 10 cosas perfectamente que 100 mal. Cada funcionalidad debe simplificar el despliegue, no complicarlo."
+      },
+      "open": {
+        "title": "Abierto por Diseño",
+        "description": "Nuestro agente es open source. Audita cada línea. No tenemos nada que ocultar porque no almacenamos nada que robar."
+      },
+      "aiNative": {
+        "title": "Pensamiento AI-Native",
+        "description": "No estamos adaptando herramientas viejas para IA. Estamos construyendo desde cero para un mundo donde la IA escribe la mayor parte del código."
+      }
+    },
+    "team": {
+      "title": "El Equipo",
+      "description": "Somos un equipo pequeño y enfocado de ingenieros frustrados por la complejidad del despliegue durante demasiado tiempo. Hemos construido y escalado sistemas en empresas grandes y pequeñas, y estamos poniendo toda esa experiencia en hacer de ServerFlow la forma más simple de ir del código a producción."
+    }
+  },
   "featuresPage": {
     "cicd": {
       "badge": "Despliegue Simplificado",

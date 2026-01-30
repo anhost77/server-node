@@ -419,6 +419,37 @@
     "getStarted": "Get Started",
     "backToHome": "Back to Home"
   },
+  "aboutPage": {
+    "subtitle": "We're building the future of AI-native deployment.",
+    "mission": {
+      "title": "Our Mission",
+      "p1": "ServerFlow was born from a simple frustration: deploying code shouldn't require a PhD in DevOps. As AI coding assistants like Claude and Cursor become more powerful, the gap between \"code that works locally\" and \"code running in production\" is becoming the biggest bottleneck.",
+      "p2": "We believe deployment should be as simple as talking to your AI assistant. Say \"deploy to production\" and watch it happen. No YAML files. No CI/CD configuration. No SSH tunnels. Just ship."
+    },
+    "values": {
+      "title": "Our Values",
+      "zeroTrust": {
+        "title": "Zero Trust by Default",
+        "description": "We built ServerFlow so we literally cannot access your servers. Your keys stay on your infrastructure. Period."
+      },
+      "simplicity": {
+        "title": "Simplicity Over Features",
+        "description": "We'd rather do 10 things perfectly than 100 things poorly. Every feature must make deployment simpler, not more complex."
+      },
+      "open": {
+        "title": "Open by Design",
+        "description": "Our agent is open source. Audit every line. We have nothing to hide because we store nothing to steal."
+      },
+      "aiNative": {
+        "title": "AI-Native Thinking",
+        "description": "We're not adapting old tools for AI. We're building from scratch for a world where AI writes most of the code."
+      }
+    },
+    "team": {
+      "title": "The Team",
+      "description": "We're a small, focused team of engineers who've been frustrated by deployment complexity for too long. We've built and scaled systems at companies large and small, and we're putting all that experience into making ServerFlow the simplest way to go from code to production."
+    }
+  },
   "featuresPage": {
     "cicd": {
       "badge": "Simplified Deployment",

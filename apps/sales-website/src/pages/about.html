@@ -3,7 +3,7 @@
     <div class="container">
         <h1 class="animate-fade-in">{{footer.company.about}}</h1>
         <p class="animate-fade-in" style="animation-delay: 0.1s; max-width: 600px; margin: 0 auto;">
-            We're building the future of AI-native deployment.
+            {{aboutPage.subtitle}}
         </p>
     </div>
 </section>
@@ -11,44 +11,32 @@
 <section class="section">
     <div class="container">
         <div class="about-content reveal">
-            <h2>Our Mission</h2>
-            <p>
-                ServerFlow was born from a simple frustration: deploying code shouldn't require a PhD in DevOps.
-                As AI coding assistants like Claude and Cursor become more powerful, the gap between
-                "code that works locally" and "code running in production" is becoming the biggest bottleneck.
-            </p>
-            <p>
-                We believe deployment should be as simple as talking to your AI assistant.
-                Say "deploy to production" and watch it happen. No YAML files. No CI/CD configuration.
-                No SSH tunnels. Just ship.
-            </p>
+            <h2>{{aboutPage.mission.title}}</h2>
+            <p>{{aboutPage.mission.p1}}</p>
+            <p>{{aboutPage.mission.p2}}</p>
 
-            <h2 style="margin-top: 4rem;">Our Values</h2>
+            <h2 style="margin-top: 4rem;">{{aboutPage.values.title}}</h2>
             <div class="values-grid">
                 <div class="value-card">
-                    <h3>Zero Trust by Default</h3>
-                    <p>We built ServerFlow so we literally cannot access your servers. Your keys stay on your infrastructure. Period.</p>
+                    <h3>{{aboutPage.values.zeroTrust.title}}</h3>
+                    <p>{{aboutPage.values.zeroTrust.description}}</p>
                 </div>
                 <div class="value-card">
-                    <h3>Simplicity Over Features</h3>
-                    <p>We'd rather do 10 things perfectly than 100 things poorly. Every feature must make deployment simpler, not more complex.</p>
+                    <h3>{{aboutPage.values.simplicity.title}}</h3>
+                    <p>{{aboutPage.values.simplicity.description}}</p>
                 </div>
                 <div class="value-card">
-                    <h3>Open by Design</h3>
-                    <p>Our agent is open source. Audit every line. We have nothing to hide because we store nothing to steal.</p>
+                    <h3>{{aboutPage.values.open.title}}</h3>
+                    <p>{{aboutPage.values.open.description}}</p>
                 </div>
                 <div class="value-card">
-                    <h3>AI-Native Thinking</h3>
-                    <p>We're not adapting old tools for AI. We're building from scratch for a world where AI writes most of the code.</p>
+                    <h3>{{aboutPage.values.aiNative.title}}</h3>
+                    <p>{{aboutPage.values.aiNative.description}}</p>
                 </div>
             </div>
 
-            <h2 style="margin-top: 4rem;">The Team</h2>
-            <p>
-                We're a small, focused team of engineers who've been frustrated by deployment complexity for too long.
-                We've built and scaled systems at companies large and small, and we're putting all that experience
-                into making ServerFlow the simplest way to go from code to production.
-            </p>
+            <h2 style="margin-top: 4rem;">{{aboutPage.team.title}}</h2>
+            <p>{{aboutPage.team.description}}</p>
         </div>
     </div>
 </section>
