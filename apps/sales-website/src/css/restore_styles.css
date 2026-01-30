@@ -1,0 +1,76 @@
+/* ==========================================================================
+   FOOTER CRYSTAL ANIMATIONS (Restored)
+   ========================================================================== */
+
+/* Active page indicator for footer links - Zero-Gravity Crystal */
+.footer-col a.active {
+  color: #fff;
+  position: relative;
+  text-shadow: 0 0 15px rgba(139, 92, 246, 0.8);
+  transition: all 0.3s ease;
+  padding-left: 0;
+  transform: translateX(12px);
+}
+
+/* Levitating Crystal Core */
+.footer-col a.active::before {
+  content: '';
+  position: absolute;
+  left: -22px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1.5px solid #fff;
+  border-radius: 1px;
+  box-shadow:
+    0 0 12px rgba(139, 92, 246, 0.8),
+    inset 0 0 6px rgba(139, 92, 246, 0.6);
+  z-index: 2;
+  animation: crystal-float 3s ease-in-out infinite;
+}
+
+/* Diamond Sonar Pulse */
+.footer-col a.active::after {
+  content: '';
+  position: absolute;
+  left: -22px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border: 2px solid rgba(139, 92, 246, 1);
+  border-radius: 1px;
+  z-index: 1;
+  opacity: 0;
+  animation: crystal-sonar 3s cubic-bezier(0.1, 0, 0.3, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes crystal-float {
+  0%,
+  100% {
+    transform: translateY(calc(-50% - 3px)) rotate(45deg);
+  }
+
+  50% {
+    transform: translateY(calc(-50% + 3px)) rotate(45deg);
+  }
+}
+
+@keyframes crystal-sonar {
+  0% {
+    transform: translateY(-50%) rotate(45deg) scale(1);
+    opacity: 1;
+    border-width: 2.5px;
+    border-color: rgba(139, 92, 246, 1);
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.6);
+  }
+
+  100% {
+    transform: translateY(-50%) rotate(45deg) scale(6);
+    opacity: 0;
+    border-width: 0px;
+    border-color: transparent;
+    box-shadow: 0 0 0 rgba(139, 92, 246, 0);
+  }
+}

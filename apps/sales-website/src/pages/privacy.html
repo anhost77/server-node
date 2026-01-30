@@ -1,85 +1,94 @@
 <!-- Privacy Policy Page -->
 <section class="page-header">
-    <div class="container">
-        <h1 class="animate-fade-in">{{footer.legal.privacy}}</h1>
-        <p class="animate-fade-in" style="animation-delay: 0.1s; max-width: 600px; margin: 0 auto;">
-            {{privacyPage.lastUpdated}}
-        </p>
-    </div>
+  <div class="container">
+    <h1 class="animate-fade-in">{{footer.legal.privacy}}</h1>
+    <p class="animate-fade-in" style="animation-delay: 0.1s; max-width: 600px; margin: 0 auto">
+      {{privacyPage.lastUpdated}}
+    </p>
+  </div>
 </section>
 
 <section class="section legal-content">
-    <div class="container">
-        <div class="legal-text reveal">
-            <h2>{{privacyPage.sections.intro.title}}</h2>
-            <p>{{privacyPage.sections.intro.content}}</p>
+  <div class="container">
+    <div class="legal-text reveal">
+      <h2>{{privacyPage.sections.intro.title}}</h2>
+      <p>{{privacyPage.sections.intro.content}}</p>
 
-            <h2>{{privacyPage.sections.dataCollect.title}}</h2>
-            <h3>{{privacyPage.sections.dataCollect.account.title}}</h3>
-            <p>{{privacyPage.sections.dataCollect.account.intro}}</p>
-            <ul>
-                {{#each privacyPage.sections.dataCollect.account.items}}
-                <li>{{this}}</li>
-                {{/each}}
-            </ul>
+      <h2>{{privacyPage.sections.dataCollect.title}}</h2>
+      <h3>{{privacyPage.sections.dataCollect.account.title}}</h3>
+      <p>{{privacyPage.sections.dataCollect.account.intro}}</p>
+      <ul>
+        {{#each privacyPage.sections.dataCollect.account.items}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
 
-            <h3>{{privacyPage.sections.dataCollect.usage.title}}</h3>
-            <p>{{privacyPage.sections.dataCollect.usage.intro}}</p>
-            <ul>
-                {{#each privacyPage.sections.dataCollect.usage.items}}
-                <li>{{this}}</li>
-                {{/each}}
-            </ul>
+      <h3>{{privacyPage.sections.dataCollect.usage.title}}</h3>
+      <p>{{privacyPage.sections.dataCollect.usage.intro}}</p>
+      <ul>
+        {{#each privacyPage.sections.dataCollect.usage.items}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
 
-            <h3>{{privacyPage.sections.dataCollect.notCollect.title}}</h3>
-            <p>{{privacyPage.sections.dataCollect.notCollect.intro}}</p>
-            <ul>
-                {{#each privacyPage.sections.dataCollect.notCollect.items}}
-                <li>{{this}}</li>
-                {{/each}}
-            </ul>
+      <h3>{{privacyPage.sections.dataCollect.notCollect.title}}</h3>
+      <p>{{privacyPage.sections.dataCollect.notCollect.intro}}</p>
+      <ul>
+        {{#each privacyPage.sections.dataCollect.notCollect.items}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
 
-            <h2>{{privacyPage.sections.howWeUse.title}}</h2>
-            <p>{{privacyPage.sections.howWeUse.intro}}</p>
-            <ul>
-                {{#each privacyPage.sections.howWeUse.items}}
-                <li>{{this}}</li>
-                {{/each}}
-            </ul>
+      <h2>{{privacyPage.sections.howWeUse.title}}</h2>
+      <p>{{privacyPage.sections.howWeUse.intro}}</p>
+      <ul>
+        {{#each privacyPage.sections.howWeUse.items}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
 
-            <h2>{{privacyPage.sections.storage.title}}</h2>
-            <p>{{privacyPage.sections.storage.content}}</p>
+      <h2>{{privacyPage.sections.storage.title}}</h2>
+      <p>{{privacyPage.sections.storage.content}}</p>
 
-            <h2>{{privacyPage.sections.retention.title}}</h2>
-            <p>{{privacyPage.sections.retention.content}}</p>
+      <h2>{{privacyPage.sections.retention.title}}</h2>
+      <p>{{privacyPage.sections.retention.content}}</p>
 
-            <h2>{{privacyPage.sections.rights.title}}</h2>
-            <p>{{privacyPage.sections.rights.intro}}</p>
-            <ul>
-                {{#each privacyPage.sections.rights.items}}
-                <li>{{this}}</li>
-                {{/each}}
-            </ul>
-            <p>{{privacyPage.sections.rights.contact}} <a href="mailto:privacy@serverflow.io">privacy@serverflow.io</a>.</p>
+      <h2>{{privacyPage.sections.rights.title}}</h2>
+      <p>{{privacyPage.sections.rights.intro}}</p>
+      <ul>
+        {{#each privacyPage.sections.rights.items}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
+      <p>
+        {{privacyPage.sections.rights.contact}}
+        <a href="mailto:privacy@serverflow.io">privacy@serverflow.io</a>.
+      </p>
 
-            <h2>{{privacyPage.sections.cookies.title}}</h2>
-            <p>{{privacyPage.sections.cookies.content}}</p>
+      <h2>{{privacyPage.sections.cookies.title}}</h2>
+      <p>{{privacyPage.sections.cookies.content}}</p>
 
-            <h2>{{privacyPage.sections.thirdParty.title}}</h2>
-            <p>{{privacyPage.sections.thirdParty.intro}}</p>
-            <ul>
-                <li><strong>{{privacyPage.sections.thirdParty.stripe}}</strong> - {{privacyPage.sections.thirdParty.stripeDesc}}</li>
-                <li><strong>{{privacyPage.sections.thirdParty.plausible}}</strong> - {{privacyPage.sections.thirdParty.plausibleDesc}}</li>
-            </ul>
+      <h2>{{privacyPage.sections.thirdParty.title}}</h2>
+      <p>{{privacyPage.sections.thirdParty.intro}}</p>
+      <ul>
+        <li>
+          <strong>{{privacyPage.sections.thirdParty.stripe}}</strong> -
+          {{privacyPage.sections.thirdParty.stripeDesc}}
+        </li>
+        <li>
+          <strong>{{privacyPage.sections.thirdParty.plausible}}</strong> -
+          {{privacyPage.sections.thirdParty.plausibleDesc}}
+        </li>
+      </ul>
 
-            <h2>{{privacyPage.sections.changes.title}}</h2>
-            <p>{{privacyPage.sections.changes.content}}</p>
+      <h2>{{privacyPage.sections.changes.title}}</h2>
+      <p>{{privacyPage.sections.changes.content}}</p>
 
-            <h2>{{privacyPage.sections.contact.title}}</h2>
-            <p>
-                {{privacyPage.sections.contact.content}}
-                <a href="mailto:privacy@serverflow.io">privacy@serverflow.io</a>.
-            </p>
-        </div>
+      <h2>{{privacyPage.sections.contact.title}}</h2>
+      <p>
+        {{privacyPage.sections.contact.content}}
+        <a href="mailto:privacy@serverflow.io">privacy@serverflow.io</a>.
+      </p>
     </div>
+  </div>
 </section>

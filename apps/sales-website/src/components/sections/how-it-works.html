@@ -1,174 +1,220 @@
 <!-- How it Works Section -->
 <div class="how-it-works-wrapper" id="how-it-works">
+  <!-- Step 1: Install -->
+  <div class="how-step reveal">
+    <div class="step-content">
+      <div class="step-number">{{howItWorks.step1.number}}</div>
+      <h2>{{howItWorks.step1.title}}</h2>
+      <p>{{howItWorks.step1.description}}</p>
 
-    <!-- Step 1: Install -->
-    <div class="how-step reveal">
-        <div class="step-content">
-            <div class="step-number">{{howItWorks.step1.number}}</div>
-            <h2>{{howItWorks.step1.title}}</h2>
-            <p>{{howItWorks.step1.description}}</p>
+      <div class="install-badges">
+        {{#each howItWorks.step1.badges}}
+        <span class="badge">{{this}}</span>
+        {{/each}}
+      </div>
 
-            <div class="install-badges">
-                {{#each howItWorks.step1.badges}}
-                <span class="badge">{{this}}</span>
-                {{/each}}
-            </div>
-
-            <p style="margin-top: 2rem; font-size: 0.9rem; color: #888; border-left: 2px solid #333; padding-left: 1rem;">
-                {{howItWorks.step1.quote}}
-            </p>
-        </div>
-        <div class="step-visual">
-            <div class="terminal-mockup">
-                <div class="terminal-header">
-                    <span class="dot red"></span>
-                    <span class="dot yellow"></span>
-                    <span class="dot green"></span>
-                    <span class="terminal-title">{{howItWorks.step1.terminalTitle}}</span>
-                </div>
-                <div class="terminal-body" id="install-terminal">
-                    <div class="terminal-line command-line">
-                        <span class="terminal-command" data-text="{{howItWorks.step1.lines.0}}"></span><span class="terminal-cursor">▋</span>
-                    </div>
-                    <div class="terminal-output">
-                        <div class="terminal-line output-line" data-text="{{howItWorks.step1.lines.1}}" data-prefix="✓"></div>
-                        <div class="terminal-line output-line" data-text="{{howItWorks.step1.lines.2}}" data-prefix="✓"></div>
-                        <div class="terminal-line output-line" data-text="{{howItWorks.step1.lines.3}}" data-prefix="✓"></div>
-                        <div class="terminal-line output-line" data-text="{{howItWorks.step1.lines.4}}" data-prefix="✓"></div>
-                        <div class="terminal-line output-line" data-text="{{howItWorks.step1.lines.5}}" data-prefix="✓"></div>
-                        <div class="terminal-line output-line" data-text="{{howItWorks.step1.lines.6}}" data-prefix="✓"></div>
-                        <div class="terminal-line output-line success-line" data-text="{{howItWorks.step1.lines.7}}" data-prefix="🚀"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+      <p
+        style="
+          margin-top: 2rem;
+          font-size: 0.9rem;
+          color: #888;
+          border-left: 2px solid #333;
+          padding-left: 1rem;
+        "
+      >
+        {{howItWorks.step1.quote}}
+      </p>
     </div>
-
-    <!-- Step 2: Deploy -->
-    <div class="how-step reveal">
-        <div class="step-content">
-            <div class="step-number">{{howItWorks.step2.number}}</div>
-            <h2>{{howItWorks.step2.title}}</h2>
-            <p>{{howItWorks.step2.description}}</p>
-
-            <div class="deploy-features">
-                {{#each howItWorks.step2.badges}}
-                <span class="badge">{{this}}</span>
-                {{/each}}
-            </div>
+    <div class="step-visual">
+      <div class="terminal-mockup">
+        <div class="terminal-header">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+          <span class="terminal-title">{{howItWorks.step1.terminalTitle}}</span>
         </div>
-        <div class="step-visual">
-            <div class="dashboard-mockup" id="deploy-mockup">
-                <div class="dash-header anim-item">
-                    <span class="logo">ServerFlow</span>
-                    <span class="user">alexchen <div class="avatar-sm"></div></span>
-                </div>
-
-                <div class="dash-body">
-                    <div class="connect-github-card">
-                        <div class="github-icon anim-item">
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-                            </svg>
-                        </div>
-                        <h3 class="anim-item anim-title" data-text="{{howItWorks.step2.connectRepo}}"></h3>
-
-                        <div class="repo-selector">
-                            <div class="repo-item anim-item" data-selected="true">
-                                <span style="margin-right:0.5rem">📁</span>
-                                <span>alexchen/my-saas-app</span>
-                                <span class="check anim-check">✓</span>
-                            </div>
-                            <div class="repo-item anim-item">
-                                <span style="margin-right:0.5rem">📁</span>
-                                <span>alexchen/landing-page</span>
-                            </div>
-                        </div>
-
-                        <div class="auto-detect anim-item">
-                            <span>🔍 {{howItWorks.step2.detected}} <strong>Next.js 14</strong></span>
-                        </div>
-
-                        <button class="btn-deploy anim-item">{{howItWorks.step2.deployNow}} →</button>
-                    </div>
-
-                    <div class="deploy-success anim-item">
-                        <span style="font-size:1.2rem">✅</span>
-                        <div>
-                            <span style="display:block; font-weight:bold; font-size:0.9rem">https://my-saas-app.com</span>
-                            <span style="font-size:0.8rem; opacity:0.8">{{howItWorks.step2.deployedIn}} 1.8s</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="terminal-body" id="install-terminal">
+          <div class="terminal-line command-line">
+            <span class="terminal-command" data-text="{{howItWorks.step1.lines.0}}"></span
+            ><span class="terminal-cursor">▋</span>
+          </div>
+          <div class="terminal-output">
+            <div
+              class="terminal-line output-line"
+              data-text="{{howItWorks.step1.lines.1}}"
+              data-prefix="✓"
+            ></div>
+            <div
+              class="terminal-line output-line"
+              data-text="{{howItWorks.step1.lines.2}}"
+              data-prefix="✓"
+            ></div>
+            <div
+              class="terminal-line output-line"
+              data-text="{{howItWorks.step1.lines.3}}"
+              data-prefix="✓"
+            ></div>
+            <div
+              class="terminal-line output-line"
+              data-text="{{howItWorks.step1.lines.4}}"
+              data-prefix="✓"
+            ></div>
+            <div
+              class="terminal-line output-line"
+              data-text="{{howItWorks.step1.lines.5}}"
+              data-prefix="✓"
+            ></div>
+            <div
+              class="terminal-line output-line"
+              data-text="{{howItWorks.step1.lines.6}}"
+              data-prefix="✓"
+            ></div>
+            <div
+              class="terminal-line output-line success-line"
+              data-text="{{howItWorks.step1.lines.7}}"
+              data-prefix="🚀"
+            ></div>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
 
-    <!-- Step 3: Chat -->
-    <div class="how-step reveal">
-        <div class="step-content">
-            <div class="step-number">{{howItWorks.step3.number}}</div>
-            <h2>{{howItWorks.step3.title}}</h2>
-            <p>{{howItWorks.step3.description}}</p>
+  <!-- Step 2: Deploy -->
+  <div class="how-step reveal">
+    <div class="step-content">
+      <div class="step-number">{{howItWorks.step2.number}}</div>
+      <h2>{{howItWorks.step2.title}}</h2>
+      <p>{{howItWorks.step2.description}}</p>
 
-            <div class="command-examples">
-                {{#each howItWorks.step3.commands}}
-                <span class="badge">{{this}}</span>
-                {{/each}}
-            </div>
-
-            <p style="margin-top: 2rem; font-size: 1.1rem; color: #fff; font-weight: 500;">
-                {{howItWorks.step3.footer}}
-            </p>
-        </div>
-        <div class="step-visual">
-            <div class="chat-mockup" id="chat-mockup">
-                <div class="chat-header chat-anim">
-                    <div class="ai-avatar"></div>
-                    <span>Claude</span>
-                    <span class="status online">● {{howItWorks.step3.mcpConnected}}</span>
-                </div>
-
-                <div class="chat-messages">
-                    <div class="message user chat-anim" data-type="user">
-                        <p data-text="{{howItWorks.step3.chatMessages.user1}}"></p>
-                    </div>
-
-                    <div class="message assistant chat-anim" data-type="assistant">
-                        <p>{{howItWorks.step3.chatMessages.assistant1}}</p>
-                        <div class="deploy-status">
-                            <span class="success">✅</span> {{howItWorks.step3.chatMessages.assistant1Status}}
-                        </div>
-                    </div>
-
-                    <div class="message user chat-anim" data-type="user">
-                        <p data-text="{{howItWorks.step3.chatMessages.user2}}"></p>
-                    </div>
-
-                    <div class="message assistant chat-anim" data-type="assistant">
-                        <p>{{howItWorks.step3.chatMessages.assistant2}}</p>
-                        <div class="deploy-status">
-                            <span class="success">✅</span> {{howItWorks.step3.chatMessages.assistant2Status}}
-                        </div>
-                    </div>
-
-                    <div class="message user chat-anim" data-type="user">
-                        <p data-text="{{howItWorks.step3.chatMessages.user3}}"></p>
-                    </div>
-
-                    <div class="message assistant chat-anim" data-type="assistant">
-                        <div class="stats-mini">
-                            <span style="font-size: 0.85rem; color: #888;">{{howItWorks.step3.chatMessages.assistant3Stats}}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="chat-input chat-anim">
-                    <input type="text" placeholder="{{howItWorks.step3.placeholder}}" id="chat-input-field">
-                    <button>↵</button>
-                </div>
-            </div>
-        </div>
+      <div class="deploy-features">
+        {{#each howItWorks.step2.badges}}
+        <span class="badge">{{this}}</span>
+        {{/each}}
+      </div>
     </div>
+    <div class="step-visual">
+      <div class="dashboard-mockup" id="deploy-mockup">
+        <div class="dash-header anim-item">
+          <span class="logo">ServerFlow</span>
+          <span class="user"
+            >alexchen
+            <div class="avatar-sm"></div
+          ></span>
+        </div>
 
+        <div class="dash-body">
+          <div class="connect-github-card">
+            <div class="github-icon anim-item">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
+                />
+              </svg>
+            </div>
+            <h3 class="anim-item anim-title" data-text="{{howItWorks.step2.connectRepo}}"></h3>
+
+            <div class="repo-selector">
+              <div class="repo-item anim-item" data-selected="true">
+                <span style="margin-right: 0.5rem">📁</span>
+                <span>alexchen/my-saas-app</span>
+                <span class="check anim-check">✓</span>
+              </div>
+              <div class="repo-item anim-item">
+                <span style="margin-right: 0.5rem">📁</span>
+                <span>alexchen/landing-page</span>
+              </div>
+            </div>
+
+            <div class="auto-detect anim-item">
+              <span>🔍 {{howItWorks.step2.detected}} <strong>Next.js 14</strong></span>
+            </div>
+
+            <button class="btn-deploy anim-item">{{howItWorks.step2.deployNow}} →</button>
+          </div>
+
+          <div class="deploy-success anim-item">
+            <span style="font-size: 1.2rem">✅</span>
+            <div>
+              <span style="display: block; font-weight: bold; font-size: 0.9rem"
+                >https://my-saas-app.com</span
+              >
+              <span style="font-size: 0.8rem; opacity: 0.8"
+                >{{howItWorks.step2.deployedIn}} 1.8s</span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Chat -->
+  <div class="how-step reveal">
+    <div class="step-content">
+      <div class="step-number">{{howItWorks.step3.number}}</div>
+      <h2>{{howItWorks.step3.title}}</h2>
+      <p>{{howItWorks.step3.description}}</p>
+
+      <div class="command-examples">
+        {{#each howItWorks.step3.commands}}
+        <span class="badge">{{this}}</span>
+        {{/each}}
+      </div>
+
+      <p style="margin-top: 2rem; font-size: 1.1rem; color: #fff; font-weight: 500">
+        {{howItWorks.step3.footer}}
+      </p>
+    </div>
+    <div class="step-visual">
+      <div class="chat-mockup" id="chat-mockup">
+        <div class="chat-header chat-anim">
+          <div class="ai-avatar"></div>
+          <span>Claude</span>
+          <span class="status online">● {{howItWorks.step3.mcpConnected}}</span>
+        </div>
+
+        <div class="chat-messages">
+          <div class="message user chat-anim" data-type="user">
+            <p data-text="{{howItWorks.step3.chatMessages.user1}}"></p>
+          </div>
+
+          <div class="message assistant chat-anim" data-type="assistant">
+            <p>{{howItWorks.step3.chatMessages.assistant1}}</p>
+            <div class="deploy-status">
+              <span class="success">✅</span> {{howItWorks.step3.chatMessages.assistant1Status}}
+            </div>
+          </div>
+
+          <div class="message user chat-anim" data-type="user">
+            <p data-text="{{howItWorks.step3.chatMessages.user2}}"></p>
+          </div>
+
+          <div class="message assistant chat-anim" data-type="assistant">
+            <p>{{howItWorks.step3.chatMessages.assistant2}}</p>
+            <div class="deploy-status">
+              <span class="success">✅</span> {{howItWorks.step3.chatMessages.assistant2Status}}
+            </div>
+          </div>
+
+          <div class="message user chat-anim" data-type="user">
+            <p data-text="{{howItWorks.step3.chatMessages.user3}}"></p>
+          </div>
+
+          <div class="message assistant chat-anim" data-type="assistant">
+            <div class="stats-mini">
+              <span style="font-size: 0.85rem; color: #888"
+                >{{howItWorks.step3.chatMessages.assistant3Stats}}</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-input chat-anim">
+          <input type="text" placeholder="{{howItWorks.step3.placeholder}}" id="chat-input-field" />
+          <button>↵</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

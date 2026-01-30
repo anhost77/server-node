@@ -1,155 +1,217 @@
 <!-- Press Kit Page -->
 <section class="page-header">
-    <div class="container">
-        <h1 class="animate-fade-in">{{footer.company.pressKit}}</h1>
-        <p class="animate-fade-in" style="animation-delay: 0.1s; max-width: 600px; margin: 0 auto;">
-            {{pressPage.subtitle}}
-        </p>
-    </div>
+  <div class="container">
+    <h1 class="animate-fade-in">{{footer.company.pressKit}}</h1>
+    <p class="animate-fade-in" style="animation-delay: 0.1s; max-width: 600px; margin: 0 auto">
+      {{pressPage.subtitle}}
+    </p>
+  </div>
 </section>
 
 <section class="section">
-    <div class="container">
-        <div class="press-content reveal">
-            <h2>{{pressPage.about.title}}</h2>
-            <p>{{pressPage.about.description}}</p>
+  <div class="container">
+    <div class="press-content reveal">
+      <h2>{{pressPage.about.title}}</h2>
+      <p>{{pressPage.about.description}}</p>
 
-            <div class="press-stats">
-                <div class="stat-card">
-                    <span class="stat-value">{{pressPage.stats.setupTime.value}}</span>
-                    <span class="stat-label">{{pressPage.stats.setupTime.label}}</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-value">{{pressPage.stats.deploySpeed.value}}</span>
-                    <span class="stat-label">{{pressPage.stats.deploySpeed.label}}</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-value">{{pressPage.stats.credentials.value}}</span>
-                    <span class="stat-label">{{pressPage.stats.credentials.label}}</span>
-                </div>
-            </div>
-
-            <h2>{{pressPage.keyFacts.title}}</h2>
-            <ul class="key-facts">
-                <li><strong>{{pressPage.keyFacts.founded}}:</strong> {{pressPage.keyFacts.foundedValue}}</li>
-                <li><strong>{{pressPage.keyFacts.headquarters}}:</strong> {{pressPage.keyFacts.headquartersValue}}</li>
-                <li><strong>{{pressPage.keyFacts.industry}}:</strong> {{pressPage.keyFacts.industryValue}}</li>
-                <li><strong>{{pressPage.keyFacts.architecture}}:</strong> {{pressPage.keyFacts.architectureValue}}</li>
-                <li><strong>{{pressPage.keyFacts.openSource}}:</strong> {{pressPage.keyFacts.openSourceValue}}</li>
-            </ul>
-
-            <h2>{{pressPage.brandAssets.title}}</h2>
-            <p>{{pressPage.brandAssets.description}}</p>
-
-            <div class="brand-assets">
-                <div class="asset-card">
-                    <div class="asset-preview logo-dark">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M4 17l6-6-6-6M12 19h8" stroke="white" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                        <span>ServerFlow</span>
-                    </div>
-                    <p>{{pressPage.brandAssets.logoDark}}</p>
-                    <a href="/assets/brand/serverflow-logo-dark.svg" class="btn btn-secondary btn-sm" download>{{pressPage.brandAssets.download}}</a>
-                </div>
-
-                <div class="asset-card">
-                    <div class="asset-preview logo-light">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M4 17l6-6-6-6M12 19h8" stroke="black" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                        <span style="color: #000;">ServerFlow</span>
-                    </div>
-                    <p>{{pressPage.brandAssets.logoLight}}</p>
-                    <a href="/assets/brand/serverflow-logo-light.svg" class="btn btn-secondary btn-sm" download>{{pressPage.brandAssets.download}}</a>
-                </div>
-
-                <div class="asset-card">
-                    <div class="asset-preview icon-only">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M4 17l6-6-6-6M12 19h8" stroke="url(#grad)" stroke-linecap="round" stroke-linejoin="round" />
-                            <defs>
-                                <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" style="stop-color:#8b5cf6" />
-                                    <stop offset="100%" style="stop-color:#3b82f6" />
-                                </linearGradient>
-                            </defs>
-                        </svg>
-                    </div>
-                    <p>{{pressPage.brandAssets.iconOnly}}</p>
-                    <a href="/assets/brand/serverflow-icon.svg" class="btn btn-secondary btn-sm" download>{{pressPage.brandAssets.download}}</a>
-                </div>
-            </div>
-
-            <h2>{{pressPage.brandColors.title}}</h2>
-            <div class="color-palette">
-                <div class="color-swatch" style="background: #8b5cf6;">
-                    <span>#8b5cf6</span>
-                    <span>{{pressPage.brandColors.primaryPurple}}</span>
-                </div>
-                <div class="color-swatch" style="background: #3b82f6;">
-                    <span>#3b82f6</span>
-                    <span>{{pressPage.brandColors.secondaryBlue}}</span>
-                </div>
-                <div class="color-swatch" style="background: #000000; border: 1px solid rgba(255,255,255,0.2);">
-                    <span>#000000</span>
-                    <span>{{pressPage.brandColors.background}}</span>
-                </div>
-                <div class="color-swatch" style="background: #10b981;">
-                    <span>#10b981</span>
-                    <span>{{pressPage.brandColors.successGreen}}</span>
-                </div>
-            </div>
-
-            <h2>{{pressPage.mediaContact.title}}</h2>
-            <p>{{pressPage.mediaContact.description}}</p>
-            <p>
-                <strong>{{pressPage.mediaContact.email}}:</strong> <a href="mailto:press@serverflow.io">press@serverflow.io</a><br>
-                <strong>{{pressPage.mediaContact.responseTime}}:</strong> {{pressPage.mediaContact.responseTimeValue}}
-            </p>
+      <div class="press-stats">
+        <div class="stat-card">
+          <span class="stat-value">{{pressPage.stats.setupTime.value}}</span>
+          <span class="stat-label">{{pressPage.stats.setupTime.label}}</span>
         </div>
+        <div class="stat-card">
+          <span class="stat-value">{{pressPage.stats.deploySpeed.value}}</span>
+          <span class="stat-label">{{pressPage.stats.deploySpeed.label}}</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">{{pressPage.stats.credentials.value}}</span>
+          <span class="stat-label">{{pressPage.stats.credentials.label}}</span>
+        </div>
+      </div>
+
+      <h2>{{pressPage.keyFacts.title}}</h2>
+      <ul class="key-facts">
+        <li>
+          <strong>{{pressPage.keyFacts.founded}}:</strong> {{pressPage.keyFacts.foundedValue}}
+        </li>
+        <li>
+          <strong>{{pressPage.keyFacts.headquarters}}:</strong>
+          {{pressPage.keyFacts.headquartersValue}}
+        </li>
+        <li>
+          <strong>{{pressPage.keyFacts.industry}}:</strong> {{pressPage.keyFacts.industryValue}}
+        </li>
+        <li>
+          <strong>{{pressPage.keyFacts.architecture}}:</strong>
+          {{pressPage.keyFacts.architectureValue}}
+        </li>
+        <li>
+          <strong>{{pressPage.keyFacts.openSource}}:</strong> {{pressPage.keyFacts.openSourceValue}}
+        </li>
+      </ul>
+
+      <h2>{{pressPage.brandAssets.title}}</h2>
+      <p>{{pressPage.brandAssets.description}}</p>
+
+      <div class="brand-assets">
+        <div class="asset-card">
+          <div class="asset-preview logo-dark">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M4 17l6-6-6-6M12 19h8"
+                stroke="white"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span>ServerFlow</span>
+          </div>
+          <p>{{pressPage.brandAssets.logoDark}}</p>
+          <a href="/assets/brand/serverflow-logo-dark.svg" class="btn btn-secondary btn-sm" download
+            >{{pressPage.brandAssets.download}}</a
+          >
+        </div>
+
+        <div class="asset-card">
+          <div class="asset-preview logo-light">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M4 17l6-6-6-6M12 19h8"
+                stroke="black"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span style="color: #000">ServerFlow</span>
+          </div>
+          <p>{{pressPage.brandAssets.logoLight}}</p>
+          <a
+            href="/assets/brand/serverflow-logo-light.svg"
+            class="btn btn-secondary btn-sm"
+            download
+            >{{pressPage.brandAssets.download}}</a
+          >
+        </div>
+
+        <div class="asset-card">
+          <div class="asset-preview icon-only">
+            <svg
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M4 17l6-6-6-6M12 19h8"
+                stroke="url(#grad)"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <defs>
+                <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color: #8b5cf6" />
+                  <stop offset="100%" style="stop-color: #3b82f6" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <p>{{pressPage.brandAssets.iconOnly}}</p>
+          <a href="/assets/brand/serverflow-icon.svg" class="btn btn-secondary btn-sm" download
+            >{{pressPage.brandAssets.download}}</a
+          >
+        </div>
+      </div>
+
+      <h2>{{pressPage.brandColors.title}}</h2>
+      <div class="color-palette">
+        <div class="color-swatch" style="background: #8b5cf6">
+          <span>#8b5cf6</span>
+          <span>{{pressPage.brandColors.primaryPurple}}</span>
+        </div>
+        <div class="color-swatch" style="background: #3b82f6">
+          <span>#3b82f6</span>
+          <span>{{pressPage.brandColors.secondaryBlue}}</span>
+        </div>
+        <div
+          class="color-swatch"
+          style="background: #000000; border: 1px solid rgba(255, 255, 255, 0.2)"
+        >
+          <span>#000000</span>
+          <span>{{pressPage.brandColors.background}}</span>
+        </div>
+        <div class="color-swatch" style="background: #10b981">
+          <span>#10b981</span>
+          <span>{{pressPage.brandColors.successGreen}}</span>
+        </div>
+      </div>
+
+      <h2>{{pressPage.mediaContact.title}}</h2>
+      <p>{{pressPage.mediaContact.description}}</p>
+      <p>
+        <strong>{{pressPage.mediaContact.email}}:</strong>
+        <a href="mailto:press@serverflow.io">press@serverflow.io</a><br />
+        <strong>{{pressPage.mediaContact.responseTime}}:</strong>
+        {{pressPage.mediaContact.responseTimeValue}}
+      </p>
     </div>
+  </div>
 </section>
 
 <style>
-.press-content {
+  .press-content {
     max-width: 900px;
     margin: 0 auto;
-}
+  }
 
-.press-content h2 {
+  .press-content h2 {
     font-size: 1.75rem;
     margin-top: 3rem;
     margin-bottom: 1.5rem;
-}
+  }
 
-.press-content h2:first-child {
+  .press-content h2:first-child {
     margin-top: 0;
-}
+  }
 
-.press-content > p {
+  .press-content > p {
     color: var(--text-secondary);
     font-size: 1.1rem;
     line-height: 1.8;
     margin-bottom: 2rem;
-}
+  }
 
-.press-stats {
+  .press-stats {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1.5rem;
     margin: 2rem 0;
-}
+  }
 
-.stat-card {
+  .stat-card {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     padding: 2rem;
     text-align: center;
-}
+  }
 
-.stat-value {
+  .stat-value {
     display: block;
     font-size: 3rem;
     font-weight: 800;
@@ -157,44 +219,44 @@
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-}
+  }
 
-.stat-label {
+  .stat-label {
     display: block;
     color: var(--text-secondary);
     margin-top: 0.5rem;
-}
+  }
 
-.key-facts {
+  .key-facts {
     padding-left: 0;
-}
+  }
 
-.key-facts li {
+  .key-facts li {
     color: var(--text-secondary);
     padding: 0.75rem 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
+  }
 
-.key-facts li:last-child {
+  .key-facts li:last-child {
     border-bottom: none;
-}
+  }
 
-.brand-assets {
+  .brand-assets {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1.5rem;
     margin: 2rem 0;
-}
+  }
 
-.asset-card {
+  .asset-card {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     padding: 1.5rem;
     text-align: center;
-}
+  }
 
-.asset-preview {
+  .asset-preview {
     height: 100px;
     display: flex;
     align-items: center;
@@ -204,62 +266,62 @@
     margin-bottom: 1rem;
     font-weight: 700;
     font-size: 1.25rem;
-}
+  }
 
-.logo-dark {
+  .logo-dark {
     background: #0a0a0a;
     color: white;
-}
+  }
 
-.logo-light {
+  .logo-light {
     background: #f5f5f5;
     color: black;
-}
+  }
 
-.icon-only {
+  .icon-only {
     background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
-}
+  }
 
-.asset-card p {
+  .asset-card p {
     color: var(--text-secondary);
     font-size: 0.9rem;
     margin-bottom: 1rem;
-}
+  }
 
-.color-palette {
+  .color-palette {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 1rem;
     margin: 2rem 0;
-}
+  }
 
-.color-swatch {
+  .color-swatch {
     border-radius: 12px;
     padding: 2rem 1rem;
     text-align: center;
     color: white;
-}
+  }
 
-.color-swatch span {
+  .color-swatch span {
     display: block;
-}
+  }
 
-.color-swatch span:first-child {
+  .color-swatch span:first-child {
     font-family: var(--font-mono);
     font-size: 0.9rem;
     margin-bottom: 0.25rem;
-}
+  }
 
-.color-swatch span:last-child {
+  .color-swatch span:last-child {
     font-size: 0.8rem;
     opacity: 0.8;
-}
+  }
 
-@media (max-width: 768px) {
+  @media (max-width: 768px) {
     .press-stats,
     .brand-assets,
     .color-palette {
-        grid-template-columns: 1fr;
+      grid-template-columns: 1fr;
     }
-}
+  }
 </style>

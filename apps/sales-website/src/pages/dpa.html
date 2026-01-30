@@ -1,100 +1,100 @@
 <!-- DPA Page -->
 <section class="page-header">
-    <div class="container">
-        <h1 class="animate-fade-in">{{dpaPage.title}}</h1>
-        <p class="animate-fade-in" style="animation-delay: 0.1s; max-width: 600px; margin: 0 auto;">
-            {{dpaPage.lastUpdated}}
-        </p>
-    </div>
+  <div class="container">
+    <h1 class="animate-fade-in">{{dpaPage.title}}</h1>
+    <p class="animate-fade-in" style="animation-delay: 0.1s; max-width: 600px; margin: 0 auto">
+      {{dpaPage.lastUpdated}}
+    </p>
+  </div>
 </section>
 
 <section class="section legal-content">
-    <div class="container">
-        <div class="legal-text reveal">
-            <h2>{{dpaPage.sections.intro.title}}</h2>
-            <p>{{dpaPage.sections.intro.content}}</p>
+  <div class="container">
+    <div class="legal-text reveal">
+      <h2>{{dpaPage.sections.intro.title}}</h2>
+      <p>{{dpaPage.sections.intro.content}}</p>
 
-            <h2>{{dpaPage.sections.definitions.title}}</h2>
-            <ul>
-                {{#each dpaPage.sections.definitions.items}}
-                <li><strong>"{{term}}"</strong> {{definition}}</li>
-                {{/each}}
-            </ul>
+      <h2>{{dpaPage.sections.definitions.title}}</h2>
+      <ul>
+        {{#each dpaPage.sections.definitions.items}}
+        <li><strong>"{{term}}"</strong> {{definition}}</li>
+        {{/each}}
+      </ul>
 
-            <h2>{{dpaPage.sections.scope.title}}</h2>
-            <p>{{dpaPage.sections.scope.content}}</p>
+      <h2>{{dpaPage.sections.scope.title}}</h2>
+      <p>{{dpaPage.sections.scope.content}}</p>
 
-            <h3>{{dpaPage.sections.scope.dataSubjects.title}}</h3>
-            <ul>
-                {{#each dpaPage.sections.scope.dataSubjects.items}}
-                <li>{{this}}</li>
-                {{/each}}
-            </ul>
+      <h3>{{dpaPage.sections.scope.dataSubjects.title}}</h3>
+      <ul>
+        {{#each dpaPage.sections.scope.dataSubjects.items}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
 
-            <h3>{{dpaPage.sections.scope.dataTypes.title}}</h3>
-            <ul>
-                {{#each dpaPage.sections.scope.dataTypes.items}}
-                <li>{{this}}</li>
-                {{/each}}
-            </ul>
+      <h3>{{dpaPage.sections.scope.dataTypes.title}}</h3>
+      <ul>
+        {{#each dpaPage.sections.scope.dataTypes.items}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
 
-            <h3>{{dpaPage.sections.scope.activities.title}}</h3>
-            <ul>
-                {{#each dpaPage.sections.scope.activities.items}}
-                <li>{{this}}</li>
-                {{/each}}
-            </ul>
+      <h3>{{dpaPage.sections.scope.activities.title}}</h3>
+      <ul>
+        {{#each dpaPage.sections.scope.activities.items}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
 
-            <h2>{{dpaPage.sections.obligations.title}}</h2>
-            <p>{{dpaPage.sections.obligations.intro}}</p>
-            <ul>
-                {{#each dpaPage.sections.obligations.items}}
-                <li>{{this}}</li>
-                {{/each}}
-            </ul>
+      <h2>{{dpaPage.sections.obligations.title}}</h2>
+      <p>{{dpaPage.sections.obligations.intro}}</p>
+      <ul>
+        {{#each dpaPage.sections.obligations.items}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
 
-            <h2>{{dpaPage.sections.security.title}}</h2>
-            <p>{{dpaPage.sections.security.intro}}</p>
-            <ul>
-                {{#each dpaPage.sections.security.items}}
-                <li>{{this}}</li>
-                {{/each}}
-            </ul>
+      <h2>{{dpaPage.sections.security.title}}</h2>
+      <p>{{dpaPage.sections.security.intro}}</p>
+      <ul>
+        {{#each dpaPage.sections.security.items}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
 
-            <h2>{{dpaPage.sections.subprocessors.title}}</h2>
-            <p>{{dpaPage.sections.subprocessors.intro}}</p>
-            <ul>
-                {{#each dpaPage.sections.subprocessors.list}}
-                <li><strong>{{name}}</strong> - {{purpose}} ({{location}})</li>
-                {{/each}}
-            </ul>
-            <p>{{dpaPage.sections.subprocessors.notice}}</p>
+      <h2>{{dpaPage.sections.subprocessors.title}}</h2>
+      <p>{{dpaPage.sections.subprocessors.intro}}</p>
+      <ul>
+        {{#each dpaPage.sections.subprocessors.list}}
+        <li><strong>{{name}}</strong> - {{purpose}} ({{location}})</li>
+        {{/each}}
+      </ul>
+      <p>{{dpaPage.sections.subprocessors.notice}}</p>
 
-            <h2>{{dpaPage.sections.transfers.title}}</h2>
-            <p>{{dpaPage.sections.transfers.content}}</p>
+      <h2>{{dpaPage.sections.transfers.title}}</h2>
+      <p>{{dpaPage.sections.transfers.content}}</p>
 
-            <h2>{{dpaPage.sections.rights.title}}</h2>
-            <p>{{dpaPage.sections.rights.content}}</p>
+      <h2>{{dpaPage.sections.rights.title}}</h2>
+      <p>{{dpaPage.sections.rights.content}}</p>
 
-            <h2>{{dpaPage.sections.breach.title}}</h2>
-            <p>{{dpaPage.sections.breach.intro}}</p>
-            <ul>
-                {{#each dpaPage.sections.breach.items}}
-                <li>{{this}}</li>
-                {{/each}}
-            </ul>
+      <h2>{{dpaPage.sections.breach.title}}</h2>
+      <p>{{dpaPage.sections.breach.intro}}</p>
+      <ul>
+        {{#each dpaPage.sections.breach.items}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
 
-            <h2>{{dpaPage.sections.audit.title}}</h2>
-            <p>{{dpaPage.sections.audit.content}}</p>
+      <h2>{{dpaPage.sections.audit.title}}</h2>
+      <p>{{dpaPage.sections.audit.content}}</p>
 
-            <h2>{{dpaPage.sections.termination.title}}</h2>
-            <p>{{dpaPage.sections.termination.content}}</p>
+      <h2>{{dpaPage.sections.termination.title}}</h2>
+      <p>{{dpaPage.sections.termination.content}}</p>
 
-            <h2>{{dpaPage.sections.contact.title}}</h2>
-            <p>
-                {{dpaPage.sections.contact.content}}
-                <a href="mailto:dpo@serverflow.io">dpo@serverflow.io</a>
-            </p>
-        </div>
+      <h2>{{dpaPage.sections.contact.title}}</h2>
+      <p>
+        {{dpaPage.sections.contact.content}}
+        <a href="mailto:dpo@serverflow.io">dpo@serverflow.io</a>
+      </p>
     </div>
+  </div>
 </section>

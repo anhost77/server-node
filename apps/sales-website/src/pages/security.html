@@ -1,349 +1,436 @@
-<link rel="stylesheet" href="/css/security-page.css">
+<link rel="stylesheet" href="/css/security-page.css" />
 
 <!-- Security Page -->
 <section class="security-hero">
-    <div class="security-hero-bg"></div>
-    <div class="container">
-        <h1 class="animate-fade-in">{{securityPage.hero.title}}</h1>
-        <p class="subtitle animate-fade-in" style="animation-delay: 0.1s;">
-            {{securityPage.hero.subtitle}}
-        </p>
-    </div>
+  <div class="security-hero-bg"></div>
+  <div class="container">
+    <h1 class="animate-fade-in">{{securityPage.hero.title}}</h1>
+    <p class="subtitle animate-fade-in" style="animation-delay: 0.1s">
+      {{securityPage.hero.subtitle}}
+    </p>
+  </div>
 </section>
 
 <!-- Intro Section -->
 <section class="security-intro">
-    <div class="container">
-        <div class="intro-content reveal">
-            <h2>{{securityPage.intro.title}}</h2>
-            <p>{{securityPage.intro.subtitle}}</p>
+  <div class="container">
+    <div class="intro-content reveal">
+      <h2>{{securityPage.intro.title}}</h2>
+      <p>{{securityPage.intro.subtitle}}</p>
 
-            <div class="zero-trust-explainer">
-                <span class="badge">{{securityPage.intro.badge}}</span>
-                <p><strong>{{securityPage.intro.zeroTrustTitle}}</strong> {{securityPage.intro.zeroTrustExplainer}}</p>
-            </div>
-        </div>
+      <div class="zero-trust-explainer">
+        <span class="badge">{{securityPage.intro.badge}}</span>
+        <p>
+          <strong>{{securityPage.intro.zeroTrustTitle}}</strong>
+          {{securityPage.intro.zeroTrustExplainer}}
+        </p>
+      </div>
     </div>
+  </div>
 </section>
 
 <!-- Architecture Diagram -->
 <section class="security-diagram-section">
-    <div class="container">
-        <h2 class="reveal">{{securityPage.diagram.title}}</h2>
+  <div class="container">
+    <h2 class="reveal">{{securityPage.diagram.title}}</h2>
 
-        <div class="diagram-container reveal">
-            <svg class="security-diagram-svg" viewBox="0 0 800 300" fill="none" xmlns="http://www.w3.org/2000/svg"
-                id="security-svg">
-                <defs>
-                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feGaussianBlur stdDeviation="5" result="blur" />
-                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                    </filter>
-                    <linearGradient id="grad-vps" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#10b981;stop-opacity:0.2" />
-                        <stop offset="100%" style="stop-color:#10b981;stop-opacity:0.05" />
-                    </linearGradient>
-                    <linearGradient id="grad-sf" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:0.2" />
-                        <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:0.05" />
-                    </linearGradient>
-                </defs>
+    <div class="diagram-container reveal">
+      <svg
+        class="security-diagram-svg"
+        viewBox="0 0 800 300"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        id="security-svg"
+      >
+        <defs>
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="5" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+          <linearGradient id="grad-vps" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color: #10b981; stop-opacity: 0.2" />
+            <stop offset="100%" style="stop-color: #10b981; stop-opacity: 0.05" />
+          </linearGradient>
+          <linearGradient id="grad-sf" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color: #8b5cf6; stop-opacity: 0.2" />
+            <stop offset="100%" style="stop-color: #8b5cf6; stop-opacity: 0.05" />
+          </linearGradient>
+        </defs>
 
-                <!-- Connection Path Hitbox -->
-                <path d="M270 140 H530" stroke="rgba(255,255,255,0.01)" stroke-width="20" stroke-linecap="round"
-                    class="connection-line-hitbox" data-info="pipe" />
-                <path d="M270 140 H530" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-dasharray="10 6"
-                    class="animated-dash" filter="url(#glow)" pointer-events="none" />
+        <!-- Connection Path Hitbox -->
+        <path
+          d="M270 140 H530"
+          stroke="rgba(255,255,255,0.01)"
+          stroke-width="20"
+          stroke-linecap="round"
+          class="connection-line-hitbox"
+          data-info="pipe"
+        />
+        <path
+          d="M270 140 H530"
+          stroke="#10b981"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-dasharray="10 6"
+          class="animated-dash"
+          filter="url(#glow)"
+          pointer-events="none"
+        />
 
-                <!-- Data Packets -->
-                <circle class="data-packet" r="4" fill="#10b981" pointer-events="none">
-                    <animateMotion dur="3s" repeatCount="indefinite" path="M270 140 H530" />
-                </circle>
-                <circle class="data-packet" r="3" fill="#10b981" opacity="0.6" pointer-events="none">
-                    <animateMotion dur="3s" repeatCount="indefinite" path="M270 140 H530" begin="1s" />
-                </circle>
-                <circle class="data-packet" r="2" fill="#10b981" opacity="0.4" pointer-events="none">
-                    <animateMotion dur="3s" repeatCount="indefinite" path="M270 140 H530" begin="2s" />
-                </circle>
+        <!-- Data Packets -->
+        <circle class="data-packet" r="4" fill="#10b981" pointer-events="none">
+          <animateMotion dur="3s" repeatCount="indefinite" path="M270 140 H530" />
+        </circle>
+        <circle class="data-packet" r="3" fill="#10b981" opacity="0.6" pointer-events="none">
+          <animateMotion dur="3s" repeatCount="indefinite" path="M270 140 H530" begin="1s" />
+        </circle>
+        <circle class="data-packet" r="2" fill="#10b981" opacity="0.4" pointer-events="none">
+          <animateMotion dur="3s" repeatCount="indefinite" path="M270 140 H530" begin="2s" />
+        </circle>
 
-                <!-- Your VPS -->
-                <g class="diag-node" data-info="vps">
-                    <rect x="50" y="80" width="220" height="120" rx="20" fill="url(#grad-vps)" stroke="#10b981"
-                        stroke-width="2" />
-                    <text x="160" y="135" text-anchor="middle" fill="#fff" font-size="18"
-                        font-weight="700">{{securityPage.diagram.yourVps}}</text>
-                    <text x="160" y="165" text-anchor="middle" fill="#10b981" font-size="12" font-weight="800"
-                        letter-spacing="0.1em">{{securityPage.diagram.agentActive}}</text>
-                </g>
+        <!-- Your VPS -->
+        <g class="diag-node" data-info="vps">
+          <rect
+            x="50"
+            y="80"
+            width="220"
+            height="120"
+            rx="20"
+            fill="url(#grad-vps)"
+            stroke="#10b981"
+            stroke-width="2"
+          />
+          <text x="160" y="135" text-anchor="middle" fill="#fff" font-size="18" font-weight="700">
+            {{securityPage.diagram.yourVps}}
+          </text>
+          <text
+            x="160"
+            y="165"
+            text-anchor="middle"
+            fill="#10b981"
+            font-size="12"
+            font-weight="800"
+            letter-spacing="0.1em"
+          >
+            {{securityPage.diagram.agentActive}}
+          </text>
+        </g>
 
-                <!-- ServerFlow -->
-                <g class="diag-node" data-info="sf">
-                    <rect x="530" y="80" width="220" height="120" rx="20" fill="url(#grad-sf)" stroke="#8b5cf6"
-                        stroke-width="2" />
-                    <text x="640" y="145" text-anchor="middle" fill="#fff" font-size="18"
-                        font-weight="700">{{securityPage.diagram.serverflow}}</text>
-                </g>
+        <!-- ServerFlow -->
+        <g class="diag-node" data-info="sf">
+          <rect
+            x="530"
+            y="80"
+            width="220"
+            height="120"
+            rx="20"
+            fill="url(#grad-sf)"
+            stroke="#8b5cf6"
+            stroke-width="2"
+          />
+          <text x="640" y="145" text-anchor="middle" fill="#fff" font-size="18" font-weight="700">
+            {{securityPage.diagram.serverflow}}
+          </text>
+        </g>
 
-                <!-- Junctions -->
-                <circle cx="270" cy="140" r="4" fill="#10b981" pointer-events="none" />
-                <circle cx="530" cy="140" r="4" fill="#10b981" pointer-events="none" />
+        <!-- Junctions -->
+        <circle cx="270" cy="140" r="4" fill="#10b981" pointer-events="none" />
+        <circle cx="530" cy="140" r="4" fill="#10b981" pointer-events="none" />
 
-                <!-- Badges / Labels -->
-                <rect x="320" y="115" width="160" height="24" rx="12" fill="rgba(16, 185, 129, 0.1)"
-                    stroke="rgba(16, 185, 129, 0.3)" pointer-events="none" />
-                <text x="400" y="131" text-anchor="middle" fill="#10b981" font-size="10" font-weight="800"
-                    letter-spacing="0.05em" pointer-events="none">TLS 1.3 + ED25519</text>
+        <!-- Badges / Labels -->
+        <rect
+          x="320"
+          y="115"
+          width="160"
+          height="24"
+          rx="12"
+          fill="rgba(16, 185, 129, 0.1)"
+          stroke="rgba(16, 185, 129, 0.3)"
+          pointer-events="none"
+        />
+        <text
+          x="400"
+          y="131"
+          text-anchor="middle"
+          fill="#10b981"
+          font-size="10"
+          font-weight="800"
+          letter-spacing="0.05em"
+          pointer-events="none"
+        >
+          TLS 1.3 + ED25519
+        </text>
 
-                <text x="400" y="240" text-anchor="middle" fill="#666" font-size="11" font-weight="600"
-                    letter-spacing="0.05em">{{securityPage.diagram.details}}</text>
-            </svg>
-        </div>
-
-        <!-- Info Box -->
-        <div class="diagram-info-wrapper reveal">
-            <div class="diagram-info-box" id="info-box"
-                data-default-title="{{securityPage.diagram.infoBox.defaultTitle}}"
-                data-default-text="{{securityPage.diagram.infoBox.defaultText}}"
-                data-vps-title="{{securityPage.diagram.infoBox.vpsTitle}}"
-                data-vps-text="{{securityPage.diagram.infoBox.vpsText}}"
-                data-sf-title="{{securityPage.diagram.infoBox.sfTitle}}"
-                data-sf-text="{{securityPage.diagram.infoBox.sfText}}"
-                data-pipe-title="{{securityPage.diagram.infoBox.pipeTitle}}"
-                data-pipe-text="{{securityPage.diagram.infoBox.pipeText}}">
-                <span class="info-title" id="info-title">{{securityPage.diagram.infoBox.defaultTitle}}</span>
-                <p class="info-text" id="info-text">{{securityPage.diagram.infoBox.defaultText}}</p>
-            </div>
-        </div>
+        <text
+          x="400"
+          y="240"
+          text-anchor="middle"
+          fill="#666"
+          font-size="11"
+          font-weight="600"
+          letter-spacing="0.05em"
+        >
+          {{securityPage.diagram.details}}
+        </text>
+      </svg>
     </div>
+
+    <!-- Info Box -->
+    <div class="diagram-info-wrapper reveal">
+      <div
+        class="diagram-info-box"
+        id="info-box"
+        data-default-title="{{securityPage.diagram.infoBox.defaultTitle}}"
+        data-default-text="{{securityPage.diagram.infoBox.defaultText}}"
+        data-vps-title="{{securityPage.diagram.infoBox.vpsTitle}}"
+        data-vps-text="{{securityPage.diagram.infoBox.vpsText}}"
+        data-sf-title="{{securityPage.diagram.infoBox.sfTitle}}"
+        data-sf-text="{{securityPage.diagram.infoBox.sfText}}"
+        data-pipe-title="{{securityPage.diagram.infoBox.pipeTitle}}"
+        data-pipe-text="{{securityPage.diagram.infoBox.pipeText}}"
+      >
+        <span class="info-title" id="info-title"
+          >{{securityPage.diagram.infoBox.defaultTitle}}</span
+        >
+        <p class="info-text" id="info-text">{{securityPage.diagram.infoBox.defaultText}}</p>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- Architecture Details -->
 <section class="security-architecture">
-    <div class="security-grid-bg"></div>
-    <div class="container">
-        <h2 class="reveal">{{securityPage.architecture.title}}</h2>
+  <div class="security-grid-bg"></div>
+  <div class="container">
+    <h2 class="reveal">{{securityPage.architecture.title}}</h2>
 
-        <div class="architecture-grid reveal">
-            <div class="arch-card">
-                <div class="arch-icon">🔐</div>
-                <h3>{{securityPage.architecture.ed25519.title}}</h3>
-                <p>{{securityPage.architecture.ed25519.description}}</p>
-            </div>
+    <div class="architecture-grid reveal">
+      <div class="arch-card">
+        <div class="arch-icon">🔐</div>
+        <h3>{{securityPage.architecture.ed25519.title}}</h3>
+        <p>{{securityPage.architecture.ed25519.description}}</p>
+      </div>
 
-            <div class="arch-card">
-                <div class="arch-icon">📤</div>
-                <h3>{{securityPage.architecture.outbound.title}}</h3>
-                <p>{{securityPage.architecture.outbound.description}}</p>
-                <ul class="arch-list">
-                    <li>{{securityPage.architecture.outbound.points.0}}</li>
-                    <li>{{securityPage.architecture.outbound.points.1}}</li>
-                    <li>{{securityPage.architecture.outbound.points.2}}</li>
-                </ul>
-            </div>
+      <div class="arch-card">
+        <div class="arch-icon">📤</div>
+        <h3>{{securityPage.architecture.outbound.title}}</h3>
+        <p>{{securityPage.architecture.outbound.description}}</p>
+        <ul class="arch-list">
+          <li>{{securityPage.architecture.outbound.points.0}}</li>
+          <li>{{securityPage.architecture.outbound.points.1}}</li>
+          <li>{{securityPage.architecture.outbound.points.2}}</li>
+        </ul>
+      </div>
 
-            <div class="arch-card">
-                <div class="arch-icon">🗑️</div>
-                <h3>{{securityPage.architecture.zeroStorage.title}}</h3>
-                <p>{{securityPage.architecture.zeroStorage.description}}</p>
-            </div>
+      <div class="arch-card">
+        <div class="arch-icon">🗑️</div>
+        <h3>{{securityPage.architecture.zeroStorage.title}}</h3>
+        <p>{{securityPage.architecture.zeroStorage.description}}</p>
+      </div>
 
-            <div class="arch-card">
-                <div class="arch-icon">📖</div>
-                <h3>{{securityPage.architecture.openSource.title}}</h3>
-                <p>{{securityPage.architecture.openSource.description}}</p>
-            </div>
+      <div class="arch-card">
+        <div class="arch-icon">📖</div>
+        <h3>{{securityPage.architecture.openSource.title}}</h3>
+        <p>{{securityPage.architecture.openSource.description}}</p>
+      </div>
 
-            <div class="arch-card">
-                <div class="arch-icon">🛡️</div>
-                <h3>{{securityPage.architecture.dataPrivacy.title}}</h3>
-                <p>{{securityPage.architecture.dataPrivacy.description}}</p>
-            </div>
-        </div>
+      <div class="arch-card">
+        <div class="arch-icon">🛡️</div>
+        <h3>{{securityPage.architecture.dataPrivacy.title}}</h3>
+        <p>{{securityPage.architecture.dataPrivacy.description}}</p>
+      </div>
     </div>
+  </div>
 </section>
 
 <!-- What We Do / What We Don't -->
 <section class="security-honesty">
-    <div class="container">
-        <div class="honesty-grid">
-            <!-- What We Do -->
-            <div class="honesty-column do-column reveal">
-                <h3>{{securityPage.whatWeDo.title}}</h3>
-                <div class="honesty-cards">
-                    <div class="honesty-card good">
-                        <div class="card-icon">✓</div>
-                        <div class="card-content">
-                            <h4>{{securityPage.whatWeDo.items.0.title}}</h4>
-                            <p>{{securityPage.whatWeDo.items.0.description}}</p>
-                        </div>
-                    </div>
-                    <div class="honesty-card good">
-                        <div class="card-icon">✓</div>
-                        <div class="card-content">
-                            <h4>{{securityPage.whatWeDo.items.1.title}}</h4>
-                            <p>{{securityPage.whatWeDo.items.1.description}}</p>
-                        </div>
-                    </div>
-                    <div class="honesty-card good">
-                        <div class="card-icon">✓</div>
-                        <div class="card-content">
-                            <h4>{{securityPage.whatWeDo.items.2.title}}</h4>
-                            <p>{{securityPage.whatWeDo.items.2.description}}</p>
-                        </div>
-                    </div>
-                </div>
+  <div class="container">
+    <div class="honesty-grid">
+      <!-- What We Do -->
+      <div class="honesty-column do-column reveal">
+        <h3>{{securityPage.whatWeDo.title}}</h3>
+        <div class="honesty-cards">
+          <div class="honesty-card good">
+            <div class="card-icon">✓</div>
+            <div class="card-content">
+              <h4>{{securityPage.whatWeDo.items.0.title}}</h4>
+              <p>{{securityPage.whatWeDo.items.0.description}}</p>
             </div>
-
-            <!-- What We Don't -->
-            <div class="honesty-column dont-column reveal">
-                <h3>{{securityPage.whatWeDont.title}}</h3>
-                <p class="honesty-subtitle">{{securityPage.whatWeDont.subtitle}}</p>
-                <div class="honesty-cards">
-                    <div class="honesty-card neutral">
-                        <div class="card-icon">—</div>
-                        <div class="card-content">
-                            <h4>{{securityPage.whatWeDont.items.0.title}}</h4>
-                            <p>{{securityPage.whatWeDont.items.0.description}}</p>
-                        </div>
-                    </div>
-                    <div class="honesty-card neutral">
-                        <div class="card-icon">—</div>
-                        <div class="card-content">
-                            <h4>{{securityPage.whatWeDont.items.1.title}}</h4>
-                            <p>{{securityPage.whatWeDont.items.1.description}}</p>
-                        </div>
-                    </div>
-                    <div class="honesty-card neutral">
-                        <div class="card-icon">—</div>
-                        <div class="card-content">
-                            <h4>{{securityPage.whatWeDont.items.2.title}}</h4>
-                            <p>{{securityPage.whatWeDont.items.2.description}}</p>
-                        </div>
-                    </div>
-                </div>
+          </div>
+          <div class="honesty-card good">
+            <div class="card-icon">✓</div>
+            <div class="card-content">
+              <h4>{{securityPage.whatWeDo.items.1.title}}</h4>
+              <p>{{securityPage.whatWeDo.items.1.description}}</p>
             </div>
+          </div>
+          <div class="honesty-card good">
+            <div class="card-icon">✓</div>
+            <div class="card-content">
+              <h4>{{securityPage.whatWeDo.items.2.title}}</h4>
+              <p>{{securityPage.whatWeDo.items.2.description}}</p>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <!-- What We Don't -->
+      <div class="honesty-column dont-column reveal">
+        <h3>{{securityPage.whatWeDont.title}}</h3>
+        <p class="honesty-subtitle">{{securityPage.whatWeDont.subtitle}}</p>
+        <div class="honesty-cards">
+          <div class="honesty-card neutral">
+            <div class="card-icon">—</div>
+            <div class="card-content">
+              <h4>{{securityPage.whatWeDont.items.0.title}}</h4>
+              <p>{{securityPage.whatWeDont.items.0.description}}</p>
+            </div>
+          </div>
+          <div class="honesty-card neutral">
+            <div class="card-icon">—</div>
+            <div class="card-content">
+              <h4>{{securityPage.whatWeDont.items.1.title}}</h4>
+              <p>{{securityPage.whatWeDont.items.1.description}}</p>
+            </div>
+          </div>
+          <div class="honesty-card neutral">
+            <div class="card-icon">—</div>
+            <div class="card-content">
+              <h4>{{securityPage.whatWeDont.items.2.title}}</h4>
+              <p>{{securityPage.whatWeDont.items.2.description}}</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
 </section>
 
 <!-- Vulnerability Disclosure -->
 <section class="security-disclosure">
-    <div class="container">
-        <div class="disclosure-card reveal">
-            <div class="disclosure-icon">🛡️</div>
-            <h3>{{securityPage.disclosure.title}}</h3>
-            <p>
-                {{securityPage.disclosure.description}}
-                <a href="mailto:{{securityPage.disclosure.email}}">{{securityPage.disclosure.email}}</a>
-            </p>
-            <p class="response-time">{{securityPage.disclosure.response}}</p>
-        </div>
+  <div class="container">
+    <div class="disclosure-card reveal">
+      <div class="disclosure-icon">🛡️</div>
+      <h3>{{securityPage.disclosure.title}}</h3>
+      <p>
+        {{securityPage.disclosure.description}}
+        <a href="mailto:{{securityPage.disclosure.email}}">{{securityPage.disclosure.email}}</a>
+      </p>
+      <p class="response-time">{{securityPage.disclosure.response}}</p>
     </div>
+  </div>
 </section>
 
 <!-- CTA -->
 <section class="security-cta">
-    <div class="container">
-        <div class="cta-buttons reveal">
-            <a href="https://github.com/serverflow/agent" target="_blank" rel="noopener" class="btn btn-secondary">
-                {{securityPage.cta.auditCode}} →
-            </a>
-            <a href="/{{lang}}/pricing/" class="btn btn-primary">
-                {{securityPage.cta.getStarted}}
-            </a>
-        </div>
+  <div class="container">
+    <div class="cta-buttons reveal">
+      <a
+        href="https://github.com/serverflow/agent"
+        target="_blank"
+        rel="noopener"
+        class="btn btn-secondary"
+      >
+        {{securityPage.cta.auditCode}} →
+      </a>
+      <a href="/{{lang}}/pricing/" class="btn btn-primary"> {{securityPage.cta.getStarted}} </a>
     </div>
+  </div>
 </section>
 
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // Reveal on scroll
-        const revealObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                }
-            });
-        }, { threshold: 0.1 });
-
-        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
-
-        // Diagram Interactivity
-        const infoBox = document.getElementById('info-box');
-        const infoTitle = document.getElementById('info-title');
-        const infoText = document.getElementById('info-text');
-
-        // Get translations from data attributes
-        const explanations = {
-            'vps': {
-                title: infoBox.dataset.vpsTitle,
-                text: infoBox.dataset.vpsText
-            },
-            'sf': {
-                title: infoBox.dataset.sfTitle,
-                text: infoBox.dataset.sfText
-            },
-            'pipe': {
-                title: infoBox.dataset.pipeTitle,
-                text: infoBox.dataset.pipeText
-            },
-            'default': {
-                title: infoBox.dataset.defaultTitle,
-                text: infoBox.dataset.defaultText
-            }
-        };
-
-        function updateInfo(key) {
-            const info = explanations[key] || explanations['default'];
-            infoBox.classList.add('active');
-            infoTitle.innerHTML = info.title;
-            infoText.innerHTML = info.text;
-        }
-
-        function resetInfo() {
-            infoBox.classList.remove('active');
-            updateInfo('default');
-        }
-
-        document.querySelectorAll('.diag-node, .connection-line-hitbox').forEach(el => {
-            el.addEventListener('mouseenter', () => updateInfo(el.dataset.info));
-            el.addEventListener('mouseleave', resetInfo);
+  document.addEventListener('DOMContentLoaded', () => {
+    // Reveal on scroll
+    const revealObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
         });
+      },
+      { threshold: 0.1 },
+    );
 
-        // Hero Floating Animation
-        gsap.to(".security-hero-bg", {
-            duration: 25,
-            x: "3%",
-            y: "2%",
-            rotation: 0.01,
-            ease: "sine.inOut",
-            repeat: -1,
-            yoyo: true
-        });
+    document.querySelectorAll('.reveal').forEach((el) => revealObserver.observe(el));
 
-        gsap.to(".security-hero-bg", {
-            duration: 18,
-            x: "-1.5%",
-            y: "-1%",
-            ease: "sine.inOut",
-            repeat: -1,
-            yoyo: true,
-            delay: 4
-        });
+    // Diagram Interactivity
+    const infoBox = document.getElementById('info-box');
+    const infoTitle = document.getElementById('info-title');
+    const infoText = document.getElementById('info-text');
 
-        // Spotlight effect for Architecture Cards
-        const archGrid = document.querySelector('.architecture-grid');
-        if (archGrid) {
-            archGrid.addEventListener('mousemove', (e) => {
-                const cards = archGrid.querySelectorAll('.arch-card');
-                cards.forEach((card) => {
-                    const rect = card.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    card.style.setProperty('--mouse-x', `${x}px`);
-                    card.style.setProperty('--mouse-y', `${y}px`);
-                });
-            });
-        }
+    // Get translations from data attributes
+    const explanations = {
+      vps: {
+        title: infoBox.dataset.vpsTitle,
+        text: infoBox.dataset.vpsText,
+      },
+      sf: {
+        title: infoBox.dataset.sfTitle,
+        text: infoBox.dataset.sfText,
+      },
+      pipe: {
+        title: infoBox.dataset.pipeTitle,
+        text: infoBox.dataset.pipeText,
+      },
+      default: {
+        title: infoBox.dataset.defaultTitle,
+        text: infoBox.dataset.defaultText,
+      },
+    };
+
+    function updateInfo(key) {
+      const info = explanations[key] || explanations['default'];
+      infoBox.classList.add('active');
+      infoTitle.innerHTML = info.title;
+      infoText.innerHTML = info.text;
+    }
+
+    function resetInfo() {
+      infoBox.classList.remove('active');
+      updateInfo('default');
+    }
+
+    document.querySelectorAll('.diag-node, .connection-line-hitbox').forEach((el) => {
+      el.addEventListener('mouseenter', () => updateInfo(el.dataset.info));
+      el.addEventListener('mouseleave', resetInfo);
     });
+
+    // Hero Floating Animation
+    gsap.to('.security-hero-bg', {
+      duration: 25,
+      x: '3%',
+      y: '2%',
+      rotation: 0.01,
+      ease: 'sine.inOut',
+      repeat: -1,
+      yoyo: true,
+    });
+
+    gsap.to('.security-hero-bg', {
+      duration: 18,
+      x: '-1.5%',
+      y: '-1%',
+      ease: 'sine.inOut',
+      repeat: -1,
+      yoyo: true,
+      delay: 4,
+    });
+
+    // Spotlight effect for Architecture Cards
+    const archGrid = document.querySelector('.architecture-grid');
+    if (archGrid) {
+      archGrid.addEventListener('mousemove', (e) => {
+        const cards = archGrid.querySelectorAll('.arch-card');
+        cards.forEach((card) => {
+          const rect = card.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          card.style.setProperty('--mouse-x', `${x}px`);
+          card.style.setProperty('--mouse-y', `${y}px`);
+        });
+      });
+    }
+  });
 </script>

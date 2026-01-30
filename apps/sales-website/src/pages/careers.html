@@ -1,135 +1,135 @@
 <!-- Careers Page -->
 <section class="page-header">
-    <div class="container">
-        <h1 class="animate-fade-in">{{footer.company.careers}}</h1>
-        <p class="animate-fade-in" style="animation-delay: 0.1s; max-width: 600px; margin: 0 auto;">
-            {{careersPage.subtitle}}
-        </p>
-    </div>
+  <div class="container">
+    <h1 class="animate-fade-in">{{footer.company.careers}}</h1>
+    <p class="animate-fade-in" style="animation-delay: 0.1s; max-width: 600px; margin: 0 auto">
+      {{careersPage.subtitle}}
+    </p>
+  </div>
 </section>
 
 <section class="section">
-    <div class="container">
-        <div class="careers-content reveal">
-            <!-- No openings message -->
-            <div class="no-openings-card">
-                <h2>{{careersPage.noOpenings.title}}</h2>
-                <p>{{careersPage.noOpenings.description}}</p>
-            </div>
+  <div class="container">
+    <div class="careers-content reveal">
+      <!-- No openings message -->
+      <div class="no-openings-card">
+        <h2>{{careersPage.noOpenings.title}}</h2>
+        <p>{{careersPage.noOpenings.description}}</p>
+      </div>
 
-            <!-- Who we're looking for -->
-            <div class="who-section">
-                <h2>{{careersPage.whoWeAreLookingFor.title}}</h2>
-                <p>{{careersPage.whoWeAreLookingFor.description}}</p>
-                <ul class="profiles-list">
-                    {{#each careersPage.whoWeAreLookingFor.profiles}}
-                    <li>{{this}}</li>
-                    {{/each}}
-                </ul>
-            </div>
+      <!-- Who we're looking for -->
+      <div class="who-section">
+        <h2>{{careersPage.whoWeAreLookingFor.title}}</h2>
+        <p>{{careersPage.whoWeAreLookingFor.description}}</p>
+        <ul class="profiles-list">
+          {{#each careersPage.whoWeAreLookingFor.profiles}}
+          <li>{{this}}</li>
+          {{/each}}
+        </ul>
+      </div>
 
-            <!-- How to apply -->
-            <div class="apply-section">
-                <h2>{{careersPage.howToApply.title}}</h2>
-                <p>
-                    {{careersPage.howToApply.description}}
-                    <a href="mailto:careers@serverflow.io">careers@serverflow.io</a>.
-                    {{careersPage.howToApply.descriptionEnd}}
-                </p>
-            </div>
-        </div>
+      <!-- How to apply -->
+      <div class="apply-section">
+        <h2>{{careersPage.howToApply.title}}</h2>
+        <p>
+          {{careersPage.howToApply.description}}
+          <a href="mailto:careers@serverflow.io">careers@serverflow.io</a>.
+          {{careersPage.howToApply.descriptionEnd}}
+        </p>
+      </div>
     </div>
+  </div>
 </section>
 
 <style>
-.careers-content {
+  .careers-content {
     max-width: 700px;
     margin: 0 auto;
-}
+  }
 
-.no-openings-card {
+  .no-openings-card {
     background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
     border: 1px solid rgba(139, 92, 246, 0.3);
     border-radius: 16px;
     padding: 2.5rem;
     margin-bottom: 3rem;
     text-align: center;
-}
+  }
 
-.no-openings-card h2 {
+  .no-openings-card h2 {
     font-size: 1.75rem;
     margin-bottom: 1rem;
     color: var(--text-primary);
-}
+  }
 
-.no-openings-card p {
+  .no-openings-card p {
     color: var(--text-secondary);
     font-size: 1.1rem;
     line-height: 1.7;
-}
+  }
 
-.who-section {
+  .who-section {
     margin-bottom: 3rem;
-}
+  }
 
-.who-section h2 {
+  .who-section h2 {
     font-size: 1.5rem;
     margin-bottom: 1rem;
-}
+  }
 
-.who-section > p {
+  .who-section > p {
     color: var(--text-secondary);
     font-size: 1.05rem;
     line-height: 1.7;
     margin-bottom: 1.5rem;
-}
+  }
 
-.profiles-list {
+  .profiles-list {
     list-style: none;
     padding: 0;
-}
+  }
 
-.profiles-list li {
+  .profiles-list li {
     position: relative;
     padding-left: 1.75rem;
     margin-bottom: 0.75rem;
     color: var(--text-secondary);
     line-height: 1.6;
-}
+  }
 
-.profiles-list li::before {
-    content: "→";
+  .profiles-list li::before {
+    content: '→';
     position: absolute;
     left: 0;
     color: var(--accent-primary);
     font-weight: 600;
-}
+  }
 
-.apply-section {
+  .apply-section {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     padding: 2rem;
     text-align: center;
-}
+  }
 
-.apply-section h2 {
+  .apply-section h2 {
     font-size: 1.5rem;
     margin-bottom: 1rem;
-}
+  }
 
-.apply-section p {
+  .apply-section p {
     color: var(--text-secondary);
     font-size: 1.05rem;
     line-height: 1.7;
-}
+  }
 
-.apply-section a {
+  .apply-section a {
     color: var(--accent-primary);
     font-weight: 600;
-}
+  }
 
-.apply-section a:hover {
+  .apply-section a:hover {
     text-decoration: underline;
-}
+  }
 </style>

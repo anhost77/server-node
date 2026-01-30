@@ -1,292 +1,293 @@
-<link rel="stylesheet" href="/css/pricing.css">
+<link rel="stylesheet" href="/css/pricing.css" />
 
 <!-- Pricing Page - Optimized for Conversions -->
 
 <!-- Hero Section -->
 <section class="pricing-hero">
-    <div class="pricing-hero-bg"></div>
-    <div class="container">
-        <h1 class="animate-fade-in">
-            {{pricingPage.hero.title}}
-            <span class="gradient-text">{{pricingPage.hero.titleGradient}}</span>
-        </h1>
-        <p class="subtitle animate-fade-in" style="animation-delay: 0.1s;">
-            {{pricingPage.hero.subtitle}}
-        </p>
-    </div>
+  <div class="pricing-hero-bg"></div>
+  <div class="container">
+    <h1 class="animate-fade-in">
+      {{pricingPage.hero.title}}
+      <span class="gradient-text">{{pricingPage.hero.titleGradient}}</span>
+    </h1>
+    <p class="subtitle animate-fade-in" style="animation-delay: 0.1s">
+      {{pricingPage.hero.subtitle}}
+    </p>
+  </div>
 </section>
 
 <!-- Trust Strip - Security Features -->
 <div class="trust-strip">
-    <div class="trust-item">
-        <span class="trust-icon">💻</span>
-        <span class="trust-text">{{pricingPage.trust.item1}}</span>
-    </div>
-    <div class="trust-item">
-        <span class="trust-icon">🔑</span>
-        <span class="trust-text">{{pricingPage.trust.item2}}</span>
-    </div>
-    <div class="trust-item">
-        <span class="trust-icon">🔐</span>
-        <span class="trust-text">{{pricingPage.trust.item3}}</span>
-    </div>
-    <div class="trust-item">
-        <span class="trust-icon">🛡️</span>
-        <span class="trust-text">{{pricingPage.trust.item4}}</span>
-    </div>
+  <div class="trust-item">
+    <span class="trust-icon">💻</span>
+    <span class="trust-text">{{pricingPage.trust.item1}}</span>
+  </div>
+  <div class="trust-item">
+    <span class="trust-icon">🔑</span>
+    <span class="trust-text">{{pricingPage.trust.item2}}</span>
+  </div>
+  <div class="trust-item">
+    <span class="trust-icon">🔐</span>
+    <span class="trust-text">{{pricingPage.trust.item3}}</span>
+  </div>
+  <div class="trust-item">
+    <span class="trust-icon">🛡️</span>
+    <span class="trust-text">{{pricingPage.trust.item4}}</span>
+  </div>
 </div>
 
 <!-- Pricing Section -->
 <section class="section pricing-section">
-    <div class="container">
-
-        <!-- Billing Toggle -->
-        <div class="billing-toggle-wrapper">
-            <div class="billing-toggle">
-                <button class="billing-option active" data-billing="monthly">
-                    {{pricingPage.billing.monthly}}
-                </button>
-                <button class="billing-option" data-billing="annually">
-                    {{pricingPage.billing.annually}}
-                </button>
-            </div>
-            <div class="savings-badge" id="savings-badge" style="display: none;">
-                <span>💰</span>
-                <span>{{pricingPage.billing.savings}}</span>
-            </div>
-        </div>
-
-        <!-- Pricing Cards -->
-        <div class="pricing-grid-enhanced">
-            <!-- Free Tier -->
-            <div class="pricing-card-enhanced">
-                <h3 class="pricing-plan-name">{{pricingPage.free.name}}</h3>
-                <p class="pricing-plan-desc">{{pricingPage.free.desc}}</p>
-
-                <div class="price-display">
-                    <span class="price-currency">€</span>
-                    <span class="price-amount" data-monthly="0" data-annually="0">0</span>
-                    <span class="price-period">{{pricingPage.perMonth}}</span>
-                </div>
-
-                <ul class="pricing-features-enhanced">
-                    {{#each pricingPage.free.features}}
-                    <li>
-                        <span class="feature-check">✓</span>
-                        <span>{{this}}</span>
-                    </li>
-                    {{/each}}
-                </ul>
-
-                <a href="https://app.serverflow.io/signup" class="pricing-cta pricing-cta-secondary">
-                    {{pricingPage.free.cta}}
-                </a>
-            </div>
-
-            <!-- Pro Tier - Featured -->
-            <div class="pricing-card-enhanced featured">
-                <div class="pricing-badge-enhanced">{{pricingPage.pro.badge}}</div>
-
-                <h3 class="pricing-plan-name">{{pricingPage.pro.name}}</h3>
-                <p class="pricing-plan-desc">{{pricingPage.pro.desc}}</p>
-
-                <div class="price-display">
-                    <span class="price-currency">€</span>
-                    <span class="price-amount" data-monthly="9" data-annually="7">9</span>
-                    <span class="price-period" data-monthly="{{pricingPage.perMonth}}"
-                        data-annually="{{pricingPage.perMonth}}">{{pricingPage.perMonth}}</span>
-                </div>
-                <div class="price-old" id="price-old-pro" style="display: none;">€9{{pricingPage.perMonth}} →
-                    €84{{pricingPage.billing.perYear}}</div>
-
-                <ul class="pricing-features-enhanced">
-                    {{#each pricingPage.pro.features}}
-                    <li>
-                        <span class="feature-check">✓</span>
-                        <span class="feature-highlight">{{this}}</span>
-                    </li>
-                    {{/each}}
-                </ul>
-
-                <a href="https://app.serverflow.io/signup?plan=pro" class="pricing-cta pricing-cta-primary">
-                    {{pricingPage.pro.cta}}
-                </a>
-            </div>
-
-        </div>
-
-        <!-- Guarantees / Risk Reversal -->
-        <div class="guarantees-section">
-            <div class="guarantee-item">
-                <div class="guarantee-icon">📖</div>
-                <span>{{pricingPage.guarantees.openSource}}</span>
-            </div>
-            <div class="guarantee-item">
-                <div class="guarantee-icon">🔐</div>
-                <span>{{pricingPage.guarantees.yourData}}</span>
-            </div>
-            <div class="guarantee-item">
-                <div class="guarantee-icon">🚪</div>
-                <span>{{pricingPage.guarantees.cancelAnytime}}</span>
-            </div>
-            <div class="guarantee-item">
-                <div class="guarantee-icon">🔓</div>
-                <span>{{pricingPage.guarantees.noLockIn}}</span>
-            </div>
-        </div>
+  <div class="container">
+    <!-- Billing Toggle -->
+    <div class="billing-toggle-wrapper">
+      <div class="billing-toggle">
+        <button class="billing-option active" data-billing="monthly">
+          {{pricingPage.billing.monthly}}
+        </button>
+        <button class="billing-option" data-billing="annually">
+          {{pricingPage.billing.annually}}
+        </button>
+      </div>
+      <div class="savings-badge" id="savings-badge" style="display: none">
+        <span>💰</span>
+        <span>{{pricingPage.billing.savings}}</span>
+      </div>
     </div>
+
+    <!-- Pricing Cards -->
+    <div class="pricing-grid-enhanced">
+      <!-- Free Tier -->
+      <div class="pricing-card-enhanced">
+        <h3 class="pricing-plan-name">{{pricingPage.free.name}}</h3>
+        <p class="pricing-plan-desc">{{pricingPage.free.desc}}</p>
+
+        <div class="price-display">
+          <span class="price-currency">€</span>
+          <span class="price-amount" data-monthly="0" data-annually="0">0</span>
+          <span class="price-period">{{pricingPage.perMonth}}</span>
+        </div>
+
+        <ul class="pricing-features-enhanced">
+          {{#each pricingPage.free.features}}
+          <li>
+            <span class="feature-check">✓</span>
+            <span>{{this}}</span>
+          </li>
+          {{/each}}
+        </ul>
+
+        <a href="https://app.serverflow.io/signup" class="pricing-cta pricing-cta-secondary">
+          {{pricingPage.free.cta}}
+        </a>
+      </div>
+
+      <!-- Pro Tier - Featured -->
+      <div class="pricing-card-enhanced featured">
+        <div class="pricing-badge-enhanced">{{pricingPage.pro.badge}}</div>
+
+        <h3 class="pricing-plan-name">{{pricingPage.pro.name}}</h3>
+        <p class="pricing-plan-desc">{{pricingPage.pro.desc}}</p>
+
+        <div class="price-display">
+          <span class="price-currency">€</span>
+          <span class="price-amount" data-monthly="9" data-annually="7">9</span>
+          <span
+            class="price-period"
+            data-monthly="{{pricingPage.perMonth}}"
+            data-annually="{{pricingPage.perMonth}}"
+            >{{pricingPage.perMonth}}</span
+          >
+        </div>
+        <div class="price-old" id="price-old-pro" style="display: none">
+          €9{{pricingPage.perMonth}} → €84{{pricingPage.billing.perYear}}
+        </div>
+
+        <ul class="pricing-features-enhanced">
+          {{#each pricingPage.pro.features}}
+          <li>
+            <span class="feature-check">✓</span>
+            <span class="feature-highlight">{{this}}</span>
+          </li>
+          {{/each}}
+        </ul>
+
+        <a href="https://app.serverflow.io/signup?plan=pro" class="pricing-cta pricing-cta-primary">
+          {{pricingPage.pro.cta}}
+        </a>
+      </div>
+    </div>
+
+    <!-- Guarantees / Risk Reversal -->
+    <div class="guarantees-section">
+      <div class="guarantee-item">
+        <div class="guarantee-icon">📖</div>
+        <span>{{pricingPage.guarantees.openSource}}</span>
+      </div>
+      <div class="guarantee-item">
+        <div class="guarantee-icon">🔐</div>
+        <span>{{pricingPage.guarantees.yourData}}</span>
+      </div>
+      <div class="guarantee-item">
+        <div class="guarantee-icon">🚪</div>
+        <span>{{pricingPage.guarantees.cancelAnytime}}</span>
+      </div>
+      <div class="guarantee-item">
+        <div class="guarantee-icon">🔓</div>
+        <span>{{pricingPage.guarantees.noLockIn}}</span>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- What ServerFlow Does Well -->
 <section class="highlights-section">
-    <div class="container">
-        <div class="highlights-header reveal">
-            <h2>{{pricingPage.highlights.title}}</h2>
-            <p>{{pricingPage.highlights.subtitle}}</p>
-        </div>
-
-        <div class="highlights-grid reveal">
-            <div class="highlight-card">
-                <div class="highlight-icon">🤖</div>
-                <h3>{{pricingPage.highlights.mcp.title}}</h3>
-                <p>{{pricingPage.highlights.mcp.desc}}</p>
-            </div>
-            <div class="highlight-card">
-                <div class="highlight-icon">⚡</div>
-                <h3>{{pricingPage.highlights.hotPatch.title}}</h3>
-                <p>{{pricingPage.highlights.hotPatch.desc}}</p>
-            </div>
-            <div class="highlight-card">
-                <div class="highlight-icon">🔐</div>
-                <h3>{{pricingPage.highlights.zeroTrust.title}}</h3>
-                <p>{{pricingPage.highlights.zeroTrust.desc}}</p>
-            </div>
-            <div class="highlight-card">
-                <div class="highlight-icon">💰</div>
-                <h3>{{pricingPage.highlights.pricing.title}}</h3>
-                <p>{{pricingPage.highlights.pricing.desc}}</p>
-            </div>
-            <div class="highlight-card">
-                <div class="highlight-icon">🖥️</div>
-                <h3>{{pricingPage.highlights.yourInfra.title}}</h3>
-                <p>{{pricingPage.highlights.yourInfra.desc}}</p>
-            </div>
-            <div class="highlight-card">
-                <div class="highlight-icon">📖</div>
-                <h3>{{pricingPage.highlights.openSource.title}}</h3>
-                <p>{{pricingPage.highlights.openSource.desc}}</p>
-            </div>
-        </div>
+  <div class="container">
+    <div class="highlights-header reveal">
+      <h2>{{pricingPage.highlights.title}}</h2>
+      <p>{{pricingPage.highlights.subtitle}}</p>
     </div>
+
+    <div class="highlights-grid reveal">
+      <div class="highlight-card">
+        <div class="highlight-icon">🤖</div>
+        <h3>{{pricingPage.highlights.mcp.title}}</h3>
+        <p>{{pricingPage.highlights.mcp.desc}}</p>
+      </div>
+      <div class="highlight-card">
+        <div class="highlight-icon">⚡</div>
+        <h3>{{pricingPage.highlights.hotPatch.title}}</h3>
+        <p>{{pricingPage.highlights.hotPatch.desc}}</p>
+      </div>
+      <div class="highlight-card">
+        <div class="highlight-icon">🔐</div>
+        <h3>{{pricingPage.highlights.zeroTrust.title}}</h3>
+        <p>{{pricingPage.highlights.zeroTrust.desc}}</p>
+      </div>
+      <div class="highlight-card">
+        <div class="highlight-icon">💰</div>
+        <h3>{{pricingPage.highlights.pricing.title}}</h3>
+        <p>{{pricingPage.highlights.pricing.desc}}</p>
+      </div>
+      <div class="highlight-card">
+        <div class="highlight-icon">🖥️</div>
+        <h3>{{pricingPage.highlights.yourInfra.title}}</h3>
+        <p>{{pricingPage.highlights.yourInfra.desc}}</p>
+      </div>
+      <div class="highlight-card">
+        <div class="highlight-icon">📖</div>
+        <h3>{{pricingPage.highlights.openSource.title}}</h3>
+        <p>{{pricingPage.highlights.openSource.desc}}</p>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- Testimonial Quote -->
 <div class="pricing-testimonial reveal">
-    <blockquote>
-        {{pricingPage.testimonial.quote}}
-    </blockquote>
-    <div class="testimonial-author">
-        <div class="testimonial-avatar">MK</div>
-        <div class="testimonial-info">
-            <div class="testimonial-name">{{pricingPage.testimonial.author}}</div>
-            <div class="testimonial-role">{{pricingPage.testimonial.role}}</div>
-        </div>
+  <blockquote>{{pricingPage.testimonial.quote}}</blockquote>
+  <div class="testimonial-author">
+    <div class="testimonial-avatar">MK</div>
+    <div class="testimonial-info">
+      <div class="testimonial-name">{{pricingPage.testimonial.author}}</div>
+      <div class="testimonial-role">{{pricingPage.testimonial.role}}</div>
     </div>
+  </div>
 </div>
 
 <!-- Feature Comparison Table -->
 <section class="features-table-section">
-    <div class="container">
-        <h2 class="reveal">{{pricingPage.featureTable.title}}</h2>
+  <div class="container">
+    <h2 class="reveal">{{pricingPage.featureTable.title}}</h2>
 
-        <div class="features-table-wrapper reveal">
-            <table class="features-table">
-                <thead>
-                    <tr>
-                        <th></th>
-                        <th>{{pricingPage.free.name}}</th>
-                        <th>{{pricingPage.pro.name}}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="has-tooltip">
-                            {{pricingPage.featureTable.servers}}
-                            <span class="tooltip">{{pricingPage.featureTable.tooltips.servers}}</span>
-                        </td>
-                        <td>1</td>
-                        <td>5</td>
-                    </tr>
-                    <tr>
-                        <td class="has-tooltip">
-                            {{pricingPage.featureTable.apps}}
-                            <span class="tooltip">{{pricingPage.featureTable.tooltips.apps}}</span>
-                        </td>
-                        <td>3</td>
-                        <td>{{pricingPage.featureTable.unlimited}}</td>
-                    </tr>
-                    <tr>
-                        <td class="has-tooltip">
-                            {{pricingPage.featureTable.mcp}}
-                            <span class="tooltip">{{pricingPage.featureTable.tooltips.mcp}}</span>
-                        </td>
-                        <td class="cross-icon">—</td>
-                        <td class="check-icon">✓</td>
-                    </tr>
-                    <tr>
-                        <td class="has-tooltip">
-                            {{pricingPage.featureTable.hotPatch}}
-                            <span class="tooltip">{{pricingPage.featureTable.tooltips.hotPatch}}</span>
-                        </td>
-                        <td class="cross-icon">—</td>
-                        <td class="check-icon">✓</td>
-                    </tr>
-                    <tr>
-                        <td class="has-tooltip">
-                            {{pricingPage.featureTable.rollback}}
-                            <span class="tooltip">{{pricingPage.featureTable.tooltips.rollback}}</span>
-                        </td>
-                        <td class="cross-icon">—</td>
-                        <td class="check-icon">✓</td>
-                    </tr>
-                    <tr>
-                        <td class="has-tooltip">
-                            {{pricingPage.featureTable.support}}
-                            <span class="tooltip">{{pricingPage.featureTable.tooltips.support}}</span>
-                        </td>
-                        <td>{{pricingPage.featureTable.community}}</td>
-                        <td>{{pricingPage.featureTable.priority}}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+    <div class="features-table-wrapper reveal">
+      <table class="features-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>{{pricingPage.free.name}}</th>
+            <th>{{pricingPage.pro.name}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="has-tooltip">
+              {{pricingPage.featureTable.servers}}
+              <span class="tooltip">{{pricingPage.featureTable.tooltips.servers}}</span>
+            </td>
+            <td>1</td>
+            <td>5</td>
+          </tr>
+          <tr>
+            <td class="has-tooltip">
+              {{pricingPage.featureTable.apps}}
+              <span class="tooltip">{{pricingPage.featureTable.tooltips.apps}}</span>
+            </td>
+            <td>3</td>
+            <td>{{pricingPage.featureTable.unlimited}}</td>
+          </tr>
+          <tr>
+            <td class="has-tooltip">
+              {{pricingPage.featureTable.mcp}}
+              <span class="tooltip">{{pricingPage.featureTable.tooltips.mcp}}</span>
+            </td>
+            <td class="cross-icon">—</td>
+            <td class="check-icon">✓</td>
+          </tr>
+          <tr>
+            <td class="has-tooltip">
+              {{pricingPage.featureTable.hotPatch}}
+              <span class="tooltip">{{pricingPage.featureTable.tooltips.hotPatch}}</span>
+            </td>
+            <td class="cross-icon">—</td>
+            <td class="check-icon">✓</td>
+          </tr>
+          <tr>
+            <td class="has-tooltip">
+              {{pricingPage.featureTable.rollback}}
+              <span class="tooltip">{{pricingPage.featureTable.tooltips.rollback}}</span>
+            </td>
+            <td class="cross-icon">—</td>
+            <td class="check-icon">✓</td>
+          </tr>
+          <tr>
+            <td class="has-tooltip">
+              {{pricingPage.featureTable.support}}
+              <span class="tooltip">{{pricingPage.featureTable.tooltips.support}}</span>
+            </td>
+            <td>{{pricingPage.featureTable.community}}</td>
+            <td>{{pricingPage.featureTable.priority}}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
+  </div>
 </section>
 
 <!-- FAQ Section -->
 <section class="faq-section-enhanced">
-    <div class="container">
-        <h2 class="reveal">{{pricingPage.faq.title}}</h2>
+  <div class="container">
+    <h2 class="reveal">{{pricingPage.faq.title}}</h2>
 
-        <div class="faq-grid-enhanced reveal">
-            <div class="faq-item-enhanced">
-                <h4>{{pricingPage.faq.q1}}</h4>
-                <p>{{pricingPage.faq.a1}}</p>
-            </div>
-            <div class="faq-item-enhanced">
-                <h4>{{pricingPage.faq.q2}}</h4>
-                <p>{{pricingPage.faq.a2}}</p>
-            </div>
-            <div class="faq-item-enhanced">
-                <h4>{{pricingPage.faq.q3}}</h4>
-                <p>{{pricingPage.faq.a3}}</p>
-            </div>
-            <div class="faq-item-enhanced">
-                <h4>{{pricingPage.faq.q4}}</h4>
-                <p>{{pricingPage.faq.a4}}</p>
-            </div>
-        </div>
+    <div class="faq-grid-enhanced reveal">
+      <div class="faq-item-enhanced">
+        <h4>{{pricingPage.faq.q1}}</h4>
+        <p>{{pricingPage.faq.a1}}</p>
+      </div>
+      <div class="faq-item-enhanced">
+        <h4>{{pricingPage.faq.q2}}</h4>
+        <p>{{pricingPage.faq.a2}}</p>
+      </div>
+      <div class="faq-item-enhanced">
+        <h4>{{pricingPage.faq.q3}}</h4>
+        <p>{{pricingPage.faq.a3}}</p>
+      </div>
+      <div class="faq-item-enhanced">
+        <h4>{{pricingPage.faq.q4}}</h4>
+        <p>{{pricingPage.faq.a4}}</p>
+      </div>
     </div>
+  </div>
 </section>
 
 <!-- Final CTA -->
@@ -294,83 +295,86 @@
 
 <!-- Pricing Page Script -->
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // Billing Toggle
-        const billingOptions = document.querySelectorAll('.billing-option');
-        const priceAmounts = document.querySelectorAll('.price-amount');
-        const savingsBadge = document.getElementById('savings-badge');
-        const priceOldPro = document.getElementById('price-old-pro');
+  document.addEventListener('DOMContentLoaded', () => {
+    // Billing Toggle
+    const billingOptions = document.querySelectorAll('.billing-option');
+    const priceAmounts = document.querySelectorAll('.price-amount');
+    const savingsBadge = document.getElementById('savings-badge');
+    const priceOldPro = document.getElementById('price-old-pro');
 
-        billingOptions.forEach(option => {
-            option.addEventListener('click', () => {
-                // Update active state
-                billingOptions.forEach(opt => opt.classList.remove('active'));
-                option.classList.add('active');
+    billingOptions.forEach((option) => {
+      option.addEventListener('click', () => {
+        // Update active state
+        billingOptions.forEach((opt) => opt.classList.remove('active'));
+        option.classList.add('active');
 
-                const billing = option.dataset.billing;
+        const billing = option.dataset.billing;
 
-                // Update prices
-                priceAmounts.forEach(amount => {
-                    const price = amount.dataset[billing];
-                    amount.textContent = price;
-                });
-
-                // Show/hide savings badge and old prices
-                if (billing === 'annually') {
-                    savingsBadge.style.display = 'inline-flex';
-                    if (priceOldPro) priceOldPro.style.display = 'block';
-                } else {
-                    savingsBadge.style.display = 'none';
-                    if (priceOldPro) priceOldPro.style.display = 'none';
-                }
-            });
+        // Update prices
+        priceAmounts.forEach((amount) => {
+          const price = amount.dataset[billing];
+          amount.textContent = price;
         });
 
-        // Reveal on scroll
-        const revealObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                }
-            });
-        }, { threshold: 0.1 });
-
-        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
-
-        // Spotlight effect for Highlights
-        const highlightsGrid = document.querySelector('.highlights-grid');
-        if (highlightsGrid) {
-            highlightsGrid.addEventListener('mousemove', (e) => {
-                const cards = highlightsGrid.querySelectorAll('.highlight-card');
-                cards.forEach((card) => {
-                    const rect = card.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    card.style.setProperty('--mouse-x', `${x}px`);
-                    card.style.setProperty('--mouse-y', `${y}px`);
-                });
-            });
+        // Show/hide savings badge and old prices
+        if (billing === 'annually') {
+          savingsBadge.style.display = 'inline-flex';
+          if (priceOldPro) priceOldPro.style.display = 'block';
+        } else {
+          savingsBadge.style.display = 'none';
+          if (priceOldPro) priceOldPro.style.display = 'none';
         }
-
-        // Animation de flottement infinie pour le background
-        gsap.to(".pricing-hero-bg", {
-            duration: 25,
-            x: "3%",
-            y: "2%",
-            rotation: 0.01,
-            ease: "sine.inOut",
-            repeat: -1,
-            yoyo: true
-        });
-
-        gsap.to(".pricing-hero-bg", {
-            duration: 18,
-            x: "-2%",
-            y: "-1%",
-            ease: "sine.inOut",
-            repeat: -1,
-            yoyo: true,
-            delay: 4
-        });
+      });
     });
+
+    // Reveal on scroll
+    const revealObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      },
+      { threshold: 0.1 },
+    );
+
+    document.querySelectorAll('.reveal').forEach((el) => revealObserver.observe(el));
+
+    // Spotlight effect for Highlights
+    const highlightsGrid = document.querySelector('.highlights-grid');
+    if (highlightsGrid) {
+      highlightsGrid.addEventListener('mousemove', (e) => {
+        const cards = highlightsGrid.querySelectorAll('.highlight-card');
+        cards.forEach((card) => {
+          const rect = card.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          card.style.setProperty('--mouse-x', `${x}px`);
+          card.style.setProperty('--mouse-y', `${y}px`);
+        });
+      });
+    }
+
+    // Animation de flottement infinie pour le background
+    gsap.to('.pricing-hero-bg', {
+      duration: 25,
+      x: '3%',
+      y: '2%',
+      rotation: 0.01,
+      ease: 'sine.inOut',
+      repeat: -1,
+      yoyo: true,
+    });
+
+    gsap.to('.pricing-hero-bg', {
+      duration: 18,
+      x: '-2%',
+      y: '-1%',
+      ease: 'sine.inOut',
+      repeat: -1,
+      yoyo: true,
+      delay: 4,
+    });
+  });
 </script>

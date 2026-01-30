@@ -1,287 +1,345 @@
 <!-- DEPLOYMENT CAPABILITIES SECTION -->
 <section id="deployments" class="deployments-section">
-    <div class="container">
-
-        <!-- Section Header -->
-        <div class="section-header reveal">
-            <span class="section-badge">{{deployments.badge}}</span>
-            <h2 class="section-title">
-                {{deployments.title}}
-                <span class="text-gradient">{{deployments.titleGradient}}</span>
-            </h2>
-            <p class="section-subtitle">{{deployments.subtitle}}</p>
-        </div>
-
-        <!-- Runtimes -->
-        <div class="deploy-category reveal">
-            <div class="category-header">
-                <span class="category-icon">&#x1F680;</span>
-                <h3>{{deployments.runtimes.title}}</h3>
-                <p>{{deployments.runtimes.description}}</p>
-            </div>
-            <div class="deploy-grid runtimes-grid">
-                <div class="deploy-card runtime-card">
-                    <div class="card-icon nodejs-icon">
-                        <img src="/assets/icons/nodejs.svg" alt="Node.js" loading="lazy" onerror="this.outerHTML='&#x1F49A;'">
-                    </div>
-                    <h4>Node.js</h4>
-                    <p>{{deployments.runtimes.nodejs}}</p>
-                    <span class="badge badge-protected">{{deployments.badges.protected}}</span>
-                </div>
-                <div class="deploy-card runtime-card">
-                    <div class="card-icon python-icon">
-                        <img src="/assets/icons/python.svg" alt="Python" loading="lazy" onerror="this.outerHTML='&#x1F40D;'">
-                    </div>
-                    <h4>Python</h4>
-                    <p>{{deployments.runtimes.python}}</p>
-                    <span class="badge badge-protected">{{deployments.badges.protected}}</span>
-                </div>
-                <div class="deploy-card runtime-card">
-                    <div class="card-icon php-icon">
-                        <img src="/assets/icons/php.svg" alt="PHP" loading="lazy" onerror="this.outerHTML='&#x1F418;'">
-                    </div>
-                    <h4>PHP</h4>
-                    <p>{{deployments.runtimes.php}}</p>
-                </div>
-                <div class="deploy-card runtime-card">
-                    <div class="card-icon go-icon">
-                        <img src="/assets/icons/go.svg" alt="Go" loading="lazy" onerror="this.outerHTML='&#x1F439;'">
-                    </div>
-                    <h4>Go</h4>
-                    <p>{{deployments.runtimes.go}}</p>
-                </div>
-                <div class="deploy-card runtime-card">
-                    <div class="card-icon rust-icon">
-                        <img src="/assets/icons/rust.svg" alt="Rust" loading="lazy" onerror="this.outerHTML='&#x1F980;'">
-                    </div>
-                    <h4>Rust</h4>
-                    <p>{{deployments.runtimes.rust}}</p>
-                </div>
-                <div class="deploy-card runtime-card">
-                    <div class="card-icon ruby-icon">
-                        <img src="/assets/icons/ruby.svg" alt="Ruby" loading="lazy" onerror="this.outerHTML='&#x1F48E;'">
-                    </div>
-                    <h4>Ruby</h4>
-                    <p>{{deployments.runtimes.ruby}}</p>
-                </div>
-                <div class="deploy-card runtime-card">
-                    <div class="card-icon docker-icon">
-                        <img src="/assets/icons/docker.svg" alt="Docker" loading="lazy" onerror="this.outerHTML='&#x1F40B;'">
-                    </div>
-                    <h4>Docker</h4>
-                    <p>{{deployments.runtimes.docker}}</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Databases -->
-        <div class="deploy-category reveal">
-            <div class="category-header">
-                <span class="category-icon">&#x1F5C4;</span>
-                <h3>{{deployments.databases.title}}</h3>
-                <p>{{deployments.databases.description}}</p>
-            </div>
-            <div class="deploy-grid databases-grid">
-                <div class="deploy-card database-card">
-                    <div class="card-icon postgres-icon">
-                        <img src="/assets/icons/postgresql.svg" alt="PostgreSQL" loading="lazy" onerror="this.outerHTML='&#x1F418;'">
-                    </div>
-                    <h4>PostgreSQL</h4>
-                    <p>{{deployments.databases.postgresql}}</p>
-                </div>
-                <div class="deploy-card database-card">
-                    <div class="card-icon mysql-icon">
-                        <img src="/assets/icons/mysql.svg" alt="MySQL" loading="lazy" onerror="this.outerHTML='&#x1F42C;'">
-                    </div>
-                    <h4>MySQL / MariaDB</h4>
-                    <p>{{deployments.databases.mysql}}</p>
-                </div>
-                <div class="deploy-card database-card">
-                    <div class="card-icon redis-icon">
-                        <img src="/assets/icons/redis.svg" alt="Redis" loading="lazy" onerror="this.outerHTML='&#x1F534;'">
-                    </div>
-                    <h4>Redis</h4>
-                    <p>{{deployments.databases.redis}}</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Web & Proxy -->
-        <div class="deploy-category reveal">
-            <div class="category-header">
-                <span class="category-icon">&#x1F310;</span>
-                <h3>{{deployments.webProxy.title}}</h3>
-                <p>{{deployments.webProxy.description}}</p>
-            </div>
-            <div class="deploy-grid">
-                <div class="deploy-card">
-                    <div class="card-icon nginx-icon">
-                        <img src="/assets/icons/nginx.svg" alt="Nginx" loading="lazy" onerror="this.outerHTML='&#x1F4E6;'">
-                    </div>
-                    <h4>Nginx</h4>
-                    <p>{{deployments.webProxy.nginx}}</p>
-                    <span class="badge badge-auto">{{deployments.badges.autoConfig}}</span>
-                </div>
-                <div class="deploy-card">
-                    <div class="card-icon haproxy-icon">
-                        <img src="/assets/icons/haproxy.svg" alt="HAProxy" loading="lazy" onerror="this.outerHTML='&#x2696;'">
-                    </div>
-                    <h4>HAProxy</h4>
-                    <p>{{deployments.webProxy.haproxy}}</p>
-                </div>
-                <div class="deploy-card">
-                    <div class="card-icon ssl-icon">&#x1F512;</div>
-                    <h4>Let's Encrypt</h4>
-                    <p>{{deployments.webProxy.letsencrypt}}</p>
-                    <span class="badge badge-auto">{{deployments.badges.autoRenew}}</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Security -->
-        <div class="deploy-category reveal">
-            <div class="category-header">
-                <span class="category-icon">&#x1F6E1;</span>
-                <h3>{{deployments.security.title}}</h3>
-                <p>{{deployments.security.description}}</p>
-            </div>
-            <div class="deploy-grid">
-                <div class="deploy-card">
-                    <div class="card-icon">&#x1F6AB;</div>
-                    <h4>Fail2ban</h4>
-                    <p>{{deployments.security.fail2ban}}</p>
-                </div>
-                <div class="deploy-card">
-                    <div class="card-icon">&#x1F525;</div>
-                    <h4>UFW Firewall</h4>
-                    <p>{{deployments.security.ufw}}</p>
-                </div>
-                <div class="deploy-card">
-                    <div class="card-icon">&#x1F50C;</div>
-                    <h4>WireGuard VPN</h4>
-                    <p>{{deployments.security.wireguard}}</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Email Stack -->
-        <div class="deploy-category reveal">
-            <div class="category-header">
-                <span class="category-icon">&#x1F4E7;</span>
-                <h3>{{deployments.email.title}}</h3>
-                <p>{{deployments.email.description}}</p>
-            </div>
-            <div class="deploy-grid email-grid">
-                <div class="deploy-card">
-                    <div class="card-icon">&#x1F4EC;</div>
-                    <h4>Postfix</h4>
-                    <p>{{deployments.email.postfix}}</p>
-                </div>
-                <div class="deploy-card">
-                    <div class="card-icon">&#x1F4E5;</div>
-                    <h4>Dovecot</h4>
-                    <p>{{deployments.email.dovecot}}</p>
-                </div>
-                <div class="deploy-card">
-                    <div class="card-icon">&#x1F6E1;</div>
-                    <h4>Rspamd</h4>
-                    <p>{{deployments.email.rspamd}}</p>
-                </div>
-                <div class="deploy-card">
-                    <div class="card-icon">&#x1F58A;</div>
-                    <h4>OpenDKIM</h4>
-                    <p>{{deployments.email.opendkim}}</p>
-                </div>
-                <div class="deploy-card">
-                    <div class="card-icon">&#x1F9EA;</div>
-                    <h4>ClamAV</h4>
-                    <p>{{deployments.email.clamav}}</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Monitoring -->
-        <div class="deploy-category reveal">
-            <div class="category-header">
-                <span class="category-icon">&#x1F4CA;</span>
-                <h3>{{deployments.monitoring.title}}</h3>
-                <p>{{deployments.monitoring.description}}</p>
-            </div>
-            <div class="deploy-grid">
-                <div class="deploy-card">
-                    <div class="card-icon">&#x2699;</div>
-                    <h4>PM2</h4>
-                    <p>{{deployments.monitoring.pm2}}</p>
-                    <span class="badge badge-auto">{{deployments.badges.autoRestart}}</span>
-                </div>
-                <div class="deploy-card">
-                    <div class="card-icon">&#x1F4C8;</div>
-                    <h4>Netdata</h4>
-                    <p>{{deployments.monitoring.netdata}}</p>
-                </div>
-                <div class="deploy-card">
-                    <div class="card-icon">&#x1F4DC;</div>
-                    <h4>Loki</h4>
-                    <p>{{deployments.monitoring.loki}}</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Backup -->
-        <div class="deploy-category reveal">
-            <div class="category-header">
-                <span class="category-icon">&#x1F4BE;</span>
-                <h3>{{deployments.backup.title}}</h3>
-                <p>{{deployments.backup.description}}</p>
-            </div>
-            <div class="deploy-grid">
-                <div class="deploy-card">
-                    <div class="card-icon">&#x1F504;</div>
-                    <h4>Rsync</h4>
-                    <p>{{deployments.backup.rsync}}</p>
-                </div>
-                <div class="deploy-card">
-                    <div class="card-icon">&#x2601;</div>
-                    <h4>Rclone</h4>
-                    <p>{{deployments.backup.rclone}}</p>
-                    <span class="badge badge-cloud">40+ {{deployments.badges.providers}}</span>
-                </div>
-                <div class="deploy-card">
-                    <div class="card-icon">&#x1F510;</div>
-                    <h4>Restic</h4>
-                    <p>{{deployments.backup.restic}}</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- FTP -->
-        <div class="deploy-category reveal">
-            <div class="category-header">
-                <span class="category-icon">&#x1F4C1;</span>
-                <h3>{{deployments.ftp.title}}</h3>
-                <p>{{deployments.ftp.description}}</p>
-            </div>
-            <div class="deploy-grid ftp-grid">
-                <div class="deploy-card">
-                    <div class="card-icon">&#x1F4E4;</div>
-                    <h4>vsftpd</h4>
-                    <p>{{deployments.ftp.vsftpd}}</p>
-                </div>
-                <div class="deploy-card">
-                    <div class="card-icon">&#x1F4E4;</div>
-                    <h4>ProFTPD</h4>
-                    <p>{{deployments.ftp.proftpd}}</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- CTA -->
-        <div class="deploy-cta reveal">
-            <p class="cta-text">{{deployments.cta.text}}</p>
-            <a href="/{{lang}}/pricing/" class="btn btn-primary cta-glow">
-                {{deployments.cta.button}} &#x2192;
-            </a>
-        </div>
-
+  <div class="container">
+    <!-- Section Header -->
+    <div class="section-header reveal">
+      <span class="section-badge">{{deployments.badge}}</span>
+      <h2 class="section-title">
+        {{deployments.title}}
+        <span class="text-gradient">{{deployments.titleGradient}}</span>
+      </h2>
+      <p class="section-subtitle">{{deployments.subtitle}}</p>
     </div>
+
+    <!-- Runtimes -->
+    <div class="deploy-category reveal">
+      <div class="category-header">
+        <span class="category-icon">&#x1F680;</span>
+        <h3>{{deployments.runtimes.title}}</h3>
+        <p>{{deployments.runtimes.description}}</p>
+      </div>
+      <div class="deploy-grid runtimes-grid">
+        <div class="deploy-card runtime-card">
+          <div class="card-icon nodejs-icon">
+            <img
+              src="/assets/icons/nodejs.svg"
+              alt="Node.js"
+              loading="lazy"
+              onerror="this.outerHTML = '&#x1F49A;'"
+            />
+          </div>
+          <h4>Node.js</h4>
+          <p>{{deployments.runtimes.nodejs}}</p>
+          <span class="badge badge-protected">{{deployments.badges.protected}}</span>
+        </div>
+        <div class="deploy-card runtime-card">
+          <div class="card-icon python-icon">
+            <img
+              src="/assets/icons/python.svg"
+              alt="Python"
+              loading="lazy"
+              onerror="this.outerHTML = '&#x1F40D;'"
+            />
+          </div>
+          <h4>Python</h4>
+          <p>{{deployments.runtimes.python}}</p>
+          <span class="badge badge-protected">{{deployments.badges.protected}}</span>
+        </div>
+        <div class="deploy-card runtime-card">
+          <div class="card-icon php-icon">
+            <img
+              src="/assets/icons/php.svg"
+              alt="PHP"
+              loading="lazy"
+              onerror="this.outerHTML = '&#x1F418;'"
+            />
+          </div>
+          <h4>PHP</h4>
+          <p>{{deployments.runtimes.php}}</p>
+        </div>
+        <div class="deploy-card runtime-card">
+          <div class="card-icon go-icon">
+            <img
+              src="/assets/icons/go.svg"
+              alt="Go"
+              loading="lazy"
+              onerror="this.outerHTML = '&#x1F439;'"
+            />
+          </div>
+          <h4>Go</h4>
+          <p>{{deployments.runtimes.go}}</p>
+        </div>
+        <div class="deploy-card runtime-card">
+          <div class="card-icon rust-icon">
+            <img
+              src="/assets/icons/rust.svg"
+              alt="Rust"
+              loading="lazy"
+              onerror="this.outerHTML = '&#x1F980;'"
+            />
+          </div>
+          <h4>Rust</h4>
+          <p>{{deployments.runtimes.rust}}</p>
+        </div>
+        <div class="deploy-card runtime-card">
+          <div class="card-icon ruby-icon">
+            <img
+              src="/assets/icons/ruby.svg"
+              alt="Ruby"
+              loading="lazy"
+              onerror="this.outerHTML = '&#x1F48E;'"
+            />
+          </div>
+          <h4>Ruby</h4>
+          <p>{{deployments.runtimes.ruby}}</p>
+        </div>
+        <div class="deploy-card runtime-card">
+          <div class="card-icon docker-icon">
+            <img
+              src="/assets/icons/docker.svg"
+              alt="Docker"
+              loading="lazy"
+              onerror="this.outerHTML = '&#x1F40B;'"
+            />
+          </div>
+          <h4>Docker</h4>
+          <p>{{deployments.runtimes.docker}}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Databases -->
+    <div class="deploy-category reveal">
+      <div class="category-header">
+        <span class="category-icon">&#x1F5C4;</span>
+        <h3>{{deployments.databases.title}}</h3>
+        <p>{{deployments.databases.description}}</p>
+      </div>
+      <div class="deploy-grid databases-grid">
+        <div class="deploy-card database-card">
+          <div class="card-icon postgres-icon">
+            <img
+              src="/assets/icons/postgresql.svg"
+              alt="PostgreSQL"
+              loading="lazy"
+              onerror="this.outerHTML = '&#x1F418;'"
+            />
+          </div>
+          <h4>PostgreSQL</h4>
+          <p>{{deployments.databases.postgresql}}</p>
+        </div>
+        <div class="deploy-card database-card">
+          <div class="card-icon mysql-icon">
+            <img
+              src="/assets/icons/mysql.svg"
+              alt="MySQL"
+              loading="lazy"
+              onerror="this.outerHTML = '&#x1F42C;'"
+            />
+          </div>
+          <h4>MySQL / MariaDB</h4>
+          <p>{{deployments.databases.mysql}}</p>
+        </div>
+        <div class="deploy-card database-card">
+          <div class="card-icon redis-icon">
+            <img
+              src="/assets/icons/redis.svg"
+              alt="Redis"
+              loading="lazy"
+              onerror="this.outerHTML = '&#x1F534;'"
+            />
+          </div>
+          <h4>Redis</h4>
+          <p>{{deployments.databases.redis}}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Web & Proxy -->
+    <div class="deploy-category reveal">
+      <div class="category-header">
+        <span class="category-icon">&#x1F310;</span>
+        <h3>{{deployments.webProxy.title}}</h3>
+        <p>{{deployments.webProxy.description}}</p>
+      </div>
+      <div class="deploy-grid">
+        <div class="deploy-card">
+          <div class="card-icon nginx-icon">
+            <img
+              src="/assets/icons/nginx.svg"
+              alt="Nginx"
+              loading="lazy"
+              onerror="this.outerHTML = '&#x1F4E6;'"
+            />
+          </div>
+          <h4>Nginx</h4>
+          <p>{{deployments.webProxy.nginx}}</p>
+          <span class="badge badge-auto">{{deployments.badges.autoConfig}}</span>
+        </div>
+        <div class="deploy-card">
+          <div class="card-icon haproxy-icon">
+            <img
+              src="/assets/icons/haproxy.svg"
+              alt="HAProxy"
+              loading="lazy"
+              onerror="this.outerHTML = '&#x2696;'"
+            />
+          </div>
+          <h4>HAProxy</h4>
+          <p>{{deployments.webProxy.haproxy}}</p>
+        </div>
+        <div class="deploy-card">
+          <div class="card-icon ssl-icon">&#x1F512;</div>
+          <h4>Let's Encrypt</h4>
+          <p>{{deployments.webProxy.letsencrypt}}</p>
+          <span class="badge badge-auto">{{deployments.badges.autoRenew}}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Security -->
+    <div class="deploy-category reveal">
+      <div class="category-header">
+        <span class="category-icon">&#x1F6E1;</span>
+        <h3>{{deployments.security.title}}</h3>
+        <p>{{deployments.security.description}}</p>
+      </div>
+      <div class="deploy-grid">
+        <div class="deploy-card">
+          <div class="card-icon">&#x1F6AB;</div>
+          <h4>Fail2ban</h4>
+          <p>{{deployments.security.fail2ban}}</p>
+        </div>
+        <div class="deploy-card">
+          <div class="card-icon">&#x1F525;</div>
+          <h4>UFW Firewall</h4>
+          <p>{{deployments.security.ufw}}</p>
+        </div>
+        <div class="deploy-card">
+          <div class="card-icon">&#x1F50C;</div>
+          <h4>WireGuard VPN</h4>
+          <p>{{deployments.security.wireguard}}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Email Stack -->
+    <div class="deploy-category reveal">
+      <div class="category-header">
+        <span class="category-icon">&#x1F4E7;</span>
+        <h3>{{deployments.email.title}}</h3>
+        <p>{{deployments.email.description}}</p>
+      </div>
+      <div class="deploy-grid email-grid">
+        <div class="deploy-card">
+          <div class="card-icon">&#x1F4EC;</div>
+          <h4>Postfix</h4>
+          <p>{{deployments.email.postfix}}</p>
+        </div>
+        <div class="deploy-card">
+          <div class="card-icon">&#x1F4E5;</div>
+          <h4>Dovecot</h4>
+          <p>{{deployments.email.dovecot}}</p>
+        </div>
+        <div class="deploy-card">
+          <div class="card-icon">&#x1F6E1;</div>
+          <h4>Rspamd</h4>
+          <p>{{deployments.email.rspamd}}</p>
+        </div>
+        <div class="deploy-card">
+          <div class="card-icon">&#x1F58A;</div>
+          <h4>OpenDKIM</h4>
+          <p>{{deployments.email.opendkim}}</p>
+        </div>
+        <div class="deploy-card">
+          <div class="card-icon">&#x1F9EA;</div>
+          <h4>ClamAV</h4>
+          <p>{{deployments.email.clamav}}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Monitoring -->
+    <div class="deploy-category reveal">
+      <div class="category-header">
+        <span class="category-icon">&#x1F4CA;</span>
+        <h3>{{deployments.monitoring.title}}</h3>
+        <p>{{deployments.monitoring.description}}</p>
+      </div>
+      <div class="deploy-grid">
+        <div class="deploy-card">
+          <div class="card-icon">&#x2699;</div>
+          <h4>PM2</h4>
+          <p>{{deployments.monitoring.pm2}}</p>
+          <span class="badge badge-auto">{{deployments.badges.autoRestart}}</span>
+        </div>
+        <div class="deploy-card">
+          <div class="card-icon">&#x1F4C8;</div>
+          <h4>Netdata</h4>
+          <p>{{deployments.monitoring.netdata}}</p>
+        </div>
+        <div class="deploy-card">
+          <div class="card-icon">&#x1F4DC;</div>
+          <h4>Loki</h4>
+          <p>{{deployments.monitoring.loki}}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Backup -->
+    <div class="deploy-category reveal">
+      <div class="category-header">
+        <span class="category-icon">&#x1F4BE;</span>
+        <h3>{{deployments.backup.title}}</h3>
+        <p>{{deployments.backup.description}}</p>
+      </div>
+      <div class="deploy-grid">
+        <div class="deploy-card">
+          <div class="card-icon">&#x1F504;</div>
+          <h4>Rsync</h4>
+          <p>{{deployments.backup.rsync}}</p>
+        </div>
+        <div class="deploy-card">
+          <div class="card-icon">&#x2601;</div>
+          <h4>Rclone</h4>
+          <p>{{deployments.backup.rclone}}</p>
+          <span class="badge badge-cloud">40+ {{deployments.badges.providers}}</span>
+        </div>
+        <div class="deploy-card">
+          <div class="card-icon">&#x1F510;</div>
+          <h4>Restic</h4>
+          <p>{{deployments.backup.restic}}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- FTP -->
+    <div class="deploy-category reveal">
+      <div class="category-header">
+        <span class="category-icon">&#x1F4C1;</span>
+        <h3>{{deployments.ftp.title}}</h3>
+        <p>{{deployments.ftp.description}}</p>
+      </div>
+      <div class="deploy-grid ftp-grid">
+        <div class="deploy-card">
+          <div class="card-icon">&#x1F4E4;</div>
+          <h4>vsftpd</h4>
+          <p>{{deployments.ftp.vsftpd}}</p>
+        </div>
+        <div class="deploy-card">
+          <div class="card-icon">&#x1F4E4;</div>
+          <h4>ProFTPD</h4>
+          <p>{{deployments.ftp.proftpd}}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="deploy-cta reveal">
+      <p class="cta-text">{{deployments.cta.text}}</p>
+      <a href="/{{lang}}/pricing/" class="btn btn-primary cta-glow">
+        {{deployments.cta.button}} &#x2192;
+      </a>
+    </div>
+  </div>
 </section>

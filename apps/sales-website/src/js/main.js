@@ -876,34 +876,88 @@
     const label = document.getElementById('section-indicator-label');
     if (!indicator) return;
 
-    const dots = indicator.querySelectorAll('.section-indicator-dot');
-    if (!dots.length) return;
+    // Detect current page from URL path
+    const path = window.location.pathname;
+    let currentPage = 'home';
+    if (path.includes('/features')) currentPage = 'features';
+    else if (path.includes('/deployments')) currentPage = 'deployments';
+    else if (path.includes('/pricing')) currentPage = 'pricing';
+    else if (path.includes('/security')) currentPage = 'security';
 
-    // Map section IDs to their elements
-    const sections = [];
-    dots.forEach((dot) => {
-      const sectionId = dot.dataset.section;
-      let section = null;
+    // Get all dots and filter by current page
+    const allDots = indicator.querySelectorAll('.section-indicator-dot');
+    const pageDots = [];
 
-      // Special handling for different section selectors
-      if (sectionId === 'hero') {
-        section = document.querySelector('.hero');
-      } else if (sectionId === 'how-it-works') {
-        section = document.getElementById('how-it-works');
-      } else if (sectionId === 'security') {
-        section = document.querySelector('.security-section, #security');
-      } else if (sectionId === 'features') {
-        section = document.querySelector('.features-grid-section, #features');
-      } else if (sectionId === 'testimonials') {
-        section = document.querySelector('.testimonials, #testimonials');
-      }
-
-      if (section) {
-        sections.push({ id: sectionId, element: section, dot: dot });
+    allDots.forEach((dot) => {
+      const pages = dot.dataset.pages?.split(',') || [];
+      if (pages.includes(currentPage)) {
+        dot.style.display = '';
+        pageDots.push(dot);
+      } else {
+        dot.style.display = 'none';
       }
     });
 
-    // If no sections found, hide indicator and exit
+    // If no dots for this page, hide indicator and exit
+    if (pageDots.length === 0) {
+      indicator.style.display = 'none';
+      return;
+    }
+
+    // Section selectors for each page
+    const sectionSelectors = {
+      // Homepage
+      hero: '.hero',
+      'how-it-works': '#how-it-works',
+      'security-home': '.security-deck, .security-section, #security',
+      'features-home': '.features-grid-section, #features',
+      testimonials: '.testimonials-section, .testimonials, #testimonials',
+
+      // Features page
+      'features-hero': '.features-hero',
+      runtimes: '.section-info-box.runtimes',
+      databases: '.section-info-box.databases',
+      'web-security': '.section-info-box.security',
+      email: '.section-info-box.email',
+      mcp: '.mcp-section, .section-info-box.mcp',
+      comparison: '.comparison-section',
+
+      // Deployments page
+      'deploy-hero': '.hero-sticky',
+      'deploy-runtimes': '#runtimes-section',
+      'deploy-databases': '#databases-section',
+      'deploy-web-security': '#web-security-section',
+      'deploy-email': '#email-section',
+      'deploy-monitoring': '#monitoring-section',
+
+      // Pricing page
+      'pricing-hero': '.pricing-hero',
+      'pricing-plans': '.pricing-section',
+      'pricing-highlights': '.highlights-section',
+      'pricing-faq': '.faq-section-enhanced',
+
+      // Security page
+      'security-hero': '.security-hero',
+      'security-diagram': '.security-diagram-section',
+      'security-architecture': '.security-architecture',
+      'security-honesty': '.security-honesty',
+    };
+
+    // Map section IDs to their elements
+    const sections = [];
+    pageDots.forEach((dot) => {
+      const sectionId = dot.dataset.section;
+      const selector = sectionSelectors[sectionId];
+
+      if (selector) {
+        const section = document.querySelector(selector);
+        if (section) {
+          sections.push({ id: sectionId, element: section, dot: dot });
+        }
+      }
+    });
+
+    // If no sections found on the page, hide indicator and exit
     if (sections.length === 0) {
       indicator.style.display = 'none';
       return;
@@ -967,7 +1021,7 @@
       if (activeSection && activeSection.id !== currentSection) {
         currentSection = activeSection.id;
 
-        dots.forEach((dot) => dot.classList.remove('active'));
+        pageDots.forEach((dot) => dot.classList.remove('active'));
         activeSection.dot.classList.add('active');
 
         // Update label text
@@ -978,7 +1032,7 @@
     }
 
     // Click handler for dots
-    dots.forEach((dot) => {
+    pageDots.forEach((dot) => {
       dot.addEventListener('click', () => {
         const sectionId = dot.dataset.section;
         const section = sections.find((s) => s.id === sectionId);
@@ -1019,11 +1073,10 @@
   }
 
   // ==========================================================================
-  // ACTIVE NAV LINK
+  // ACTIVE NAV LINK (Header + Footer)
   // ==========================================================================
   function initActiveNavLink() {
     const path = window.location.pathname;
-    const navLinks = document.querySelectorAll('.nav-links a[data-page]');
 
     // Détecte la page courante depuis l'URL
     let currentPage = 'home';
@@ -1031,12 +1084,166 @@
     else if (path.includes('/deployments')) currentPage = 'deployments';
     else if (path.includes('/pricing')) currentPage = 'pricing';
     else if (path.includes('/security')) currentPage = 'security';
+    else if (path.includes('/about')) currentPage = 'about';
+    else if (path.includes('/careers')) currentPage = 'careers';
+    else if (path.includes('/contact')) currentPage = 'contact';
+    else if (path.includes('/press')) currentPage = 'press';
+    else if (path.includes('/privacy')) currentPage = 'privacy';
+    else if (path.includes('/terms')) currentPage = 'terms';
+    else if (path.includes('/dpa')) currentPage = 'dpa';
+    else if (path.includes('/gdpr')) currentPage = 'gdpr';
+    else if (path.includes('/changelog')) currentPage = 'changelog';
 
-    // Applique la classe active au lien correspondant
+    // Applique la classe active aux liens du header
+    const navLinks = document.querySelectorAll('.nav-links a[data-page]');
     navLinks.forEach((link) => {
       if (link.dataset.page === currentPage) {
         link.classList.add('active');
       }
+    });
+
+    // Applique la classe active aux liens du footer
+    const footerLinks = document.querySelectorAll('.footer-col a[data-page]');
+    footerLinks.forEach((link) => {
+      if (link.dataset.page === currentPage) {
+        link.classList.add('active');
+      }
+    });
+  }
+
+  // ==========================================================================
+  // TEXT RESIZER
+  // ==========================================================================
+  function initTextResizer() {
+    const resizer = document.getElementById('text-resizer');
+    if (!resizer) return;
+
+    const toggle = resizer.querySelector('.resizer-toggle');
+    const valueDisplay = resizer.querySelector('.value-display');
+    const increaseBtn = resizer.querySelector('[data-action="increase"]');
+    const decreaseBtn = resizer.querySelector('[data-action="decrease"]');
+    const resetBtn = resizer.querySelector('[data-action="reset"]');
+
+    let currentSize = parseInt(localStorage.getItem('serverflow-fontsize')) || 100;
+
+    function applySize(size) {
+      // Use percentage to scale the base font size (usually 16px)
+      // This affects all rem-based units
+      document.documentElement.style.fontSize = `${size}%`;
+      if (valueDisplay) valueDisplay.textContent = `${size}%`;
+      localStorage.setItem('serverflow-fontsize', size);
+      currentSize = size;
+    }
+
+    // Apply on init
+    applySize(currentSize);
+
+    // Toggle Menu
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', !isExpanded);
+      resizer.classList.toggle('active');
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!resizer.contains(e.target)) {
+        resizer.classList.remove('active');
+        toggle.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // Actions
+    if (increaseBtn) {
+      increaseBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent closing menu
+        if (currentSize < 150) applySize(currentSize + 10);
+      });
+    }
+
+    if (decreaseBtn) {
+      decreaseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentSize > 70) applySize(currentSize - 10);
+      });
+    }
+
+    if (resetBtn) {
+      resetBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        applySize(100);
+      });
+    }
+  }
+
+  // ==========================================================================
+  // SECURITY QUOTES TYPEWRITER EFFECT
+  // ==========================================================================
+  function initSecurityQuotesTypewriter() {
+    const quotes = document.querySelectorAll('.quote-bubble');
+    if (quotes.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('typewriter-active');
+            observer.unobserve(entry.target); // Animate only once
+          }
+        });
+      },
+      { threshold: 0.5 },
+    );
+
+    quotes.forEach((quote) => {
+      observer.observe(quote);
+    });
+  }
+
+  // ==========================================================================
+  // BENEFIT CARDS TYPING ANIMATION
+  // ==========================================================================
+  function initBenefitTyping() {
+    const cards = document.querySelectorAll('.glass-card');
+    if (cards.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const card = entry.target;
+            const title = card.querySelector('.console-type-title');
+            const text = card.querySelector('.console-fade-text');
+
+            if (title && !title.classList.contains('typed')) {
+              const originalText = title.textContent;
+              title.textContent = '';
+              title.classList.add('typing');
+
+              let i = 0;
+              const typeInterval = setInterval(() => {
+                title.textContent += originalText.charAt(i);
+                i++;
+                if (i >= originalText.length) {
+                  clearInterval(typeInterval);
+                  title.classList.remove('typing');
+                  title.classList.add('typed');
+                  // Reveal text after typing
+                  if (text) text.classList.add('visible');
+                }
+              }, 50); // Speed of typing
+            }
+
+            observer.unobserve(card);
+          }
+        });
+      },
+      { threshold: 0.3 },
+    );
+
+    cards.forEach((card) => {
+      observer.observe(card);
     });
   }
 
@@ -1067,6 +1274,9 @@
     initReducedMotion();
     initFeatureCardsSpotlight();
     initHomeSecurityDiagram();
+    initTextResizer();
+    initSecurityQuotesTypewriter();
+    initBenefitTyping();
   }
 
   // Run when DOM is ready

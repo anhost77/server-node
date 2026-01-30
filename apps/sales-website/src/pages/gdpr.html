@@ -1,79 +1,79 @@
 <!-- GDPR Page -->
 <section class="page-header">
-    <div class="container">
-        <h1 class="animate-fade-in">{{gdprPage.title}}</h1>
-        <p class="animate-fade-in" style="animation-delay: 0.1s; max-width: 600px; margin: 0 auto;">
-            {{gdprPage.subtitle}}
-        </p>
-    </div>
+  <div class="container">
+    <h1 class="animate-fade-in">{{gdprPage.title}}</h1>
+    <p class="animate-fade-in" style="animation-delay: 0.1s; max-width: 600px; margin: 0 auto">
+      {{gdprPage.subtitle}}
+    </p>
+  </div>
 </section>
 
 <section class="section legal-content">
-    <div class="container">
-        <div class="legal-text reveal">
-            <h2>{{gdprPage.sections.commitment.title}}</h2>
-            <p>{{gdprPage.sections.commitment.content}}</p>
+  <div class="container">
+    <div class="legal-text reveal">
+      <h2>{{gdprPage.sections.commitment.title}}</h2>
+      <p>{{gdprPage.sections.commitment.content}}</p>
 
-            <h2>{{gdprPage.sections.controller.title}}</h2>
-            <p>
-                {{gdprPage.sections.controller.content}}
-                <a href="mailto:dpo@serverflow.io">dpo@serverflow.io</a>.
-            </p>
+      <h2>{{gdprPage.sections.controller.title}}</h2>
+      <p>
+        {{gdprPage.sections.controller.content}}
+        <a href="mailto:dpo@serverflow.io">dpo@serverflow.io</a>.
+      </p>
 
-            <h2>{{gdprPage.sections.rights.title}}</h2>
-            <p>{{gdprPage.sections.rights.intro}}</p>
-            <ul>
-                {{#each gdprPage.sections.rights.items}}
-                <li><strong>{{name}}</strong> - {{description}}</li>
-                {{/each}}
-            </ul>
+      <h2>{{gdprPage.sections.rights.title}}</h2>
+      <p>{{gdprPage.sections.rights.intro}}</p>
+      <ul>
+        {{#each gdprPage.sections.rights.items}}
+        <li><strong>{{name}}</strong> - {{description}}</li>
+        {{/each}}
+      </ul>
 
-            <h2>{{gdprPage.sections.lawfulBasis.title}}</h2>
-            <p>{{gdprPage.sections.lawfulBasis.intro}}</p>
-            <ul>
-                {{#each gdprPage.sections.lawfulBasis.items}}
-                <li><strong>{{name}}</strong> - {{description}}</li>
-                {{/each}}
-            </ul>
+      <h2>{{gdprPage.sections.lawfulBasis.title}}</h2>
+      <p>{{gdprPage.sections.lawfulBasis.intro}}</p>
+      <ul>
+        {{#each gdprPage.sections.lawfulBasis.items}}
+        <li><strong>{{name}}</strong> - {{description}}</li>
+        {{/each}}
+      </ul>
 
-            <h2>{{gdprPage.sections.processing.title}}</h2>
-            <h3>{{gdprPage.sections.processing.collect.title}}</h3>
-            <ul>
-                {{#each gdprPage.sections.processing.collect.items}}
-                <li>{{this}}</li>
-                {{/each}}
-            </ul>
+      <h2>{{gdprPage.sections.processing.title}}</h2>
+      <h3>{{gdprPage.sections.processing.collect.title}}</h3>
+      <ul>
+        {{#each gdprPage.sections.processing.collect.items}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
 
-            <h3>{{gdprPage.sections.processing.notCollect.title}}</h3>
-            <p>{{gdprPage.sections.processing.notCollect.intro}}</p>
-            <ul>
-                {{#each gdprPage.sections.processing.notCollect.items}}
-                <li>{{this}}</li>
-                {{/each}}
-            </ul>
+      <h3>{{gdprPage.sections.processing.notCollect.title}}</h3>
+      <p>{{gdprPage.sections.processing.notCollect.intro}}</p>
+      <ul>
+        {{#each gdprPage.sections.processing.notCollect.items}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
 
-            <h2>{{gdprPage.sections.transfers.title}}</h2>
-            <p>{{gdprPage.sections.transfers.content}}</p>
+      <h2>{{gdprPage.sections.transfers.title}}</h2>
+      <p>{{gdprPage.sections.transfers.content}}</p>
 
-            <h2>{{gdprPage.sections.retention.title}}</h2>
-            <p>{{gdprPage.sections.retention.content}}</p>
+      <h2>{{gdprPage.sections.retention.title}}</h2>
+      <p>{{gdprPage.sections.retention.content}}</p>
 
-            <h2>{{gdprPage.sections.protection.title}}</h2>
-            <ul>
-                {{#each gdprPage.sections.protection.items}}
-                <li>{{this}}</li>
-                {{/each}}
-            </ul>
+      <h2>{{gdprPage.sections.protection.title}}</h2>
+      <ul>
+        {{#each gdprPage.sections.protection.items}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
 
-            <h2>{{gdprPage.sections.exercising.title}}</h2>
-            <p>
-                {{gdprPage.sections.exercising.content}}
-                <a href="mailto:privacy@serverflow.io">privacy@serverflow.io</a>.
-                {{gdprPage.sections.exercising.response}}
-            </p>
+      <h2>{{gdprPage.sections.exercising.title}}</h2>
+      <p>
+        {{gdprPage.sections.exercising.content}}
+        <a href="mailto:privacy@serverflow.io">privacy@serverflow.io</a>.
+        {{gdprPage.sections.exercising.response}}
+      </p>
 
-            <h2>{{gdprPage.sections.authority.title}}</h2>
-            <p>{{gdprPage.sections.authority.content}}</p>
-        </div>
+      <h2>{{gdprPage.sections.authority.title}}</h2>
+      <p>{{gdprPage.sections.authority.content}}</p>
     </div>
+  </div>
 </section>

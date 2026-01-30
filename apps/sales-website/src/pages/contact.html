@@ -1,121 +1,155 @@
 <!-- Contact Page -->
 <section class="page-header">
-    <div class="container">
-        <h1 class="animate-fade-in">{{footer.company.contact}}</h1>
-        <p class="animate-fade-in" style="animation-delay: 0.1s; max-width: 600px; margin: 0 auto;">
-            {{contactPage.subtitle}}
-        </p>
-    </div>
+  <div class="container">
+    <h1 class="animate-fade-in">{{footer.company.contact}}</h1>
+    <p class="animate-fade-in" style="animation-delay: 0.1s; max-width: 600px; margin: 0 auto">
+      {{contactPage.subtitle}}
+    </p>
+  </div>
 </section>
 
 <section class="section">
-    <div class="container">
-        <div class="contact-grid reveal">
-            <div class="contact-info">
-                <h2>{{contactPage.getInTouch.title}}</h2>
-                <p>{{contactPage.getInTouch.description}}</p>
+  <div class="container">
+    <div class="contact-grid reveal">
+      <div class="contact-info">
+        <h2>{{contactPage.getInTouch.title}}</h2>
+        <p>{{contactPage.getInTouch.description}}</p>
 
-                <div class="contact-methods">
-                    <div class="contact-method">
-                        <div class="contact-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                                <polyline points="22,6 12,13 2,6"></polyline>
-                            </svg>
-                        </div>
-                        <div>
-                            <h4>{{contactPage.methods.email.title}}</h4>
-                            <a href="mailto:{{contactPage.methods.email.address}}">{{contactPage.methods.email.address}}</a>
-                        </div>
-                    </div>
-
-                    <div class="contact-method">
-                        <div class="contact-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <h4>{{contactPage.methods.discord.title}}</h4>
-                            <a href="https://discord.gg/serverflow" target="_blank" rel="noopener noreferrer">{{contactPage.methods.discord.link}}</a>
-                        </div>
-                    </div>
-
-                    <div class="contact-method">
-                        <div class="contact-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231z"></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <h4>{{contactPage.methods.twitter.title}}</h4>
-                            <a href="https://twitter.com/serverflow" target="_blank" rel="noopener noreferrer">{{contactPage.methods.twitter.handle}}</a>
-                        </div>
-                    </div>
-                </div>
+        <div class="contact-methods">
+          <div class="contact-method">
+            <div class="contact-icon">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <path
+                  d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+                ></path>
+                <polyline points="22,6 12,13 2,6"></polyline>
+              </svg>
             </div>
-
-            <div class="contact-form-wrapper">
-                <form class="contact-form" id="contact-form">
-                    <div class="form-group">
-                        <label for="name">{{contactPage.form.name}}</label>
-                        <input type="text" id="name" name="name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="email">{{contactPage.form.email}}</label>
-                        <input type="email" id="email" name="email" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="subject">{{contactPage.form.subject}}</label>
-                        <select id="subject" name="subject" required>
-                            <option value="">{{contactPage.form.subjectPlaceholder}}</option>
-                            <option value="general">{{contactPage.form.subjectOptions.general}}</option>
-                            <option value="support">{{contactPage.form.subjectOptions.support}}</option>
-                            <option value="sales">{{contactPage.form.subjectOptions.sales}}</option>
-                            <option value="partnership">{{contactPage.form.subjectOptions.partnership}}</option>
-                            <option value="press">{{contactPage.form.subjectOptions.press}}</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="message">{{contactPage.form.message}}</label>
-                        <textarea id="message" name="message" rows="5" required></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-block" id="submit-btn">
-                        <span class="btn-text">{{contactPage.form.submit}}</span>
-                        <span class="btn-loading" style="display: none;">{{contactPage.form.sending}}</span>
-                    </button>
-                    <div id="form-message" class="form-message" style="display: none;"></div>
-                </form>
+            <div>
+              <h4>{{contactPage.methods.email.title}}</h4>
+              <a href="mailto:{{contactPage.methods.email.address}}"
+                >{{contactPage.methods.email.address}}</a
+              >
             </div>
+          </div>
+
+          <div class="contact-method">
+            <div class="contact-icon">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </div>
+            <div>
+              <h4>{{contactPage.methods.discord.title}}</h4>
+              <a href="https://discord.gg/serverflow" target="_blank" rel="noopener noreferrer"
+                >{{contactPage.methods.discord.link}}</a
+              >
+            </div>
+          </div>
+
+          <div class="contact-method">
+            <div class="contact-icon">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <path
+                  d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231z"
+                ></path>
+              </svg>
+            </div>
+            <div>
+              <h4>{{contactPage.methods.twitter.title}}</h4>
+              <a href="https://twitter.com/serverflow" target="_blank" rel="noopener noreferrer"
+                >{{contactPage.methods.twitter.handle}}</a
+              >
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div class="contact-form-wrapper">
+        <form class="contact-form" id="contact-form">
+          <div class="form-group">
+            <label for="name">{{contactPage.form.name}}</label>
+            <input type="text" id="name" name="name" required />
+          </div>
+          <div class="form-group">
+            <label for="email">{{contactPage.form.email}}</label>
+            <input type="email" id="email" name="email" required />
+          </div>
+          <div class="form-group">
+            <label for="subject">{{contactPage.form.subject}}</label>
+            <select id="subject" name="subject" required>
+              <option value="">{{contactPage.form.subjectPlaceholder}}</option>
+              <option value="general">{{contactPage.form.subjectOptions.general}}</option>
+              <option value="support">{{contactPage.form.subjectOptions.support}}</option>
+              <option value="sales">{{contactPage.form.subjectOptions.sales}}</option>
+              <option value="partnership">{{contactPage.form.subjectOptions.partnership}}</option>
+              <option value="press">{{contactPage.form.subjectOptions.press}}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="message">{{contactPage.form.message}}</label>
+            <textarea id="message" name="message" rows="5" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" id="submit-btn">
+            <span class="btn-text">{{contactPage.form.submit}}</span>
+            <span class="btn-loading" style="display: none">{{contactPage.form.sending}}</span>
+          </button>
+          <div id="form-message" class="form-message" style="display: none"></div>
+        </form>
+      </div>
     </div>
+  </div>
 </section>
 
 <style>
-.form-message {
+  .form-message {
     margin-top: 1rem;
     padding: 1rem;
     border-radius: 8px;
     text-align: center;
-}
-.form-message.success {
+  }
+  .form-message.success {
     background: rgba(16, 185, 129, 0.1);
     border: 1px solid rgba(16, 185, 129, 0.3);
     color: #10b981;
-}
-.form-message.error {
+  }
+  .form-message.error {
     background: rgba(239, 68, 68, 0.1);
     border: 1px solid rgba(239, 68, 68, 0.3);
     color: #ef4444;
-}
-#submit-btn:disabled {
+  }
+  #submit-btn:disabled {
     opacity: 0.7;
     cursor: not-allowed;
-}
+  }
 </style>
 
 <script>
-(function() {
+  (function () {
     const form = document.getElementById('contact-form');
     const submitBtn = document.getElementById('submit-btn');
     const btnText = submitBtn.querySelector('.btn-text');
@@ -124,52 +158,52 @@
 
     // Messages from i18n (injected by template system)
     const messages = {
-        success: '{{contactPage.form.success}}',
-        error: '{{contactPage.form.error}}'
+      success: '{{contactPage.form.success}}',
+      error: '{{contactPage.form.error}}',
     };
 
-    form.addEventListener('submit', async function(e) {
-        e.preventDefault();
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
 
-        // Disable button and show loading
-        submitBtn.disabled = true;
-        btnText.style.display = 'none';
-        btnLoading.style.display = 'inline';
-        formMessage.style.display = 'none';
+      // Disable button and show loading
+      submitBtn.disabled = true;
+      btnText.style.display = 'none';
+      btnLoading.style.display = 'inline';
+      formMessage.style.display = 'none';
 
-        const formData = {
-            name: form.name.value,
-            email: form.email.value,
-            subject: form.subject.value,
-            message: form.message.value
-        };
+      const formData = {
+        name: form.name.value,
+        email: form.email.value,
+        subject: form.subject.value,
+        message: form.message.value,
+      };
 
-        try {
-            const response = await fetch('/api/contact', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            });
+      try {
+        const response = await fetch('/api/contact', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        });
 
-            if (response.ok) {
-                formMessage.textContent = messages.success;
-                formMessage.className = 'form-message success';
-                formMessage.style.display = 'block';
-                form.reset();
-            } else {
-                throw new Error('Failed to send');
-            }
-        } catch (error) {
-            formMessage.textContent = messages.error;
-            formMessage.className = 'form-message error';
-            formMessage.style.display = 'block';
-        } finally {
-            submitBtn.disabled = false;
-            btnText.style.display = 'inline';
-            btnLoading.style.display = 'none';
+        if (response.ok) {
+          formMessage.textContent = messages.success;
+          formMessage.className = 'form-message success';
+          formMessage.style.display = 'block';
+          form.reset();
+        } else {
+          throw new Error('Failed to send');
         }
+      } catch (error) {
+        formMessage.textContent = messages.error;
+        formMessage.className = 'form-message error';
+        formMessage.style.display = 'block';
+      } finally {
+        submitBtn.disabled = false;
+        btnText.style.display = 'inline';
+        btnLoading.style.display = 'none';
+      }
     });
-})();
+  })();
 </script>

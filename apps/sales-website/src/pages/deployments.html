@@ -1,306 +1,305 @@
-<link rel="stylesheet" href="/css/deployments.css">
+<link rel="stylesheet" href="/css/deployments.css" />
 
 <main class="deployments-page">
-    <!-- 1. Hero Sticky -->
-    <section class="hero-sticky" data-scroll-section>
-        <div class="hero-bg"></div>
-        <div class="sticky-content">
-            <div class="badge-container reveal">
-                <span class="badge">{{deployments.badge}}</span>
-            </div>
-            <h1 class="hero-title">
-                <span class="word">{{deployments.title}}</span>
-                <span class="word gradient">{{deployments.titleGradient}}</span>
-            </h1>
-            <p class="subtitle reveal">{{deployments.subtitle}}</p>
-        </div>
-        <div id="particle-canvas-container"></div>
-        <div class="scroll-indicator">
-            <div class="mouse"></div>
-        </div>
-    </section>
+  <!-- 1. Hero Sticky -->
+  <section class="hero-sticky" data-scroll-section>
+    <div class="hero-bg"></div>
+    <div class="sticky-content">
+      <div class="badge-container reveal">
+        <span class="badge">{{deployments.badge}}</span>
+      </div>
+      <h1 class="hero-title">
+        <span class="word">{{deployments.title}}</span>
+        <span class="word gradient">{{deployments.titleGradient}}</span>
+      </h1>
+      <p class="subtitle reveal">{{deployments.subtitle}}</p>
+    </div>
+    <div id="particle-canvas-container"></div>
+    <div class="scroll-indicator">
+      <div class="mouse"></div>
+    </div>
+  </section>
 
-    <!-- 2. Runtimes Horizontal -->
-    <section class="horizontal-scroll" id="runtimes-section" data-scroll-section>
-        <div class="section-header container">
-            <h2 class="section-title reveal">{{deployments.runtimes.title}}</h2>
-            <p class="section-desc reveal">{{deployments.runtimes.description}}</p>
+  <!-- 2. Runtimes Horizontal -->
+  <section class="horizontal-scroll" id="runtimes-section" data-scroll-section>
+    <div class="section-header container">
+      <h2 class="section-title reveal">{{deployments.runtimes.title}}</h2>
+      <p class="section-desc reveal">{{deployments.runtimes.description}}</p>
+    </div>
+    <div class="horizontal-container">
+      <div class="track">
+        <div class="card card-3d runtime-card" data-runtime="nodejs">
+          <div class="card-glow"></div>
+          <img src="/assets/runtime-nodejs.png" alt="Node.js" class="card-icon" />
+          <h3>Node.js</h3>
+          <p>{{deployments.runtimes.nodejs}}</p>
         </div>
-        <div class="horizontal-container">
-            <div class="track">
-                <div class="card card-3d runtime-card" data-runtime="nodejs">
-                    <div class="card-glow"></div>
-                    <img src="/assets/runtime-nodejs.png" alt="Node.js" class="card-icon">
-                    <h3>Node.js</h3>
-                    <p>{{deployments.runtimes.nodejs}}</p>
-                </div>
-                <div class="card card-3d runtime-card" data-runtime="python">
-                    <div class="card-glow"></div>
-                    <img src="/assets/runtime-python.png" alt="Python" class="card-icon">
-                    <h3>Python</h3>
-                    <p>{{deployments.runtimes.python}}</p>
-                </div>
-                <div class="card card-3d runtime-card" data-runtime="php">
-                    <div class="card-glow"></div>
-                    <img src="/assets/runtime-php.png" alt="PHP" class="card-icon">
-                    <h3>PHP</h3>
-                    <p>{{deployments.runtimes.php}}</p>
-                </div>
-                <div class="card card-3d runtime-card" data-runtime="go">
-                    <div class="card-glow"></div>
-                    <img src="/assets/runtime-go.png" alt="Go" class="card-icon">
-                    <h3>Go</h3>
-                    <p>{{deployments.runtimes.go}}</p>
-                </div>
-                <div class="card card-3d runtime-card" data-runtime="rust">
-                    <div class="card-glow"></div>
-                    <img src="/assets/runtime-rust.png" alt="Rust" class="card-icon">
-                    <h3>Rust</h3>
-                    <p>{{deployments.runtimes.rust}}</p>
-                </div>
-                <div class="card card-3d runtime-card" data-runtime="ruby">
-                    <div class="card-glow"></div>
-                    <img src="/assets/runtime-ruby.png" alt="Ruby" class="card-icon">
-                    <h3>Ruby</h3>
-                    <p>{{deployments.runtimes.ruby}}</p>
-                </div>
-                <div class="card card-3d runtime-card" data-runtime="docker">
-                    <div class="card-glow"></div>
-                    <img src="/assets/runtime-docker.png" alt="Docker" class="card-icon">
-                    <h3>Docker</h3>
-                    <p>{{deployments.runtimes.docker}}</p>
-                </div>
-            </div>
+        <div class="card card-3d runtime-card" data-runtime="python">
+          <div class="card-glow"></div>
+          <img src="/assets/runtime-python.png" alt="Python" class="card-icon" />
+          <h3>Python</h3>
+          <p>{{deployments.runtimes.python}}</p>
         </div>
-    </section>
+        <div class="card card-3d runtime-card" data-runtime="php">
+          <div class="card-glow"></div>
+          <img src="/assets/runtime-php.png" alt="PHP" class="card-icon" />
+          <h3>PHP</h3>
+          <p>{{deployments.runtimes.php}}</p>
+        </div>
+        <div class="card card-3d runtime-card" data-runtime="go">
+          <div class="card-glow"></div>
+          <img src="/assets/runtime-go.png" alt="Go" class="card-icon" />
+          <h3>Go</h3>
+          <p>{{deployments.runtimes.go}}</p>
+        </div>
+        <div class="card card-3d runtime-card" data-runtime="rust">
+          <div class="card-glow"></div>
+          <img src="/assets/runtime-rust.png" alt="Rust" class="card-icon" />
+          <h3>Rust</h3>
+          <p>{{deployments.runtimes.rust}}</p>
+        </div>
+        <div class="card card-3d runtime-card" data-runtime="ruby">
+          <div class="card-glow"></div>
+          <img src="/assets/runtime-ruby.png" alt="Ruby" class="card-icon" />
+          <h3>Ruby</h3>
+          <p>{{deployments.runtimes.ruby}}</p>
+        </div>
+        <div class="card card-3d runtime-card" data-runtime="docker">
+          <div class="card-glow"></div>
+          <img src="/assets/runtime-docker.png" alt="Docker" class="card-icon" />
+          <h3>Docker</h3>
+          <p>{{deployments.runtimes.docker}}</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    <!-- 3. Databases Stack -->
-    <section class="card-stack-section" id="databases-section" data-scroll-section>
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title reveal">{{deployments.databases.title}}</h2>
-                <p class="section-desc reveal">{{deployments.databases.description}}</p>
-            </div>
-            <div class="stack-container">
-                <div class="stack-card database-card" id="db-postgres">
-                    <div class="db-visual"></div>
-                    <div class="card-content">
-                        <img src="/assets/database-postgresql.png" alt="PostgreSQL" class="card-icon">
-                        <h3>PostgreSQL</h3>
-                        <p>{{deployments.databases.postgresql}}</p>
-                        <span class="badge green">SECURED_VAULT</span>
-                    </div>
-                </div>
-                <div class="stack-card database-card" id="db-mysql">
-                    <div class="db-visual"></div>
-                    <div class="card-content">
-                        <img src="/assets/database-mysql.png" alt="MySQL" class="card-icon">
-                        <h3>MySQL / MariaDB</h3>
-                        <p>{{deployments.databases.mysql}}</p>
-                        <span class="badge green">SECURED_VAULT</span>
-                    </div>
-                </div>
-                <div class="stack-card database-card" id="db-redis">
-                    <div class="db-visual"></div>
-                    <div class="card-content">
-                        <img src="/assets/database-redis.png" alt="Redis" class="card-icon">
-                        <h3>Redis</h3>
-                        <p>{{deployments.databases.redis}}</p>
-                        <span class="badge green">SECURED_VAULT</span>
-                    </div>
-                </div>
-            </div>
+  <!-- 3. Databases Stack -->
+  <section class="card-stack-section" id="databases-section" data-scroll-section>
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title reveal">{{deployments.databases.title}}</h2>
+        <p class="section-desc reveal">{{deployments.databases.description}}</p>
+      </div>
+      <div class="stack-container">
+        <div class="stack-card database-card" id="db-postgres">
+          <div class="db-visual"></div>
+          <div class="card-content">
+            <img src="/assets/database-postgresql.png" alt="PostgreSQL" class="card-icon" />
+            <h3>PostgreSQL</h3>
+            <p>{{deployments.databases.postgresql}}</p>
+            <span class="badge green">SECURED_VAULT</span>
+          </div>
         </div>
-    </section>
+        <div class="stack-card database-card" id="db-mysql">
+          <div class="db-visual"></div>
+          <div class="card-content">
+            <img src="/assets/database-mysql.png" alt="MySQL" class="card-icon" />
+            <h3>MySQL / MariaDB</h3>
+            <p>{{deployments.databases.mysql}}</p>
+            <span class="badge green">SECURED_VAULT</span>
+          </div>
+        </div>
+        <div class="stack-card database-card" id="db-redis">
+          <div class="db-visual"></div>
+          <div class="card-content">
+            <img src="/assets/database-redis.png" alt="Redis" class="card-icon" />
+            <h3>Redis</h3>
+            <p>{{deployments.databases.redis}}</p>
+            <span class="badge green">SECURED_VAULT</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    <!-- 4. Web & Security -->
-    <section class="split-screen" id="web-security-section" data-scroll-section>
-        <div class="container">
-            <div class="split-intro reveal">
-                <h2>{{deployments.webSecurityIntro.title}}</h2>
-                <p>{{deployments.webSecurityIntro.description}}</p>
-            </div>
-            <div class="split-grid">
-                <div class="split-side left" id="web-side">
-                    <div class="side-content">
-                        <h2>{{deployments.webProxy.title}}</h2>
-                        <div class="service-list">
-                            <div class="service-item">
-                                <div class="icon-wrap">
-                                    <img src="/assets/web-nginx.png" alt="Nginx" class="small-icon">
-                                </div>
-                                <div>
-                                    <h4>Nginx</h4>
-                                    <p>{{deployments.webProxy.nginx}}</p>
-                                </div>
-                            </div>
-                            <div class="service-item">
-                                <div class="icon-wrap">
-                                    <img src="/assets/web-haproxy.png" alt="HAProxy" class="small-icon">
-                                </div>
-                                <div>
-                                    <h4>HAProxy</h4>
-                                    <p>{{deployments.webProxy.haproxy}}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+  <!-- 4. Web & Security -->
+  <section class="split-screen" id="web-security-section" data-scroll-section>
+    <div class="container">
+      <div class="split-intro reveal">
+        <h2>{{deployments.webSecurityIntro.title}}</h2>
+        <p>{{deployments.webSecurityIntro.description}}</p>
+      </div>
+      <div class="split-grid">
+        <div class="split-side left" id="web-side">
+          <div class="side-content">
+            <h2>{{deployments.webProxy.title}}</h2>
+            <div class="service-list">
+              <div class="service-item">
+                <div class="icon-wrap">
+                  <img src="/assets/web-nginx.png" alt="Nginx" class="small-icon" />
                 </div>
-                <div class="split-side right" id="security-side">
-                    <div class="side-content">
-                        <h2>{{deployments.security.title}}</h2>
-                        <div class="service-list">
-                            <div class="service-item">
-                                <div class="icon-wrap security">
-                                    <div class="icon-placeholder green">F2B</div>
-                                </div>
-                                <div>
-                                    <h4>Fail2ban</h4>
-                                    <p>{{deployments.security.fail2ban}}</p>
-                                </div>
-                            </div>
-                            <div class="service-item">
-                                <div class="icon-wrap security">
-                                    <div class="icon-placeholder green">UFW</div>
-                                </div>
-                                <div>
-                                    <h4>UFW Firewall</h4>
-                                    <p>{{deployments.security.ufw}}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div>
+                  <h4>Nginx</h4>
+                  <p>{{deployments.webProxy.nginx}}</p>
                 </div>
+              </div>
+              <div class="service-item">
+                <div class="icon-wrap">
+                  <img src="/assets/web-haproxy.png" alt="HAProxy" class="small-icon" />
+                </div>
+                <div>
+                  <h4>HAProxy</h4>
+                  <p>{{deployments.webProxy.haproxy}}</p>
+                </div>
+              </div>
             </div>
+          </div>
         </div>
-    </section>
+        <div class="split-side right" id="security-side">
+          <div class="side-content">
+            <h2>{{deployments.security.title}}</h2>
+            <div class="service-list">
+              <div class="service-item">
+                <div class="icon-wrap security">
+                  <div class="icon-placeholder green">F2B</div>
+                </div>
+                <div>
+                  <h4>Fail2ban</h4>
+                  <p>{{deployments.security.fail2ban}}</p>
+                </div>
+              </div>
+              <div class="service-item">
+                <div class="icon-wrap security">
+                  <div class="icon-placeholder green">UFW</div>
+                </div>
+                <div>
+                  <h4>UFW Firewall</h4>
+                  <p>{{deployments.security.ufw}}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    <!-- 5. Email Stack Pipeline -->
-    <section class="email-pipeline" id="email-section" data-scroll-section>
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title reveal">{{deployments.email.title}}</h2>
-                <p class="section-desc reveal">{{deployments.email.description}}</p>
+  <!-- 5. Email Stack Pipeline -->
+  <section class="email-pipeline" id="email-section" data-scroll-section>
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title reveal">{{deployments.email.title}}</h2>
+        <p class="section-desc reveal">{{deployments.email.description}}</p>
+      </div>
+      <div class="pipeline-visualization">
+        <div class="pipeline-blueprint"></div>
+        <div class="pipeline-track">
+          <div class="pipeline-node" id="node-postfix">
+            <div class="node-icon">SMTP</div>
+            <span class="node-label">Postfix</span>
+            <div class="node-tooltip">
+              <h5>{{deployments.email.tooltips.postfixTitle}}</h5>
+              <p>{{deployments.email.tooltips.postfixDesc}}</p>
             </div>
-            <div class="pipeline-visualization">
-                <div class="pipeline-blueprint"></div>
-                <div class="pipeline-track">
-                    <div class="pipeline-node" id="node-postfix">
-                        <div class="node-icon">SMTP</div>
-                        <span class="node-label">Postfix</span>
-                        <div class="node-tooltip">
-                            <h5>{{deployments.email.tooltips.postfixTitle}}</h5>
-                            <p>{{deployments.email.tooltips.postfixDesc}}</p>
-                        </div>
-                    </div>
-                    <div class="pipeline-arrow"></div>
-                    <div class="pipeline-node" id="node-rspamd">
-                        <div class="node-icon">SPAM</div>
-                        <span class="node-label">Rspamd</span>
-                        <div class="node-tooltip">
-                            <h5>{{deployments.email.tooltips.rspamdTitle}}</h5>
-                            <p>{{deployments.email.tooltips.rspamdDesc}}</p>
-                        </div>
-                    </div>
-                    <div class="pipeline-arrow"></div>
-                    <div class="pipeline-node" id="node-clamav">
-                        <div class="node-icon">AV</div>
-                        <span class="node-label">ClamAV</span>
-                        <div class="node-tooltip">
-                            <h5>{{deployments.email.tooltips.clamavTitle}}</h5>
-                            <p>{{deployments.email.tooltips.clamavDesc}}</p>
-                        </div>
-                    </div>
-                    <div class="pipeline-arrow"></div>
-                    <div class="pipeline-node" id="node-dovecot">
-                        <div class="node-icon">IMAP</div>
-                        <span class="node-label">Dovecot</span>
-                        <div class="node-tooltip">
-                            <h5>{{deployments.email.tooltips.dovecotTitle}}</h5>
-                            <p>{{deployments.email.tooltips.dovecotDesc}}</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="pipeline-particles"></div>
+          </div>
+          <div class="pipeline-arrow"></div>
+          <div class="pipeline-node" id="node-rspamd">
+            <div class="node-icon">SPAM</div>
+            <span class="node-label">Rspamd</span>
+            <div class="node-tooltip">
+              <h5>{{deployments.email.tooltips.rspamdTitle}}</h5>
+              <p>{{deployments.email.tooltips.rspamdDesc}}</p>
             </div>
+          </div>
+          <div class="pipeline-arrow"></div>
+          <div class="pipeline-node" id="node-clamav">
+            <div class="node-icon">AV</div>
+            <span class="node-label">ClamAV</span>
+            <div class="node-tooltip">
+              <h5>{{deployments.email.tooltips.clamavTitle}}</h5>
+              <p>{{deployments.email.tooltips.clamavDesc}}</p>
+            </div>
+          </div>
+          <div class="pipeline-arrow"></div>
+          <div class="pipeline-node" id="node-dovecot">
+            <div class="node-icon">IMAP</div>
+            <span class="node-label">Dovecot</span>
+            <div class="node-tooltip">
+              <h5>{{deployments.email.tooltips.dovecotTitle}}</h5>
+              <p>{{deployments.email.tooltips.dovecotDesc}}</p>
+            </div>
+          </div>
         </div>
-    </section>
+        <div class="pipeline-particles"></div>
+      </div>
+    </div>
+  </section>
 
-    <!-- 6. Monitoring Dashboard -->
-    <section class="monitoring-dashboard" id="monitoring-section" data-scroll-section>
-        <div class="container side-by-side">
-            <div class="dashboard-text">
-                <h2 class="reveal">{{deployments.monitoring.title}}</h2>
-                <p class="reveal">{{deployments.monitoring.description}}</p>
-                <ul class="features-list">
-                    <li class="reveal"><strong>PM2:</strong> {{deployments.monitoring.pm2}}</li>
-                    <li class="reveal"><strong>Netdata:</strong> {{deployments.monitoring.netdata}}</li>
-                    <li class="reveal"><strong>Loki:</strong> {{deployments.monitoring.loki}}</li>
-                </ul>
+  <!-- 6. Monitoring Dashboard -->
+  <section class="monitoring-dashboard" id="monitoring-section" data-scroll-section>
+    <div class="container side-by-side">
+      <div class="dashboard-text">
+        <h2 class="reveal">{{deployments.monitoring.title}}</h2>
+        <p class="reveal">{{deployments.monitoring.description}}</p>
+        <ul class="features-list">
+          <li class="reveal"><strong>PM2:</strong> {{deployments.monitoring.pm2}}</li>
+          <li class="reveal"><strong>Netdata:</strong> {{deployments.monitoring.netdata}}</li>
+          <li class="reveal"><strong>Loki:</strong> {{deployments.monitoring.loki}}</li>
+        </ul>
+      </div>
+      <div class="dashboard-preview">
+        <div class="device-frame">
+          <div class="dashboard-grid">
+            <div class="chart-card">
+              <div class="chart-header">{{deployments.monitoring.dashboard.cpuUsage}}</div>
+              <div class="chart-body"><canvas id="cpu-chart"></canvas></div>
             </div>
-            <div class="dashboard-preview">
-                <div class="device-frame">
-                    <div class="dashboard-grid">
-                        <div class="chart-card">
-                            <div class="chart-header">{{deployments.monitoring.dashboard.cpuUsage}}</div>
-                            <div class="chart-body"><canvas id="cpu-chart"></canvas></div>
-                        </div>
-                        <div class="chart-card">
-                            <div class="chart-header">{{deployments.monitoring.dashboard.memory}}</div>
-                            <div class="chart-body"><canvas id="mem-chart"></canvas></div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">{{deployments.monitoring.dashboard.uptime}}</div>
-                            <div class="stat-value" data-target="99.99">0</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">{{deployments.monitoring.dashboard.latency}}</div>
-                            <div class="stat-value" data-target="24">0</div><span>ms</span>
-                        </div>
-                    </div>
-                </div>
+            <div class="chart-card">
+              <div class="chart-header">{{deployments.monitoring.dashboard.memory}}</div>
+              <div class="chart-body"><canvas id="mem-chart"></canvas></div>
             </div>
+            <div class="stat-card">
+              <div class="stat-label">{{deployments.monitoring.dashboard.uptime}}</div>
+              <div class="stat-value" data-target="99.99">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">{{deployments.monitoring.dashboard.latency}}</div>
+              <div class="stat-value" data-target="24">0</div>
+              <span>ms</span>
+            </div>
+          </div>
         </div>
-    </section>
+      </div>
+    </div>
+  </section>
 
-    <!-- 7. Backup & Sync -->
-    <section class="backup-cloud" id="backup-section" data-scroll-section>
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">{{deployments.backup.title}}</h2>
-                <p class="section-desc">{{deployments.backup.description}}</p>
-            </div>
-            <div class="backup-providers">
-                <div class="backup-card" data-provider="rsync">
-                    <div class="backup-icon">⚡</div>
-                    <h4>Rsync</h4>
-                    <p>{{deployments.backup.rsync}}</p>
-                </div>
-                <div class="backup-card" data-provider="rclone">
-                    <div class="backup-icon">☁️</div>
-                    <h4>Rclone</h4>
-                    <p>{{deployments.backup.rclone}}</p>
-                </div>
-                <div class="backup-card" data-provider="restic">
-                    <div class="backup-icon">🔐</div>
-                    <h4>Restic</h4>
-                    <p>{{deployments.backup.restic}}</p>
-                </div>
-            </div>
+  <!-- 7. Backup & Sync -->
+  <section class="backup-cloud" id="backup-section" data-scroll-section>
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">{{deployments.backup.title}}</h2>
+        <p class="section-desc">{{deployments.backup.description}}</p>
+      </div>
+      <div class="backup-providers">
+        <div class="backup-card" data-provider="rsync">
+          <div class="backup-icon">⚡</div>
+          <h4>Rsync</h4>
+          <p>{{deployments.backup.rsync}}</p>
         </div>
-    </section>
+        <div class="backup-card" data-provider="rclone">
+          <div class="backup-icon">☁️</div>
+          <h4>Rclone</h4>
+          <p>{{deployments.backup.rclone}}</p>
+        </div>
+        <div class="backup-card" data-provider="restic">
+          <div class="backup-icon">🔐</div>
+          <h4>Restic</h4>
+          <p>{{deployments.backup.restic}}</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    <!-- 8. CTA -->
-    <section class="cta-section" id="cta-section" data-scroll-section>
-        <div class="container">
-            <div class="cta-content">
-                <h2>{{deployments.cta.text}}</h2>
-                <a href="/pricing" class="btn btn-primary btn-glow">
-                    {{deployments.cta.button}}
-                </a>
-            </div>
-        </div>
-    </section>
+  <!-- 8. CTA -->
+  <section class="cta-section" id="cta-section" data-scroll-section>
+    <div class="container">
+      <div class="cta-content">
+        <h2>{{deployments.cta.text}}</h2>
+        <a href="/pricing" class="btn btn-primary btn-glow"> {{deployments.cta.button}} </a>
+      </div>
+    </div>
+  </section>
 </main>
 
 <!-- Scripts -->

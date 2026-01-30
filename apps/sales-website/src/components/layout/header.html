@@ -1,91 +1,112 @@
 <nav class="navbar" role="navigation" aria-label="Main navigation">
-    <div class="container nav-content">
-        <a href="/{{lang}}/" class="logo" aria-label="ServerFlow Home">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                aria-hidden="true">
-                <path d="M4 17l6-6-6-6" stroke="white" stroke-linecap="round" stroke-linejoin="round" />
-                <path class="cursor-blink" d="M12 19h8" stroke="white" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-            <span class="console-text">ServerFlow</span>
-        </a>
+  <div class="container nav-content">
+    <a href="/{{lang}}/" class="logo" aria-label="ServerFlow Home">
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        aria-hidden="true"
+      >
+        <path d="M4 17l6-6-6-6" stroke="white" stroke-linecap="round" stroke-linejoin="round" />
+        <path
+          class="cursor-blink"
+          d="M12 19h8"
+          stroke="white"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <span class="console-text">ServerFlow</span>
+    </a>
 
-        <div class="nav-links">
-            <a href="/{{lang}}/#how-it-works" data-page="home">{{nav.howItWorks}}</a>
-            <a href="/{{lang}}/features/" data-page="features">{{nav.features}}</a>
-            <a href="/{{lang}}/deployments/" data-page="deployments">{{nav.deployments}}</a>
-            <a href="/{{lang}}/pricing/" data-page="pricing">{{nav.pricing}}</a>
-            <a href="https://github.com/serverflow" target="_blank" rel="noopener noreferrer">{{nav.github}}</a>
-        </div>
+    <div class="nav-links">
+      <a href="/{{lang}}/#how-it-works" data-page="home">{{nav.howItWorks}}</a>
+      <a href="/{{lang}}/features/" data-page="features">{{nav.features}}</a>
+      <a href="/{{lang}}/deployments/" data-page="deployments">{{nav.deployments}}</a>
+      <a href="/{{lang}}/pricing/" data-page="pricing">{{nav.pricing}}</a>
+      <a href="https://github.com/serverflow" target="_blank" rel="noopener noreferrer"
+        >{{nav.github}}</a
+      >
+    </div>
 
-        <div class="nav-actions">
-            <!-- Language Selector -->
-            <div class="language-selector">
-                <button class="lang-trigger" aria-expanded="false" aria-haspopup="true" aria-label="Select language">
-                    <svg class="globe-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" fill="none" stroke-width="2" />
-                        <path
-                            d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
-                            stroke="currentColor" fill="none" stroke-width="2" />
-                    </svg>
-                    <span class="current-lang">{{lang}}</span>
-                    <svg class="chevron" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-                        <path d="M6 9l6 6 6-6" stroke="currentColor" fill="none" stroke-width="2" />
-                    </svg>
-                </button>
-
-                <div class="lang-dropdown" role="menu">
-                    <a href="/en/{{pageUrl}}" class="lang-option" role="menuitem" data-lang="en">
-                        <span class="flag" aria-hidden="true">&#x1F1EC;&#x1F1E7;</span>
-                        <span>{{languages.en}}</span>
-                    </a>
-                    <a href="/fr/{{pageUrl}}" class="lang-option" role="menuitem" data-lang="fr">
-                        <span class="flag" aria-hidden="true">&#x1F1EB;&#x1F1F7;</span>
-                        <span>{{languages.fr}}</span>
-                    </a>
-                    <a href="/de/{{pageUrl}}" class="lang-option" role="menuitem" data-lang="de">
-                        <span class="flag" aria-hidden="true">&#x1F1E9;&#x1F1EA;</span>
-                        <span>{{languages.de}}</span>
-                    </a>
-                    <a href="/es/{{pageUrl}}" class="lang-option" role="menuitem" data-lang="es">
-                        <span class="flag" aria-hidden="true">&#x1F1EA;&#x1F1F8;</span>
-                        <span>{{languages.es}}</span>
-                    </a>
-                    <a href="/it/{{pageUrl}}" class="lang-option" role="menuitem" data-lang="it">
-                        <span class="flag" aria-hidden="true">&#x1F1EE;&#x1F1F9;</span>
-                        <span>{{languages.it}}</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- Login Button -->
-            <a href="https://app.serverflow.io/login" class="btn-ghost-sm">
-                {{nav.login}}
-            </a>
-
-            <!-- Get Started Button -->
-            <a href="/{{lang}}/pricing/" class="btn btn-primary btn-sm">
-                {{nav.getStarted}}
-            </a>
-        </div>
-
-        <!-- Mobile Menu Toggle -->
-        <button class="mobile-menu-toggle" aria-expanded="false" aria-label="Toggle menu">
-            <span class="hamburger"></span>
+    <div class="nav-actions">
+      <!-- Language Selector -->
+      <div class="language-selector">
+        <button
+          class="lang-trigger"
+          aria-expanded="false"
+          aria-haspopup="true"
+          aria-label="Select language"
+        >
+          <svg class="globe-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" fill="none" stroke-width="2" />
+            <path
+              d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+              stroke="currentColor"
+              fill="none"
+              stroke-width="2"
+            />
+          </svg>
+          <span class="current-lang">{{lang}}</span>
+          <svg class="chevron" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" stroke="currentColor" fill="none" stroke-width="2" />
+          </svg>
         </button>
+
+        <div class="lang-dropdown" role="menu">
+          <a href="/en/{{pageUrl}}" class="lang-option" role="menuitem" data-lang="en">
+            <span class="flag" aria-hidden="true">&#x1F1EC;&#x1F1E7;</span>
+            <span>{{languages.en}}</span>
+          </a>
+          <a href="/fr/{{pageUrl}}" class="lang-option" role="menuitem" data-lang="fr">
+            <span class="flag" aria-hidden="true">&#x1F1EB;&#x1F1F7;</span>
+            <span>{{languages.fr}}</span>
+          </a>
+          <a href="/de/{{pageUrl}}" class="lang-option" role="menuitem" data-lang="de">
+            <span class="flag" aria-hidden="true">&#x1F1E9;&#x1F1EA;</span>
+            <span>{{languages.de}}</span>
+          </a>
+          <a href="/es/{{pageUrl}}" class="lang-option" role="menuitem" data-lang="es">
+            <span class="flag" aria-hidden="true">&#x1F1EA;&#x1F1F8;</span>
+            <span>{{languages.es}}</span>
+          </a>
+          <a href="/it/{{pageUrl}}" class="lang-option" role="menuitem" data-lang="it">
+            <span class="flag" aria-hidden="true">&#x1F1EE;&#x1F1F9;</span>
+            <span>{{languages.it}}</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Login Button -->
+      <a href="https://app.serverflow.io/login" class="btn-ghost-sm"> {{nav.login}} </a>
+
+      <!-- Get Started Button -->
+      <a href="/{{lang}}/pricing/" class="btn btn-primary btn-sm"> {{nav.getStarted}} </a>
     </div>
 
-    <!-- Mobile Menu -->
-    <div class="mobile-menu" aria-hidden="true">
-        <div class="mobile-menu-links">
-            <a href="/{{lang}}/#how-it-works">{{nav.howItWorks}}</a>
-            <a href="/{{lang}}/features/">{{nav.features}}</a>
-            <a href="/{{lang}}/deployments/">{{nav.deployments}}</a>
-            <a href="/{{lang}}/pricing/">{{nav.pricing}}</a>
-            <a href="https://github.com/serverflow" target="_blank" rel="noopener noreferrer">{{nav.github}}</a>
-        </div>
-        <div class="mobile-menu-actions">
-            <a href="https://app.serverflow.io/login" class="btn btn-ghost">{{nav.login}}</a>
-            <a href="/{{lang}}/pricing/" class="btn btn-primary">{{nav.getStarted}}</a>
-        </div>
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" aria-expanded="false" aria-label="Toggle menu">
+      <span class="hamburger"></span>
+    </button>
+  </div>
+
+  <!-- Mobile Menu -->
+  <div class="mobile-menu" aria-hidden="true">
+    <div class="mobile-menu-links">
+      <a href="/{{lang}}/#how-it-works">{{nav.howItWorks}}</a>
+      <a href="/{{lang}}/features/">{{nav.features}}</a>
+      <a href="/{{lang}}/deployments/">{{nav.deployments}}</a>
+      <a href="/{{lang}}/pricing/">{{nav.pricing}}</a>
+      <a href="https://github.com/serverflow" target="_blank" rel="noopener noreferrer"
+        >{{nav.github}}</a
+      >
     </div>
+    <div class="mobile-menu-actions">
+      <a href="https://app.serverflow.io/login" class="btn btn-ghost">{{nav.login}}</a>
+      <a href="/{{lang}}/pricing/" class="btn btn-primary">{{nav.getStarted}}</a>
+    </div>
+  </div>
 </nav>

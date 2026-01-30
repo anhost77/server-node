@@ -1,37 +1,42 @@
 <!-- Hero Section -->
 <header class="hero">
-    <div class="container">
-        <h1 class="animate-fade-in">
-            {{hero.title}}<br>
-            <span class="text-gradient-animate">{{hero.titleGradient}}</span>
-        </h1>
-        <p class="animate-fade-in" style="animation-delay: 0.1s">
-            {{hero.subtitle}}
-            {{hero.subtitleSecond}}
-        </p>
-        <div class="hero-actions animate-fade-in" style="animation-delay: 0.2s">
-            <a href="/{{lang}}/pricing/" class="btn btn-primary cta-glow">{{hero.cta}}</a>
-            <a href="#how-it-works" class="btn btn-secondary">{{hero.ctaSecondary}}</a>
-        </div>
-
-        <!-- Terminal Demo -->
-        <div class="terminal animate-fade-in parallax" data-speed="0.2" style="animation-delay: 0.4s; position: relative; z-index: 10;">
-            <div class="terminal-header">
-                <div class="dot" style="background: #ef4444"></div>
-                <div class="dot" style="background: #eab308"></div>
-                <div class="dot" style="background: #22c55e"></div>
-            </div>
-            <div class="terminal-content" id="hero-terminal">
-                <div class="terminal-line command-line">
-                    <span class="prompt">$</span> <span class="terminal-command" data-text="{{terminal.command}}"></span><span class="terminal-cursor">▋</span>
-                </div>
-                <div class="terminal-output">
-                    <div class="terminal-line output-line" data-text="{{terminal.line1}}"></div>
-                    <div class="terminal-line output-line" data-text="{{terminal.line2}}"></div>
-                    <div class="terminal-line output-line" data-text="{{terminal.line3}}"></div>
-                    <div class="terminal-line output-line success-line" data-text="{{terminal.line4}}"></div>
-                </div>
-            </div>
-        </div>
+  <div class="container">
+    <h1 class="animate-fade-in">
+      {{hero.title}}<br />
+      <span class="text-gradient-animate">{{hero.titleGradient}}</span>
+    </h1>
+    <p class="animate-fade-in" style="animation-delay: 0.1s">
+      {{hero.subtitle}} {{hero.subtitleSecond}}
+    </p>
+    <div class="hero-actions animate-fade-in" style="animation-delay: 0.2s">
+      <a href="/{{lang}}/pricing/" class="btn btn-primary cta-glow">{{hero.cta}}</a>
+      <a href="#how-it-works" class="btn btn-secondary">{{hero.ctaSecondary}}</a>
     </div>
+
+    <!-- Terminal Demo -->
+    <div
+      class="terminal animate-fade-in parallax"
+      data-speed="0.2"
+      style="animation-delay: 0.4s; position: relative; z-index: 10"
+    >
+      <div class="terminal-header">
+        <div class="dot" style="background: #ef4444"></div>
+        <div class="dot" style="background: #eab308"></div>
+        <div class="dot" style="background: #22c55e"></div>
+      </div>
+      <div class="terminal-content" id="hero-terminal">
+        <div class="terminal-line command-line">
+          <span class="prompt">$</span>
+          <span class="terminal-command" data-text="{{terminal.command}}"></span
+          ><span class="terminal-cursor">▋</span>
+        </div>
+        <div class="terminal-output">
+          <div class="terminal-line output-line" data-text="{{terminal.line1}}"></div>
+          <div class="terminal-line output-line" data-text="{{terminal.line2}}"></div>
+          <div class="terminal-line output-line" data-text="{{terminal.line3}}"></div>
+          <div class="terminal-line output-line success-line" data-text="{{terminal.line4}}"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </header>

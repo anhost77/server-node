@@ -1,9 +1,196 @@
 <!-- Section Indicator (Fixed bottom navigation) -->
 <nav class="section-indicator" aria-label="Section navigation" id="section-indicator">
-    <div class="section-indicator-dot" data-section="hero" data-label="{{sectionIndicator.hero}}" aria-label="{{sectionIndicator.hero}}"></div>
-    <div class="section-indicator-dot" data-section="how-it-works" data-label="{{sectionIndicator.howItWorks}}" aria-label="{{sectionIndicator.howItWorks}}"></div>
-    <div class="section-indicator-dot" data-section="security" data-label="{{sectionIndicator.security}}" aria-label="{{sectionIndicator.security}}"></div>
-    <div class="section-indicator-dot" data-section="features" data-label="{{sectionIndicator.features}}" aria-label="{{sectionIndicator.features}}"></div>
-    <div class="section-indicator-dot" data-section="testimonials" data-label="{{sectionIndicator.testimonials}}" aria-label="{{sectionIndicator.testimonials}}"></div>
-    <span class="section-indicator-label" id="section-indicator-label"></span>
+  <!-- Homepage sections -->
+  <div
+    class="section-indicator-dot"
+    data-section="hero"
+    data-pages="home"
+    data-label="{{sectionIndicator.hero}}"
+    aria-label="{{sectionIndicator.hero}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="how-it-works"
+    data-pages="home"
+    data-label="{{sectionIndicator.howItWorks}}"
+    aria-label="{{sectionIndicator.howItWorks}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="security-home"
+    data-pages="home"
+    data-label="{{sectionIndicator.security}}"
+    aria-label="{{sectionIndicator.security}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="features-home"
+    data-pages="home"
+    data-label="{{sectionIndicator.features}}"
+    aria-label="{{sectionIndicator.features}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="testimonials"
+    data-pages="home"
+    data-label="{{sectionIndicator.testimonials}}"
+    aria-label="{{sectionIndicator.testimonials}}"
+  ></div>
+
+  <!-- Features page sections -->
+  <div
+    class="section-indicator-dot"
+    data-section="features-hero"
+    data-pages="features"
+    data-label="{{sectionIndicator.featuresHero}}"
+    aria-label="{{sectionIndicator.featuresHero}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="runtimes"
+    data-pages="features"
+    data-label="{{sectionIndicator.runtimes}}"
+    aria-label="{{sectionIndicator.runtimes}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="databases"
+    data-pages="features"
+    data-label="{{sectionIndicator.databases}}"
+    aria-label="{{sectionIndicator.databases}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="web-security"
+    data-pages="features"
+    data-label="{{sectionIndicator.webSecurity}}"
+    aria-label="{{sectionIndicator.webSecurity}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="email"
+    data-pages="features"
+    data-label="{{sectionIndicator.email}}"
+    aria-label="{{sectionIndicator.email}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="mcp"
+    data-pages="features"
+    data-label="{{sectionIndicator.mcp}}"
+    aria-label="{{sectionIndicator.mcp}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="comparison"
+    data-pages="features"
+    data-label="{{sectionIndicator.comparison}}"
+    aria-label="{{sectionIndicator.comparison}}"
+  ></div>
+
+  <!-- Deployments page sections -->
+  <div
+    class="section-indicator-dot"
+    data-section="deploy-hero"
+    data-pages="deployments"
+    data-label="{{sectionIndicator.deployHero}}"
+    aria-label="{{sectionIndicator.deployHero}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="deploy-runtimes"
+    data-pages="deployments"
+    data-label="{{sectionIndicator.runtimes}}"
+    aria-label="{{sectionIndicator.runtimes}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="deploy-databases"
+    data-pages="deployments"
+    data-label="{{sectionIndicator.databases}}"
+    aria-label="{{sectionIndicator.databases}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="deploy-web-security"
+    data-pages="deployments"
+    data-label="{{sectionIndicator.webSecurity}}"
+    aria-label="{{sectionIndicator.webSecurity}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="deploy-email"
+    data-pages="deployments"
+    data-label="{{sectionIndicator.email}}"
+    aria-label="{{sectionIndicator.email}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="deploy-monitoring"
+    data-pages="deployments"
+    data-label="{{sectionIndicator.monitoring}}"
+    aria-label="{{sectionIndicator.monitoring}}"
+  ></div>
+
+  <!-- Pricing page sections -->
+  <div
+    class="section-indicator-dot"
+    data-section="pricing-hero"
+    data-pages="pricing"
+    data-label="{{sectionIndicator.pricingHero}}"
+    aria-label="{{sectionIndicator.pricingHero}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="pricing-plans"
+    data-pages="pricing"
+    data-label="{{sectionIndicator.pricingPlans}}"
+    aria-label="{{sectionIndicator.pricingPlans}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="pricing-highlights"
+    data-pages="pricing"
+    data-label="{{sectionIndicator.highlights}}"
+    aria-label="{{sectionIndicator.highlights}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="pricing-faq"
+    data-pages="pricing"
+    data-label="{{sectionIndicator.faq}}"
+    aria-label="{{sectionIndicator.faq}}"
+  ></div>
+
+  <!-- Security page sections -->
+  <div
+    class="section-indicator-dot"
+    data-section="security-hero"
+    data-pages="security"
+    data-label="{{sectionIndicator.securityHero}}"
+    aria-label="{{sectionIndicator.securityHero}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="security-diagram"
+    data-pages="security"
+    data-label="{{sectionIndicator.securityDiagram}}"
+    aria-label="{{sectionIndicator.securityDiagram}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="security-architecture"
+    data-pages="security"
+    data-label="{{sectionIndicator.architecture}}"
+    aria-label="{{sectionIndicator.architecture}}"
+  ></div>
+  <div
+    class="section-indicator-dot"
+    data-section="security-honesty"
+    data-pages="security"
+    data-label="{{sectionIndicator.transparency}}"
+    aria-label="{{sectionIndicator.transparency}}"
+  ></div>
+
+  <span class="section-indicator-label" id="section-indicator-label"></span>
 </nav>
