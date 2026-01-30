@@ -1345,6 +1345,61 @@ img {
     }
 }
 
+/* Dashboard Mockup Animation States */
+#deploy-mockup .anim-item {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+#deploy-mockup .anim-item.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+#deploy-mockup .anim-title {
+    min-height: 1.5em;
+}
+
+#deploy-mockup .anim-check {
+    opacity: 0;
+    transform: scale(0);
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#deploy-mockup .anim-check.visible {
+    opacity: 1;
+    transform: scale(1);
+}
+
+#deploy-mockup .repo-item[data-selected="true"].selected-anim {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+#deploy-mockup .btn-deploy {
+    animation: none;
+}
+
+#deploy-mockup .btn-deploy.visible {
+    animation: pulse 2s infinite;
+}
+
+#deploy-mockup .deploy-success {
+    animation: none;
+    transform: translateY(100px);
+    opacity: 0;
+}
+
+#deploy-mockup .deploy-success.visible {
+    animation: slideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    opacity: 1;
+}
+
+#deploy-mockup .auto-detect {
+    animation: none;
+    opacity: 0;
+}
+
 /* Chat Mockup */
 .chat-mockup {
     background: #1a1a1a;

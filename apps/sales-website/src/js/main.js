@@ -580,6 +580,101 @@
   }
 
   // ==========================================================================
+  // DEPLOY MOCKUP ANIMATION (How it Works step 2)
+  // ==========================================================================
+  function initDeployMockup() {
+    const mockup = document.getElementById('deploy-mockup');
+    if (!mockup) return;
+
+    const header = mockup.querySelector('.dash-header');
+    const githubIcon = mockup.querySelector('.github-icon');
+    const title = mockup.querySelector('.anim-title');
+    const repoItems = mockup.querySelectorAll('.repo-item');
+    const autoDetect = mockup.querySelector('.auto-detect');
+    const btnDeploy = mockup.querySelector('.btn-deploy');
+    const deploySuccess = mockup.querySelector('.deploy-success');
+    const check = mockup.querySelector('.anim-check');
+
+    // Store title text and clear it
+    const titleText = title?.dataset.text || '';
+    if (title) title.textContent = '';
+
+    let hasAnimated = false;
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && !hasAnimated) {
+          hasAnimated = true;
+          startAnimation();
+          observer.disconnect();
+        }
+      });
+    }, { threshold: 0.4 });
+
+    observer.observe(mockup);
+
+    function startAnimation() {
+      let delay = 0;
+
+      // 1. Header appears
+      setTimeout(() => header?.classList.add('visible'), delay);
+      delay += 200;
+
+      // 2. GitHub icon appears
+      setTimeout(() => githubIcon?.classList.add('visible'), delay);
+      delay += 300;
+
+      // 3. Title types out
+      setTimeout(() => {
+        if (title) {
+          title.classList.add('visible');
+          typeText(title, titleText, 40);
+        }
+      }, delay);
+      delay += titleText.length * 40 + 200;
+
+      // 4. Repo items appear one by one
+      repoItems.forEach((item, i) => {
+        setTimeout(() => item.classList.add('visible'), delay + i * 200);
+      });
+      delay += repoItems.length * 200 + 100;
+
+      // 5. First repo gets selected (check appears)
+      setTimeout(() => {
+        const firstRepo = repoItems[0];
+        if (firstRepo) {
+          firstRepo.classList.add('selected-anim');
+          check?.classList.add('visible');
+        }
+      }, delay);
+      delay += 400;
+
+      // 6. Auto-detect appears
+      setTimeout(() => autoDetect?.classList.add('visible'), delay);
+      delay += 400;
+
+      // 7. Deploy button appears
+      setTimeout(() => btnDeploy?.classList.add('visible'), delay);
+      delay += 800;
+
+      // 8. Success notification slides up
+      setTimeout(() => deploySuccess?.classList.add('visible'), delay);
+    }
+
+    function typeText(element, text, speed) {
+      let i = 0;
+      function type() {
+        if (i < text.length) {
+          element.textContent += text.charAt(i);
+          i++;
+          setTimeout(type, speed);
+        }
+      }
+      type();
+    }
+  }
+
+  // ==========================================================================
   // ACTIVE NAV LINK
   // ==========================================================================
   function initActiveNavLink() {
@@ -608,6 +703,7 @@
     initConsoleTyping();
     initHeroTerminal();
     initInstallTerminal();
+    initDeployMockup();
     initActiveNavLink();
     initScrollProgress();
     initRevealOnScroll();
