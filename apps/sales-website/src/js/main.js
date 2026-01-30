@@ -687,16 +687,23 @@
     const chatInput = mockup.querySelector('.chat-input');
     const inputField = mockup.querySelector('#chat-input-field');
 
-    // Scroll to show a specific message (only if needed)
+    // Scroll chat container to show a specific message (only scrolls the container, not the page)
     function scrollToMessage(message) {
-      if (messagesContainer && message) {
-        // Only scroll if the message is below the visible area
-        const containerRect = messagesContainer.getBoundingClientRect();
-        const messageRect = message.getBoundingClientRect();
+      if (!messagesContainer || !message) return;
 
-        if (messageRect.bottom > containerRect.bottom) {
-          message.scrollIntoView({ behavior: 'smooth', block: 'end' });
-        }
+      // Calculate if message is below visible area of the container
+      const containerHeight = messagesContainer.clientHeight;
+      const messageBottom = message.offsetTop + message.offsetHeight;
+      const scrollTop = messagesContainer.scrollTop;
+      const visibleBottom = scrollTop + containerHeight;
+
+      // Only scroll if the message bottom is below the visible area
+      if (messageBottom > visibleBottom) {
+        const newScrollTop = messageBottom - containerHeight + 20; // 20px padding
+        messagesContainer.scrollTo({
+          top: newScrollTop,
+          behavior: 'smooth'
+        });
       }
     }
 
