@@ -3,7 +3,7 @@
     <div class="container">
         <h1 class="animate-fade-in">{{footer.company.pressKit}}</h1>
         <p class="animate-fade-in" style="animation-delay: 0.1s; max-width: 600px; margin: 0 auto;">
-            Resources for media and press coverage.
+            {{pressPage.subtitle}}
         </p>
     </div>
 </section>
@@ -11,43 +11,35 @@
 <section class="section">
     <div class="container">
         <div class="press-content reveal">
-            <h2>About ServerFlow</h2>
-            <p>
-                ServerFlow is a Zero-Trust deployment platform that bridges AI coding assistants
-                (like Claude and Cursor) with real server infrastructure. Founded in 2024, ServerFlow
-                enables developers to deploy code to their own VPS servers in seconds, using natural
-                language commands.
-            </p>
+            <h2>{{pressPage.about.title}}</h2>
+            <p>{{pressPage.about.description}}</p>
 
             <div class="press-stats">
                 <div class="stat-card">
-                    <span class="stat-value">47s</span>
-                    <span class="stat-label">Average server setup time</span>
+                    <span class="stat-value">{{pressPage.stats.setupTime.value}}</span>
+                    <span class="stat-label">{{pressPage.stats.setupTime.label}}</span>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-value">&lt;2s</span>
-                    <span class="stat-label">Hot deployment speed</span>
+                    <span class="stat-value">{{pressPage.stats.deploySpeed.value}}</span>
+                    <span class="stat-label">{{pressPage.stats.deploySpeed.label}}</span>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-value">Zero</span>
-                    <span class="stat-label">Credentials stored</span>
+                    <span class="stat-value">{{pressPage.stats.credentials.value}}</span>
+                    <span class="stat-label">{{pressPage.stats.credentials.label}}</span>
                 </div>
             </div>
 
-            <h2>Key Facts</h2>
+            <h2>{{pressPage.keyFacts.title}}</h2>
             <ul class="key-facts">
-                <li><strong>Founded:</strong> 2024</li>
-                <li><strong>Headquarters:</strong> Paris, France</li>
-                <li><strong>Industry:</strong> Developer Tools, DevOps, AI</li>
-                <li><strong>Architecture:</strong> Zero-Trust (agent never stores credentials)</li>
-                <li><strong>Open Source:</strong> Agent is 100% open source</li>
+                <li><strong>{{pressPage.keyFacts.founded}}:</strong> {{pressPage.keyFacts.foundedValue}}</li>
+                <li><strong>{{pressPage.keyFacts.headquarters}}:</strong> {{pressPage.keyFacts.headquartersValue}}</li>
+                <li><strong>{{pressPage.keyFacts.industry}}:</strong> {{pressPage.keyFacts.industryValue}}</li>
+                <li><strong>{{pressPage.keyFacts.architecture}}:</strong> {{pressPage.keyFacts.architectureValue}}</li>
+                <li><strong>{{pressPage.keyFacts.openSource}}:</strong> {{pressPage.keyFacts.openSourceValue}}</li>
             </ul>
 
-            <h2>Brand Assets</h2>
-            <p>
-                Download our logo and brand assets for use in press coverage.
-                Please follow our brand guidelines when using these assets.
-            </p>
+            <h2>{{pressPage.brandAssets.title}}</h2>
+            <p>{{pressPage.brandAssets.description}}</p>
 
             <div class="brand-assets">
                 <div class="asset-card">
@@ -57,8 +49,8 @@
                         </svg>
                         <span>ServerFlow</span>
                     </div>
-                    <p>Logo on dark background</p>
-                    <a href="/assets/brand/serverflow-logo-dark.svg" class="btn btn-secondary btn-sm" download>Download SVG</a>
+                    <p>{{pressPage.brandAssets.logoDark}}</p>
+                    <a href="/assets/brand/serverflow-logo-dark.svg" class="btn btn-secondary btn-sm" download>{{pressPage.brandAssets.download}}</a>
                 </div>
 
                 <div class="asset-card">
@@ -68,8 +60,8 @@
                         </svg>
                         <span style="color: #000;">ServerFlow</span>
                     </div>
-                    <p>Logo on light background</p>
-                    <a href="/assets/brand/serverflow-logo-light.svg" class="btn btn-secondary btn-sm" download>Download SVG</a>
+                    <p>{{pressPage.brandAssets.logoLight}}</p>
+                    <a href="/assets/brand/serverflow-logo-light.svg" class="btn btn-secondary btn-sm" download>{{pressPage.brandAssets.download}}</a>
                 </div>
 
                 <div class="asset-card">
@@ -84,38 +76,36 @@
                             </defs>
                         </svg>
                     </div>
-                    <p>Icon only</p>
-                    <a href="/assets/brand/serverflow-icon.svg" class="btn btn-secondary btn-sm" download>Download SVG</a>
+                    <p>{{pressPage.brandAssets.iconOnly}}</p>
+                    <a href="/assets/brand/serverflow-icon.svg" class="btn btn-secondary btn-sm" download>{{pressPage.brandAssets.download}}</a>
                 </div>
             </div>
 
-            <h2>Brand Colors</h2>
+            <h2>{{pressPage.brandColors.title}}</h2>
             <div class="color-palette">
                 <div class="color-swatch" style="background: #8b5cf6;">
                     <span>#8b5cf6</span>
-                    <span>Primary Purple</span>
+                    <span>{{pressPage.brandColors.primaryPurple}}</span>
                 </div>
                 <div class="color-swatch" style="background: #3b82f6;">
                     <span>#3b82f6</span>
-                    <span>Secondary Blue</span>
+                    <span>{{pressPage.brandColors.secondaryBlue}}</span>
                 </div>
                 <div class="color-swatch" style="background: #000000; border: 1px solid rgba(255,255,255,0.2);">
                     <span>#000000</span>
-                    <span>Background</span>
+                    <span>{{pressPage.brandColors.background}}</span>
                 </div>
                 <div class="color-swatch" style="background: #10b981;">
                     <span>#10b981</span>
-                    <span>Success Green</span>
+                    <span>{{pressPage.brandColors.successGreen}}</span>
                 </div>
             </div>
 
-            <h2>Media Contact</h2>
+            <h2>{{pressPage.mediaContact.title}}</h2>
+            <p>{{pressPage.mediaContact.description}}</p>
             <p>
-                For press inquiries, interviews, or additional information, please contact:
-            </p>
-            <p>
-                <strong>Email:</strong> <a href="mailto:press@serverflow.io">press@serverflow.io</a><br>
-                <strong>Response time:</strong> Within 24 hours
+                <strong>{{pressPage.mediaContact.email}}:</strong> <a href="mailto:press@serverflow.io">press@serverflow.io</a><br>
+                <strong>{{pressPage.mediaContact.responseTime}}:</strong> {{pressPage.mediaContact.responseTimeValue}}
             </p>
         </div>
     </div>

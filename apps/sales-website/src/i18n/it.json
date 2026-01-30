@@ -808,6 +808,28 @@
       "button": "Inizia gratis"
     }
   },
+  "careersPage": {
+    "subtitle": "Costruisci il futuro del deployment AI-nativo con noi.",
+    "noOpenings": {
+      "title": "Nessuna posizione aperta al momento",
+      "description": "Siamo un piccolo team bootstrapped e non stiamo assumendo attivamente al momento. Ma questo non significa che non ci interessi sentirti."
+    },
+    "whoWeAreLookingFor": {
+      "title": "Chi ci piacerebbe conoscere",
+      "description": "Se sei appassionato di strumenti per sviluppatori, automazione dell'infrastruttura o integrazione con l'IA — e pensi di poter portare qualcosa di unico a ServerFlow — ci piacerebbe leggerti.",
+      "profiles": [
+        "Ingegneri backend che amano Node.js, TypeScript e sistemi in tempo reale",
+        "Entusiasti DevOps che vogliono semplificare l'infrastruttura per tutti",
+        "Sviluppatori frontend con occhio per interfacce pulite e funzionali",
+        "Redattori tecnici capaci di rendere accessibili argomenti complessi"
+      ]
+    },
+    "howToApply": {
+      "title": "Interessato/a?",
+      "description": "Inviaci un'email a",
+      "descriptionEnd": "Raccontaci di te, cosa ti entusiasma di ServerFlow, e come vorresti contribuire. Leggiamo ogni email."
+    }
+  },
   "securityPage": {
     "hero": {
       "title": "Sicurezza",
@@ -910,6 +932,493 @@
     "cta": {
       "auditCode": "Verifica il codice dell'agente",
       "getStarted": "Inizia gratis"
+    }
+  },
+  "contactPage": {
+    "subtitle": "Hai una domanda? Ci farebbe piacere sentirti.",
+    "getInTouch": {
+      "title": "Contattaci",
+      "description": "Che si tratti di una domanda sulle funzionalità, i prezzi o altro, il nostro team è pronto a rispondere a tutte le tue domande."
+    },
+    "methods": {
+      "email": {
+        "title": "Email",
+        "address": "hello@serverflow.io"
+      },
+      "discord": {
+        "title": "Discord",
+        "link": "Unisciti alla community"
+      },
+      "twitter": {
+        "title": "Twitter / X",
+        "handle": "@serverflow"
+      }
+    },
+    "form": {
+      "name": "Nome",
+      "email": "Email",
+      "subject": "Oggetto",
+      "subjectPlaceholder": "Seleziona un argomento",
+      "subjectOptions": {
+        "general": "Domanda generale",
+        "support": "Supporto tecnico",
+        "sales": "Richiesta commerciale",
+        "partnership": "Partnership",
+        "press": "Stampa"
+      },
+      "message": "Messaggio",
+      "submit": "Invia messaggio",
+      "sending": "Invio in corso...",
+      "success": "Messaggio inviato! Ti risponderemo presto.",
+      "error": "Errore durante l'invio. Riprova o contattaci direttamente via email."
+    }
+  },
+  "pressPage": {
+    "subtitle": "Risorse per media e copertura stampa.",
+    "about": {
+      "title": "Su ServerFlow",
+      "description": "ServerFlow è una piattaforma di deployment Zero-Trust che collega gli assistenti di codice IA (come Claude e Cursor) all'infrastruttura server reale. Fondata nel 2026, ServerFlow permette agli sviluppatori di distribuire codice sui propri server VPS in pochi secondi, usando comandi in linguaggio naturale."
+    },
+    "stats": {
+      "setupTime": {
+        "value": "47s",
+        "label": "Tempo medio di configurazione server"
+      },
+      "deploySpeed": {
+        "value": "<2s",
+        "label": "Velocità di deployment a caldo"
+      },
+      "credentials": {
+        "value": "Zero",
+        "label": "Credenziali memorizzate"
+      }
+    },
+    "keyFacts": {
+      "title": "Fatti chiave",
+      "founded": "Fondata",
+      "foundedValue": "2026",
+      "headquarters": "Sede centrale",
+      "headquartersValue": "Parigi, Francia",
+      "industry": "Settore",
+      "industryValue": "Strumenti per sviluppatori, DevOps, IA",
+      "architecture": "Architettura",
+      "architectureValue": "Zero-Trust (l'agente non memorizza mai le credenziali)",
+      "openSource": "Open Source",
+      "openSourceValue": "L'agente è 100% open source"
+    },
+    "brandAssets": {
+      "title": "Risorse del brand",
+      "description": "Scarica il nostro logo e le risorse del brand per la tua copertura stampa. Per favore, segui le nostre linee guida del brand quando li utilizzi.",
+      "logoDark": "Logo su sfondo scuro",
+      "logoLight": "Logo su sfondo chiaro",
+      "iconOnly": "Solo icona",
+      "download": "Scarica SVG"
+    },
+    "brandColors": {
+      "title": "Colori del brand",
+      "primaryPurple": "Viola principale",
+      "secondaryBlue": "Blu secondario",
+      "background": "Sfondo",
+      "successGreen": "Verde successo"
+    },
+    "mediaContact": {
+      "title": "Contatto stampa",
+      "description": "Per richieste stampa, interviste o informazioni aggiuntive, contatta:",
+      "email": "Email",
+      "responseTime": "Tempo di risposta",
+      "responseTimeValue": "Entro 24 ore"
+    }
+  },
+  "privacyPage": {
+    "lastUpdated": "Ultimo aggiornamento: gennaio 2026",
+    "sections": {
+      "intro": {
+        "title": "1. Introduzione",
+        "content": "ServerFlow Inc. (\"ServerFlow\", \"noi\", \"nostro\") rispetta la tua privacy e si impegna a proteggere i tuoi dati personali. Questa informativa sulla privacy spiega come raccogliamo, utilizziamo e proteggiamo le tue informazioni quando utilizzi i nostri servizi."
+      },
+      "dataCollect": {
+        "title": "2. Dati che raccogliamo",
+        "account": {
+          "title": "2.1 Informazioni dell'account",
+          "intro": "Quando crei un account, raccogliamo:",
+          "items": [
+            "Indirizzo email",
+            "Nome (opzionale)",
+            "Nome dell'organizzazione (opzionale)",
+            "Informazioni di pagamento (elaborate da Stripe)"
+          ]
+        },
+        "usage": {
+          "title": "2.2 Dati di utilizzo",
+          "intro": "Raccogliamo informazioni su come utilizzi il nostro servizio:",
+          "items": [
+            "Comandi di deployment e metadati (non il tuo codice applicativo)",
+            "Stato della connessione del server e metriche di salute",
+            "Statistiche sull'utilizzo delle funzionalità"
+          ]
+        },
+        "notCollect": {
+          "title": "2.3 Cosa NON raccogliamo",
+          "intro": "ServerFlow è progettato con architettura Zero-Trust. Non abbiamo mai accesso a:",
+          "items": [
+            "Le tue credenziali del server (chiavi SSH, password)",
+            "Il tuo codice sorgente applicativo",
+            "Il contenuto dei tuoi database",
+            "I dati personali dei tuoi utenti"
+          ]
+        }
+      },
+      "howWeUse": {
+        "title": "3. Come utilizziamo i tuoi dati",
+        "intro": "Utilizziamo i tuoi dati per:",
+        "items": [
+          "Fornire e mantenere il nostro servizio",
+          "Elaborare i pagamenti",
+          "Inviare notifiche importanti sul servizio",
+          "Migliorare il nostro prodotto in base ai pattern di utilizzo",
+          "Rispondere alle richieste di supporto"
+        ]
+      },
+      "storage": {
+        "title": "4. Archiviazione e sicurezza",
+        "content": "I tuoi dati sono archiviati su server situati nell'Unione Europea, ospitati da fornitori certificati conformi agli standard ISO 27001 e SOC 2. Tutti i dati sono crittografati a riposo e in transito."
+      },
+      "retention": {
+        "title": "5. Conservazione dei dati",
+        "content": "Conserviamo i dati del tuo account finché il tuo account è attivo. Se elimini il tuo account, elimineremo i tuoi dati personali entro 30 giorni, tranne quando dobbiamo conservarli per conformità legale."
+      },
+      "rights": {
+        "title": "6. I tuoi diritti",
+        "intro": "Ai sensi del GDPR, hai il diritto di:",
+        "items": [
+          "Accedere ai tuoi dati personali",
+          "Correggere dati inesatti",
+          "Eliminare i tuoi dati",
+          "Esportare i tuoi dati",
+          "Opporti al trattamento dei dati"
+        ],
+        "contact": "Per esercitare questi diritti, contattaci a"
+      },
+      "cookies": {
+        "title": "7. Cookie",
+        "content": "Utilizziamo solo cookie essenziali per l'autenticazione e la gestione della sessione. Non utilizziamo cookie di tracciamento né analytics di terze parti che tracciano i singoli utenti."
+      },
+      "thirdParty": {
+        "title": "8. Servizi di terze parti",
+        "intro": "Utilizziamo i seguenti servizi di terze parti:",
+        "stripe": "Stripe",
+        "stripeDesc": "Elaborazione pagamenti",
+        "plausible": "Plausible",
+        "plausibleDesc": "Analytics rispettose della privacy (nessuna raccolta di dati personali)"
+      },
+      "changes": {
+        "title": "9. Modifiche a questa policy",
+        "content": "Potremmo aggiornare questa informativa sulla privacy di tanto in tanto. Ti informeremo di eventuali modifiche significative via email e pubblicando la nuova policy su questa pagina."
+      },
+      "contact": {
+        "title": "10. Contattaci",
+        "content": "Per qualsiasi domanda su questa informativa sulla privacy, contattaci a"
+      }
+    }
+  },
+  "termsPage": {
+    "lastUpdated": "Ultimo aggiornamento: gennaio 2026",
+    "sections": {
+      "agreement": {
+        "title": "1. Accettazione dei termini",
+        "content": "Accedendo o utilizzando ServerFlow (\"Servizio\"), accetti di essere vincolato da questi Termini di Servizio. Se non sei d'accordo con una parte di questi termini, non puoi accedere al Servizio."
+      },
+      "description": {
+        "title": "2. Descrizione del Servizio",
+        "content": "ServerFlow fornisce una piattaforma di orchestrazione del deployment che consente agli utenti di distribuire applicazioni sui propri server tramite comandi assistiti dall'IA e una dashboard web. Il Servizio non fornisce hosting o infrastruttura server."
+      },
+      "accounts": {
+        "title": "3. Account utente",
+        "creation": {
+          "title": "3.1 Creazione dell'account",
+          "content": "Devi fornire informazioni accurate e complete quando crei un account. Sei responsabile del mantenimento della sicurezza delle tue credenziali di accesso."
+        },
+        "responsibility": {
+          "title": "3.2 Responsabilità dell'account",
+          "content": "Sei responsabile di tutte le attività che si verificano sotto il tuo account, inclusi i deployment sui server collegati al tuo account."
+        }
+      },
+      "acceptableUse": {
+        "title": "4. Uso accettabile",
+        "intro": "Accetti di non utilizzare il Servizio per:",
+        "items": [
+          "Distribuire malware, virus o altro codice dannoso",
+          "Violare leggi o regolamenti applicabili",
+          "Violare diritti di proprietà intellettuale",
+          "Tentare di ottenere accesso non autorizzato ai nostri sistemi",
+          "Interferire con o interrompere il Servizio"
+        ]
+      },
+      "yourServers": {
+        "title": "5. I tuoi server",
+        "content": "Sei l'unico responsabile dei tuoi server, inclusa la loro sicurezza, manutenzione e conformità alle leggi applicabili. ServerFlow non accede, controlla o monitora i tuoi server se non quando necessario per eseguire i tuoi comandi di deployment."
+      },
+      "payment": {
+        "title": "6. Termini di pagamento",
+        "pricing": {
+          "title": "6.1 Prezzi",
+          "content": "I prezzi sono quelli indicati sul nostro sito web. Possiamo modificare i prezzi con un preavviso di 30 giorni. Le modifiche ai prezzi non influenzeranno i periodi di fatturazione in corso."
+        },
+        "refunds": {
+          "title": "6.2 Rimborsi",
+          "content": "Le richieste di rimborso vengono gestite caso per caso. Contattaci via email per discutere la tua situazione."
+        }
+      },
+      "availability": {
+        "title": "7. Disponibilità del Servizio",
+        "content": "Ci impegniamo per un'alta disponibilità ma non garantiamo un servizio ininterrotto. Non siamo responsabili per eventuali danni derivanti da interruzioni del servizio."
+      },
+      "liability": {
+        "title": "8. Limitazione di responsabilità",
+        "content": "Nella misura massima consentita dalla legge, ServerFlow non sarà responsabile per danni indiretti, incidentali, speciali, consequenziali o punitivi, inclusa la perdita di profitti, dati o opportunità commerciali."
+      },
+      "intellectualProperty": {
+        "title": "9. Proprietà intellettuale",
+        "content": "Il Servizio e il suo contenuto originale (escluso il contenuto fornito dagli utenti) rimangono di proprietà di ServerFlow. I nostri marchi non possono essere utilizzati senza previo consenso scritto."
+      },
+      "termination": {
+        "title": "10. Terminazione",
+        "content": "Possiamo terminare o sospendere il tuo account immediatamente, senza preavviso, per comportamenti che riteniamo violino questi Termini o siano dannosi per altri utenti o per il Servizio."
+      },
+      "governingLaw": {
+        "title": "11. Legge applicabile",
+        "content": "Questi Termini saranno regolati dalle leggi della Francia. Qualsiasi controversia sarà risolta presso i tribunali di Parigi, Francia."
+      },
+      "changes": {
+        "title": "12. Modifiche ai Termini",
+        "content": "Ci riserviamo il diritto di modificare questi Termini in qualsiasi momento. Ti informeremo di modifiche significative via email e pubblicandole su questa pagina."
+      },
+      "contact": {
+        "title": "13. Contattaci",
+        "content": "Per qualsiasi domanda su questi Termini, contattaci a"
+      }
+    }
+  },
+  "dpaPage": {
+    "title": "Accordo sul Trattamento dei Dati",
+    "lastUpdated": "Ultimo aggiornamento: gennaio 2026",
+    "sections": {
+      "intro": {
+        "title": "1. Introduzione",
+        "content": "Questo Accordo sul Trattamento dei Dati (\"ATD\") fa parte dell'Accordo tra ServerFlow Inc. (\"Responsabile del trattamento\") e il Cliente (\"Titolare del trattamento\") per la fornitura dei servizi ServerFlow."
+      },
+      "definitions": {
+        "title": "2. Definizioni",
+        "items": [
+          {
+            "term": "Dati Personali",
+            "definition": "indica qualsiasi informazione relativa a una persona fisica identificata o identificabile"
+          },
+          {
+            "term": "Trattamento",
+            "definition": "indica qualsiasi operazione eseguita sui Dati Personali"
+          },
+          {
+            "term": "Sub-responsabile",
+            "definition": "indica qualsiasi terza parte incaricata dal Responsabile del trattamento per trattare Dati Personali"
+          }
+        ]
+      },
+      "scope": {
+        "title": "3. Ambito e Finalità",
+        "content": "Il Responsabile del trattamento tratterà i Dati Personali solo su istruzioni documentate del Titolare del trattamento, anche per quanto riguarda i trasferimenti di Dati Personali verso un paese terzo o un'organizzazione internazionale.",
+        "dataSubjects": {
+          "title": "3.1 Categorie di Interessati",
+          "items": [
+            "Dipendenti e collaboratori del Titolare del trattamento",
+            "Clienti del Titolare del trattamento (limitato ai metadati di deployment)"
+          ]
+        },
+        "dataTypes": {
+          "title": "3.2 Tipi di Dati Personali",
+          "items": ["Indirizzi email", "Nomi", "Indirizzi IP", "Log e metadati di deployment"]
+        },
+        "activities": {
+          "title": "3.3 Attività di Trattamento",
+          "items": [
+            "Gestione degli account",
+            "Fornitura del servizio",
+            "Supporto tecnico",
+            "Analytics e miglioramenti"
+          ]
+        }
+      },
+      "obligations": {
+        "title": "4. Obblighi del Responsabile del Trattamento",
+        "intro": "Il Responsabile del trattamento dovrà:",
+        "items": [
+          "Trattare i Dati Personali solo su istruzioni documentate del Titolare del trattamento",
+          "Garantire che le persone autorizzate a trattare i Dati Personali si siano impegnate alla riservatezza",
+          "Implementare misure tecniche e organizzative di sicurezza appropriate",
+          "Assistere il Titolare del trattamento nel rispondere alle richieste degli interessati",
+          "Eliminare o restituire tutti i Dati Personali alla cessazione dei servizi",
+          "Mettere a disposizione tutte le informazioni necessarie per dimostrare la conformità"
+        ]
+      },
+      "security": {
+        "title": "5. Misure di Sicurezza",
+        "intro": "Il Responsabile del trattamento implementa le seguenti misure di sicurezza:",
+        "items": [
+          "Crittografia dei dati in transito (TLS 1.3)",
+          "Crittografia dei dati a riposo",
+          "Controlli di accesso e autenticazione",
+          "Valutazioni di sicurezza regolari",
+          "Procedure di risposta agli incidenti",
+          "Formazione sulla sicurezza per i dipendenti"
+        ]
+      },
+      "subprocessors": {
+        "title": "6. Sub-responsabili",
+        "intro": "Il Titolare del trattamento fornisce un'autorizzazione generale al Responsabile del trattamento per incaricare Sub-responsabili. I Sub-responsabili attuali includono:",
+        "list": [
+          { "name": "Stripe", "purpose": "Elaborazione pagamenti", "location": "US" },
+          { "name": "Plausible", "purpose": "Analytics", "location": "UE" },
+          { "name": "Hetzner", "purpose": "Hosting infrastruttura", "location": "UE" }
+        ],
+        "notice": "Il Responsabile del trattamento informerà il Titolare del trattamento di eventuali modifiche previste ai Sub-responsabili, dando al Titolare del trattamento l'opportunità di opporsi."
+      },
+      "transfers": {
+        "title": "7. Trasferimenti Internazionali",
+        "content": "Quando i Dati Personali vengono trasferiti al di fuori dello Spazio Economico Europeo, il Responsabile del trattamento garantirà che siano in atto garanzie appropriate, incluse le Clausole Contrattuali Standard."
+      },
+      "rights": {
+        "title": "8. Diritti degli Interessati",
+        "content": "Il Responsabile del trattamento assisterà il Titolare del trattamento nell'adempimento del suo obbligo di rispondere alle richieste degli interessati che esercitano i loro diritti ai sensi del GDPR."
+      },
+      "breach": {
+        "title": "9. Notifica di Violazione dei Dati",
+        "intro": "Il Responsabile del trattamento notificherà il Titolare del trattamento senza indebito ritardo non appena venga a conoscenza di una violazione dei dati personali. Tale notifica includerà:",
+        "items": [
+          "Descrizione della natura della violazione",
+          "Categorie e numero approssimativo degli interessati coinvolti",
+          "Probabili conseguenze della violazione",
+          "Misure adottate o proposte per affrontare la violazione"
+        ]
+      },
+      "audit": {
+        "title": "10. Diritti di Audit",
+        "content": "Il Titolare del trattamento può condurre audit per verificare la conformità a questo ATD. Il Responsabile del trattamento collaborerà a tali audit e fornirà accesso alla documentazione pertinente."
+      },
+      "termination": {
+        "title": "11. Durata e Cessazione",
+        "content": "Questo ATD rimarrà in vigore per la durata dell'Accordo. Alla cessazione, il Responsabile del trattamento eliminerà tutti i Dati Personali entro 30 giorni, a meno che la conservazione non sia richiesta dalla legge."
+      },
+      "contact": {
+        "title": "12. Contatti",
+        "content": "Per qualsiasi domanda riguardante questo ATD, si prega di contattare:"
+      }
+    }
+  },
+  "gdprPage": {
+    "title": "Conformità GDPR",
+    "subtitle": "La privacy dei tuoi dati è la nostra priorità.",
+    "sections": {
+      "commitment": {
+        "title": "Il nostro impegno per il GDPR",
+        "content": "ServerFlow è pienamente impegnata a rispettare il Regolamento Generale sulla Protezione dei Dati (GDPR). Abbiamo implementato misure complete per garantire che i tuoi dati personali siano trattati in modo lecito, equo e trasparente."
+      },
+      "controller": {
+        "title": "Titolare del trattamento",
+        "content": "ServerFlow Inc. agisce come titolare del trattamento dei dati personali raccolti attraverso i nostri servizi. Per qualsiasi richiesta relativa al GDPR, contatta il nostro Responsabile della Protezione dei Dati a"
+      },
+      "rights": {
+        "title": "I tuoi diritti ai sensi del GDPR",
+        "intro": "In qualità di interessato, hai i seguenti diritti:",
+        "items": [
+          {
+            "name": "Diritto di accesso",
+            "description": "Richiedere una copia dei tuoi dati personali"
+          },
+          { "name": "Diritto di rettifica", "description": "Correggere dati personali inesatti" },
+          {
+            "name": "Diritto alla cancellazione",
+            "description": "Richiedere la cancellazione dei tuoi dati personali"
+          },
+          {
+            "name": "Diritto di limitazione del trattamento",
+            "description": "Limitare il modo in cui utilizziamo i tuoi dati"
+          },
+          {
+            "name": "Diritto alla portabilità dei dati",
+            "description": "Ricevere i tuoi dati in un formato portabile"
+          },
+          {
+            "name": "Diritto di opposizione",
+            "description": "Opporsi al trattamento basato su interessi legittimi"
+          },
+          {
+            "name": "Diritto di revocare il consenso",
+            "description": "Revocare il consenso in qualsiasi momento"
+          }
+        ]
+      },
+      "lawfulBasis": {
+        "title": "Base giuridica del trattamento",
+        "intro": "Trattiamo i dati personali in base alle seguenti basi giuridiche:",
+        "items": [
+          { "name": "Esecuzione del contratto", "description": "Per fornirti i nostri servizi" },
+          {
+            "name": "Interessi legittimi",
+            "description": "Per operazioni aziendali e miglioramenti"
+          },
+          { "name": "Obblighi legali", "description": "Per rispettare le leggi applicabili" },
+          { "name": "Consenso", "description": "Per comunicazioni di marketing (ove applicabile)" }
+        ]
+      },
+      "processing": {
+        "title": "Attività di trattamento dei dati",
+        "collect": {
+          "title": "Dati che raccogliamo",
+          "items": [
+            "Informazioni sull'account (email, nome)",
+            "Informazioni di pagamento (elaborate da Stripe)",
+            "Dati di utilizzo (log di deployment, utilizzo delle funzionalità)",
+            "Dati tecnici (indirizzo IP, tipo di browser)"
+          ]
+        },
+        "notCollect": {
+          "title": "Dati che NON raccogliamo",
+          "intro": "Grazie alla nostra architettura Zero-Trust, non abbiamo mai accesso a:",
+          "items": [
+            "Le tue credenziali del server (chiavi SSH, password)",
+            "Il tuo codice sorgente applicativo",
+            "Il contenuto dei tuoi database",
+            "I dati personali dei tuoi utenti finali"
+          ]
+        }
+      },
+      "transfers": {
+        "title": "Trasferimenti internazionali di dati",
+        "content": "I nostri server si trovano nell'Unione Europea. Quando i dati vengono trasferiti al di fuori dell'UE, ci assicuriamo che siano in atto garanzie appropriate, come le Clausole Contrattuali Standard."
+      },
+      "retention": {
+        "title": "Conservazione dei dati",
+        "content": "Conserviamo i tuoi dati personali solo per il tempo necessario a soddisfare le finalità per cui sono stati raccolti. I dati dell'account vengono cancellati entro 30 giorni dalla chiusura dell'account."
+      },
+      "protection": {
+        "title": "Misure di protezione dei dati",
+        "items": [
+          "Crittografia end-to-end per i dati in transito (TLS 1.3)",
+          "Crittografia a riposo per i dati archiviati",
+          "Audit di sicurezza regolari e test di penetrazione",
+          "Formazione dei dipendenti sulla protezione dei dati",
+          "Controlli di accesso e registrazione"
+        ]
+      },
+      "exercising": {
+        "title": "Esercitare i tuoi diritti",
+        "content": "Per esercitare uno qualsiasi dei tuoi diritti GDPR, contattaci a",
+        "response": "Risponderemo alla tua richiesta entro 30 giorni."
+      },
+      "authority": {
+        "title": "Autorità di controllo",
+        "content": "Se ritieni che i tuoi diritti in materia di protezione dei dati siano stati violati, hai il diritto di presentare un reclamo alla tua autorità di controllo locale."
+      }
     }
   }
 }

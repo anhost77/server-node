@@ -3,7 +3,7 @@
     <div class="container">
         <h1 class="animate-fade-in">{{footer.company.contact}}</h1>
         <p class="animate-fade-in" style="animation-delay: 0.1s; max-width: 600px; margin: 0 auto;">
-            Have a question? We'd love to hear from you.
+            {{contactPage.subtitle}}
         </p>
     </div>
 </section>
@@ -12,11 +12,8 @@
     <div class="container">
         <div class="contact-grid reveal">
             <div class="contact-info">
-                <h2>Get in Touch</h2>
-                <p>
-                    Whether you have a question about features, pricing, or anything else,
-                    our team is ready to answer all your questions.
-                </p>
+                <h2>{{contactPage.getInTouch.title}}</h2>
+                <p>{{contactPage.getInTouch.description}}</p>
 
                 <div class="contact-methods">
                     <div class="contact-method">
@@ -27,8 +24,8 @@
                             </svg>
                         </div>
                         <div>
-                            <h4>Email</h4>
-                            <a href="mailto:hello@serverflow.io">hello@serverflow.io</a>
+                            <h4>{{contactPage.methods.email.title}}</h4>
+                            <a href="mailto:{{contactPage.methods.email.address}}">{{contactPage.methods.email.address}}</a>
                         </div>
                     </div>
 
@@ -39,8 +36,8 @@
                             </svg>
                         </div>
                         <div>
-                            <h4>Discord</h4>
-                            <a href="https://discord.gg/serverflow" target="_blank" rel="noopener noreferrer">Join our community</a>
+                            <h4>{{contactPage.methods.discord.title}}</h4>
+                            <a href="https://discord.gg/serverflow" target="_blank" rel="noopener noreferrer">{{contactPage.methods.discord.link}}</a>
                         </div>
                     </div>
 
@@ -51,41 +48,128 @@
                             </svg>
                         </div>
                         <div>
-                            <h4>Twitter / X</h4>
-                            <a href="https://twitter.com/serverflow" target="_blank" rel="noopener noreferrer">@serverflow</a>
+                            <h4>{{contactPage.methods.twitter.title}}</h4>
+                            <a href="https://twitter.com/serverflow" target="_blank" rel="noopener noreferrer">{{contactPage.methods.twitter.handle}}</a>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="contact-form-wrapper">
-                <form class="contact-form" action="https://formspree.io/f/your-form-id" method="POST">
+                <form class="contact-form" id="contact-form">
                     <div class="form-group">
-                        <label for="name">Name</label>
+                        <label for="name">{{contactPage.form.name}}</label>
                         <input type="text" id="name" name="name" required>
                     </div>
                     <div class="form-group">
-                        <label for="email">Email</label>
+                        <label for="email">{{contactPage.form.email}}</label>
                         <input type="email" id="email" name="email" required>
                     </div>
                     <div class="form-group">
-                        <label for="subject">Subject</label>
+                        <label for="subject">{{contactPage.form.subject}}</label>
                         <select id="subject" name="subject" required>
-                            <option value="">Select a topic</option>
-                            <option value="general">General Question</option>
-                            <option value="support">Technical Support</option>
-                            <option value="sales">Sales Inquiry</option>
-                            <option value="partnership">Partnership</option>
-                            <option value="press">Press Inquiry</option>
+                            <option value="">{{contactPage.form.subjectPlaceholder}}</option>
+                            <option value="general">{{contactPage.form.subjectOptions.general}}</option>
+                            <option value="support">{{contactPage.form.subjectOptions.support}}</option>
+                            <option value="sales">{{contactPage.form.subjectOptions.sales}}</option>
+                            <option value="partnership">{{contactPage.form.subjectOptions.partnership}}</option>
+                            <option value="press">{{contactPage.form.subjectOptions.press}}</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="message">Message</label>
+                        <label for="message">{{contactPage.form.message}}</label>
                         <textarea id="message" name="message" rows="5" required></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary btn-block">Send Message</button>
+                    <button type="submit" class="btn btn-primary btn-block" id="submit-btn">
+                        <span class="btn-text">{{contactPage.form.submit}}</span>
+                        <span class="btn-loading" style="display: none;">{{contactPage.form.sending}}</span>
+                    </button>
+                    <div id="form-message" class="form-message" style="display: none;"></div>
                 </form>
             </div>
         </div>
     </div>
 </section>
+
+<style>
+.form-message {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+}
+.form-message.success {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #10b981;
+}
+.form-message.error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+#submit-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+</style>
+
+<script>
+(function() {
+    const form = document.getElementById('contact-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const btnText = submitBtn.querySelector('.btn-text');
+    const btnLoading = submitBtn.querySelector('.btn-loading');
+    const formMessage = document.getElementById('form-message');
+
+    // Messages from i18n (injected by template system)
+    const messages = {
+        success: '{{contactPage.form.success}}',
+        error: '{{contactPage.form.error}}'
+    };
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        // Disable button and show loading
+        submitBtn.disabled = true;
+        btnText.style.display = 'none';
+        btnLoading.style.display = 'inline';
+        formMessage.style.display = 'none';
+
+        const formData = {
+            name: form.name.value,
+            email: form.email.value,
+            subject: form.subject.value,
+            message: form.message.value
+        };
+
+        try {
+            const response = await fetch('/api/contact', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+
+            if (response.ok) {
+                formMessage.textContent = messages.success;
+                formMessage.className = 'form-message success';
+                formMessage.style.display = 'block';
+                form.reset();
+            } else {
+                throw new Error('Failed to send');
+            }
+        } catch (error) {
+            formMessage.textContent = messages.error;
+            formMessage.className = 'form-message error';
+            formMessage.style.display = 'block';
+        } finally {
+            submitBtn.disabled = false;
+            btnText.style.display = 'inline';
+            btnLoading.style.display = 'none';
+        }
+    });
+})();
+</script>

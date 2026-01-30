@@ -808,6 +808,28 @@
       "button": "Kostenlos starten"
     }
   },
+  "careersPage": {
+    "subtitle": "Bauen Sie mit uns die Zukunft des AI-nativen Deployments.",
+    "noOpenings": {
+      "title": "Derzeit keine offenen Stellen",
+      "description": "Wir sind ein kleines, bootstrapped Team und stellen momentan nicht aktiv ein. Das bedeutet aber nicht, dass wir nicht an Ihnen interessiert sind."
+    },
+    "whoWeAreLookingFor": {
+      "title": "Wen wir gerne kennenlernen würden",
+      "description": "Wenn Sie leidenschaftlich an Entwicklertools, Infrastrukturautomatisierung oder KI-Integration interessiert sind — und glauben, dass Sie etwas Einzigartiges zu ServerFlow beitragen könnten — würden wir gerne von Ihnen hören.",
+      "profiles": [
+        "Backend-Entwickler, die Node.js, TypeScript und Echtzeitsysteme lieben",
+        "DevOps-Enthusiasten, die Infrastruktur für alle vereinfachen wollen",
+        "Frontend-Entwickler mit einem Auge für saubere, funktionale UIs",
+        "Technische Redakteure, die komplexe Themen verständlich machen können"
+      ]
+    },
+    "howToApply": {
+      "title": "Interessiert?",
+      "description": "Senden Sie uns eine E-Mail an",
+      "descriptionEnd": "Erzählen Sie uns von sich, was Sie an ServerFlow begeistert, und wie Sie beitragen möchten. Wir lesen jede E-Mail."
+    }
+  },
   "securityPage": {
     "hero": {
       "title": "Sicherheit",
@@ -910,6 +932,502 @@
     "cta": {
       "auditCode": "Agent-Code prüfen",
       "getStarted": "Kostenlos starten"
+    }
+  },
+  "contactPage": {
+    "subtitle": "Haben Sie eine Frage? Wir freuen uns von Ihnen zu hören.",
+    "getInTouch": {
+      "title": "Kontakt aufnehmen",
+      "description": "Ob Fragen zu Funktionen, Preisen oder anderem – unser Team ist bereit, alle Ihre Fragen zu beantworten."
+    },
+    "methods": {
+      "email": {
+        "title": "E-Mail",
+        "address": "hello@serverflow.io"
+      },
+      "discord": {
+        "title": "Discord",
+        "link": "Community beitreten"
+      },
+      "twitter": {
+        "title": "Twitter / X",
+        "handle": "@serverflow"
+      }
+    },
+    "form": {
+      "name": "Name",
+      "email": "E-Mail",
+      "subject": "Betreff",
+      "subjectPlaceholder": "Thema auswählen",
+      "subjectOptions": {
+        "general": "Allgemeine Frage",
+        "support": "Technischer Support",
+        "sales": "Vertriebsanfrage",
+        "partnership": "Partnerschaft",
+        "press": "Presseanfrage"
+      },
+      "message": "Nachricht",
+      "submit": "Nachricht senden",
+      "sending": "Wird gesendet...",
+      "success": "Nachricht gesendet! Wir werden uns bald bei Ihnen melden.",
+      "error": "Fehler beim Senden. Bitte versuchen Sie es erneut oder kontaktieren Sie uns direkt per E-Mail."
+    }
+  },
+  "pressPage": {
+    "subtitle": "Ressourcen für Medien und Presseberichterstattung.",
+    "about": {
+      "title": "Über ServerFlow",
+      "description": "ServerFlow ist eine Zero-Trust-Deployment-Plattform, die KI-Coding-Assistenten (wie Claude und Cursor) mit echter Server-Infrastruktur verbindet. 2026 gegründet, ermöglicht ServerFlow Entwicklern, Code in Sekunden auf ihren eigenen VPS-Servern zu deployen, mit natürlichsprachlichen Befehlen."
+    },
+    "stats": {
+      "setupTime": {
+        "value": "47s",
+        "label": "Durchschnittliche Server-Einrichtungszeit"
+      },
+      "deploySpeed": {
+        "value": "<2s",
+        "label": "Hot-Deployment-Geschwindigkeit"
+      },
+      "credentials": {
+        "value": "Null",
+        "label": "Gespeicherte Anmeldedaten"
+      }
+    },
+    "keyFacts": {
+      "title": "Wichtige Fakten",
+      "founded": "Gegründet",
+      "foundedValue": "2026",
+      "headquarters": "Hauptsitz",
+      "headquartersValue": "Paris, Frankreich",
+      "industry": "Branche",
+      "industryValue": "Entwickler-Tools, DevOps, KI",
+      "architecture": "Architektur",
+      "architectureValue": "Zero-Trust (Agent speichert niemals Anmeldedaten)",
+      "openSource": "Open Source",
+      "openSourceValue": "Agent ist 100% Open Source"
+    },
+    "brandAssets": {
+      "title": "Marken-Assets",
+      "description": "Laden Sie unser Logo und Marken-Assets für Ihre Presseberichterstattung herunter. Bitte befolgen Sie unsere Markenrichtlinien bei der Verwendung.",
+      "logoDark": "Logo auf dunklem Hintergrund",
+      "logoLight": "Logo auf hellem Hintergrund",
+      "iconOnly": "Nur Icon",
+      "download": "SVG herunterladen"
+    },
+    "brandColors": {
+      "title": "Markenfarben",
+      "primaryPurple": "Primäres Violett",
+      "secondaryBlue": "Sekundäres Blau",
+      "background": "Hintergrund",
+      "successGreen": "Erfolgs-Grün"
+    },
+    "mediaContact": {
+      "title": "Medienkontakt",
+      "description": "Für Presseanfragen, Interviews oder weitere Informationen kontaktieren Sie bitte:",
+      "email": "E-Mail",
+      "responseTime": "Antwortzeit",
+      "responseTimeValue": "Innerhalb von 24 Stunden"
+    }
+  },
+  "privacyPage": {
+    "lastUpdated": "Zuletzt aktualisiert: Januar 2026",
+    "sections": {
+      "intro": {
+        "title": "1. Einleitung",
+        "content": "ServerFlow Inc. (\"ServerFlow\", \"wir\", \"uns\" oder \"unser\") respektiert Ihre Privatsphäre und verpflichtet sich zum Schutz Ihrer persönlichen Daten. Diese Datenschutzrichtlinie erklärt, wie wir Ihre Informationen sammeln, verwenden und schützen, wenn Sie unsere Dienste nutzen."
+      },
+      "dataCollect": {
+        "title": "2. Daten, die wir sammeln",
+        "account": {
+          "title": "2.1 Kontoinformationen",
+          "intro": "Wenn Sie ein Konto erstellen, sammeln wir:",
+          "items": [
+            "E-Mail-Adresse",
+            "Name (optional)",
+            "Organisationsname (optional)",
+            "Zahlungsinformationen (verarbeitet durch Stripe)"
+          ]
+        },
+        "usage": {
+          "title": "2.2 Nutzungsdaten",
+          "intro": "Wir sammeln Informationen über Ihre Nutzung unseres Dienstes:",
+          "items": [
+            "Deployment-Befehle und Metadaten (nicht Ihr Anwendungscode)",
+            "Server-Verbindungsstatus und Gesundheitsmetriken",
+            "Funktionsnutzungsstatistiken"
+          ]
+        },
+        "notCollect": {
+          "title": "2.3 Was wir NICHT sammeln",
+          "intro": "ServerFlow ist mit Zero-Trust-Architektur konzipiert. Wir haben niemals Zugriff auf:",
+          "items": [
+            "Ihre Server-Anmeldedaten (SSH-Schlüssel, Passwörter)",
+            "Ihren Anwendungs-Quellcode",
+            "Ihre Datenbankinhalte",
+            "Die persönlichen Daten Ihrer Benutzer"
+          ]
+        }
+      },
+      "howWeUse": {
+        "title": "3. Wie wir Ihre Daten verwenden",
+        "intro": "Wir verwenden Ihre Daten um:",
+        "items": [
+          "Unseren Dienst bereitzustellen und zu pflegen",
+          "Zahlungen zu verarbeiten",
+          "Wichtige Service-Benachrichtigungen zu senden",
+          "Unser Produkt basierend auf Nutzungsmustern zu verbessern",
+          "Auf Support-Anfragen zu antworten"
+        ]
+      },
+      "storage": {
+        "title": "4. Datenspeicherung und Sicherheit",
+        "content": "Ihre Daten werden auf Servern in der Europäischen Union gespeichert, gehostet von zertifizierten Anbietern, die ISO 27001 und SOC 2 konform sind. Alle Daten sind im Ruhezustand und bei der Übertragung verschlüsselt."
+      },
+      "retention": {
+        "title": "5. Datenaufbewahrung",
+        "content": "Wir bewahren Ihre Kontodaten auf, solange Ihr Konto aktiv ist. Wenn Sie Ihr Konto löschen, werden wir Ihre persönlichen Daten innerhalb von 30 Tagen löschen, außer wenn wir sie aus rechtlichen Gründen aufbewahren müssen."
+      },
+      "rights": {
+        "title": "6. Ihre Rechte",
+        "intro": "Nach der DSGVO haben Sie das Recht:",
+        "items": [
+          "Auf Ihre persönlichen Daten zuzugreifen",
+          "Unrichtige Daten zu korrigieren",
+          "Ihre Daten zu löschen",
+          "Ihre Daten zu exportieren",
+          "Der Datenverarbeitung zu widersprechen"
+        ],
+        "contact": "Um diese Rechte auszuüben, kontaktieren Sie uns unter"
+      },
+      "cookies": {
+        "title": "7. Cookies",
+        "content": "Wir verwenden nur essenzielle Cookies für Authentifizierung und Session-Management. Wir verwenden keine Tracking-Cookies oder Drittanbieter-Analytics, die einzelne Benutzer verfolgen."
+      },
+      "thirdParty": {
+        "title": "8. Drittanbieter-Dienste",
+        "intro": "Wir nutzen folgende Drittanbieter-Dienste:",
+        "stripe": "Stripe",
+        "stripeDesc": "Zahlungsabwicklung",
+        "plausible": "Plausible",
+        "plausibleDesc": "Datenschutzfreundliche Analytics (keine Sammlung persönlicher Daten)"
+      },
+      "changes": {
+        "title": "9. Änderungen dieser Richtlinie",
+        "content": "Wir können diese Datenschutzrichtlinie von Zeit zu Zeit aktualisieren. Wir werden Sie über wesentliche Änderungen per E-Mail und durch Veröffentlichung der neuen Richtlinie auf dieser Seite informieren."
+      },
+      "contact": {
+        "title": "10. Kontakt",
+        "content": "Bei Fragen zu dieser Datenschutzrichtlinie kontaktieren Sie uns bitte unter"
+      }
+    }
+  },
+  "termsPage": {
+    "lastUpdated": "Zuletzt aktualisiert: Januar 2026",
+    "sections": {
+      "agreement": {
+        "title": "1. Zustimmung zu den Bedingungen",
+        "content": "Durch den Zugriff auf oder die Nutzung von ServerFlow (\"Dienst\") erklären Sie sich mit diesen Nutzungsbedingungen einverstanden. Wenn Sie mit einem Teil dieser Bedingungen nicht einverstanden sind, dürfen Sie den Dienst nicht nutzen."
+      },
+      "description": {
+        "title": "2. Beschreibung des Dienstes",
+        "content": "ServerFlow bietet eine Deployment-Orchestrierungsplattform, die es Benutzern ermöglicht, Anwendungen über KI-gestützte Befehle und ein Web-Dashboard auf ihren eigenen Servern bereitzustellen. Der Dienst bietet kein Hosting oder Server-Infrastruktur."
+      },
+      "accounts": {
+        "title": "3. Benutzerkonten",
+        "creation": {
+          "title": "3.1 Kontoerstellung",
+          "content": "Sie müssen bei der Kontoerstellung genaue und vollständige Informationen angeben. Sie sind für die Sicherheit Ihrer Kontodaten verantwortlich."
+        },
+        "responsibility": {
+          "title": "3.2 Kontoverantwortung",
+          "content": "Sie sind für alle Aktivitäten verantwortlich, die unter Ihrem Konto stattfinden, einschließlich Deployments auf mit Ihrem Konto verbundene Server."
+        }
+      },
+      "acceptableUse": {
+        "title": "4. Akzeptable Nutzung",
+        "intro": "Sie verpflichten sich, den Dienst nicht zu nutzen, um:",
+        "items": [
+          "Malware, Viren oder anderen schädlichen Code bereitzustellen",
+          "Geltende Gesetze oder Vorschriften zu verletzen",
+          "Geistige Eigentumsrechte zu verletzen",
+          "Unbefugten Zugriff auf unsere Systeme zu versuchen",
+          "Den Dienst zu stören oder zu beeinträchtigen"
+        ]
+      },
+      "yourServers": {
+        "title": "5. Ihre Server",
+        "content": "Sie sind allein verantwortlich für Ihre Server, einschließlich deren Sicherheit, Wartung und Einhaltung geltender Gesetze. ServerFlow greift nicht auf Ihre Server zu, kontrolliert oder überwacht sie nicht, außer wenn dies für die Ausführung Ihrer Deployment-Befehle erforderlich ist."
+      },
+      "payment": {
+        "title": "6. Zahlungsbedingungen",
+        "pricing": {
+          "title": "6.1 Preise",
+          "content": "Die Preise sind wie auf unserer Website aufgeführt. Wir können Preise mit einer Frist von 30 Tagen ändern. Preisänderungen wirken sich nicht auf laufende Abrechnungszeiträume aus."
+        },
+        "refunds": {
+          "title": "6.2 Erstattungen",
+          "content": "Erstattungsanfragen werden im Einzelfall behandelt. Kontaktieren Sie uns per E-Mail, um Ihre Situation zu besprechen."
+        }
+      },
+      "availability": {
+        "title": "7. Dienstverfügbarkeit",
+        "content": "Wir streben eine hohe Verfügbarkeit an, garantieren jedoch keinen ununterbrochenen Dienst. Wir haften nicht für Schäden, die aus Dienstunterbrechungen resultieren."
+      },
+      "liability": {
+        "title": "8. Haftungsbeschränkung",
+        "content": "Im maximal gesetzlich zulässigen Umfang haftet ServerFlow nicht für indirekte, zufällige, besondere, Folge- oder Strafschäden, einschließlich Gewinn-, Daten- oder Geschäftsmöglichkeitsverlust."
+      },
+      "intellectualProperty": {
+        "title": "9. Geistiges Eigentum",
+        "content": "Der Dienst und seine Originalinhalte (ausgenommen von Benutzern bereitgestellte Inhalte) bleiben Eigentum von ServerFlow. Unsere Marken dürfen ohne vorherige schriftliche Zustimmung nicht verwendet werden."
+      },
+      "termination": {
+        "title": "10. Kündigung",
+        "content": "Wir können Ihr Konto sofort und ohne Vorankündigung kündigen oder sperren, wenn wir der Meinung sind, dass Ihr Verhalten gegen diese Bedingungen verstößt oder anderen Benutzern oder dem Dienst schadet."
+      },
+      "governingLaw": {
+        "title": "11. Anwendbares Recht",
+        "content": "Diese Bedingungen unterliegen französischem Recht. Streitigkeiten werden vor den Gerichten von Paris, Frankreich, beigelegt."
+      },
+      "changes": {
+        "title": "12. Änderungen der Bedingungen",
+        "content": "Wir behalten uns das Recht vor, diese Bedingungen jederzeit zu ändern. Wir werden Sie über wesentliche Änderungen per E-Mail und durch Veröffentlichung auf dieser Seite informieren."
+      },
+      "contact": {
+        "title": "13. Kontakt",
+        "content": "Bei Fragen zu diesen Bedingungen kontaktieren Sie uns bitte unter"
+      }
+    }
+  },
+  "dpaPage": {
+    "title": "Auftragsverarbeitungsvertrag",
+    "lastUpdated": "Zuletzt aktualisiert: Januar 2026",
+    "sections": {
+      "intro": {
+        "title": "1. Einleitung",
+        "content": "Dieser Auftragsverarbeitungsvertrag (\"AVV\") ist Teil der Vereinbarung zwischen ServerFlow Inc. (\"Auftragsverarbeiter\") und dem Kunden (\"Verantwortlicher\") für die Bereitstellung von ServerFlow-Diensten."
+      },
+      "definitions": {
+        "title": "2. Definitionen",
+        "items": [
+          {
+            "term": "Personenbezogene Daten",
+            "definition": "bezeichnet alle Informationen, die sich auf eine identifizierte oder identifizierbare natürliche Person beziehen"
+          },
+          {
+            "term": "Verarbeitung",
+            "definition": "bezeichnet jeden Vorgang, der mit personenbezogenen Daten durchgeführt wird"
+          },
+          {
+            "term": "Unterauftragsverarbeiter",
+            "definition": "bezeichnet jeden Dritten, der vom Auftragsverarbeiter mit der Verarbeitung personenbezogener Daten beauftragt wird"
+          }
+        ]
+      },
+      "scope": {
+        "title": "3. Umfang und Zweck",
+        "content": "Der Auftragsverarbeiter verarbeitet personenbezogene Daten nur auf dokumentierte Weisungen des Verantwortlichen, einschließlich in Bezug auf Übermittlungen personenbezogener Daten in ein Drittland oder an eine internationale Organisation.",
+        "dataSubjects": {
+          "title": "3.1 Kategorien betroffener Personen",
+          "items": [
+            "Mitarbeiter und Auftragnehmer des Verantwortlichen",
+            "Kunden des Verantwortlichen (beschränkt auf Deployment-Metadaten)"
+          ]
+        },
+        "dataTypes": {
+          "title": "3.2 Arten personenbezogener Daten",
+          "items": ["E-Mail-Adressen", "Namen", "IP-Adressen", "Deployment-Logs und Metadaten"]
+        },
+        "activities": {
+          "title": "3.3 Verarbeitungstätigkeiten",
+          "items": [
+            "Kontoverwaltung",
+            "Dienstleistungserbringung",
+            "Technischer Support",
+            "Analysen und Verbesserungen"
+          ]
+        }
+      },
+      "obligations": {
+        "title": "4. Pflichten des Auftragsverarbeiters",
+        "intro": "Der Auftragsverarbeiter wird:",
+        "items": [
+          "Personenbezogene Daten nur auf dokumentierte Weisungen des Verantwortlichen verarbeiten",
+          "Sicherstellen, dass zur Verarbeitung befugte Personen zur Vertraulichkeit verpflichtet sind",
+          "Geeignete technische und organisatorische Sicherheitsmaßnahmen umsetzen",
+          "Den Verantwortlichen bei der Beantwortung von Betroffenenanfragen unterstützen",
+          "Alle personenbezogenen Daten bei Beendigung der Dienste löschen oder zurückgeben",
+          "Alle Informationen zur Verfügung stellen, die zum Nachweis der Compliance erforderlich sind"
+        ]
+      },
+      "security": {
+        "title": "5. Sicherheitsmaßnahmen",
+        "intro": "Der Auftragsverarbeiter implementiert folgende Sicherheitsmaßnahmen:",
+        "items": [
+          "Verschlüsselung von Daten bei der Übertragung (TLS 1.3)",
+          "Verschlüsselung von Daten im Ruhezustand",
+          "Zugriffskontrollen und Authentifizierung",
+          "Regelmäßige Sicherheitsbewertungen",
+          "Incident-Response-Verfahren",
+          "Sicherheitsschulung der Mitarbeiter"
+        ]
+      },
+      "subprocessors": {
+        "title": "6. Unterauftragsverarbeiter",
+        "intro": "Der Verantwortliche erteilt dem Auftragsverarbeiter eine allgemeine Genehmigung zur Beauftragung von Unterauftragsverarbeitern. Aktuelle Unterauftragsverarbeiter sind:",
+        "list": [
+          { "name": "Stripe", "purpose": "Zahlungsabwicklung", "location": "US" },
+          { "name": "Plausible", "purpose": "Analytics", "location": "EU" },
+          { "name": "Hetzner", "purpose": "Infrastruktur-Hosting", "location": "EU" }
+        ],
+        "notice": "Der Auftragsverarbeiter informiert den Verantwortlichen über beabsichtigte Änderungen bei Unterauftragsverarbeitern und gibt dem Verantwortlichen die Möglichkeit, Einspruch zu erheben."
+      },
+      "transfers": {
+        "title": "7. Internationale Übermittlungen",
+        "content": "Wenn personenbezogene Daten außerhalb des Europäischen Wirtschaftsraums übermittelt werden, stellt der Auftragsverarbeiter sicher, dass angemessene Garantien vorhanden sind, einschließlich Standardvertragsklauseln."
+      },
+      "rights": {
+        "title": "8. Rechte der betroffenen Personen",
+        "content": "Der Auftragsverarbeiter unterstützt den Verantwortlichen bei der Erfüllung seiner Pflicht, auf Anfragen von betroffenen Personen zu reagieren, die ihre Rechte gemäß DSGVO ausüben."
+      },
+      "breach": {
+        "title": "9. Meldung von Datenschutzverletzungen",
+        "intro": "Der Auftragsverarbeiter benachrichtigt den Verantwortlichen unverzüglich nach Kenntnisnahme einer Verletzung des Schutzes personenbezogener Daten. Diese Benachrichtigung umfasst:",
+        "items": [
+          "Beschreibung der Art der Verletzung",
+          "Kategorien und ungefähre Anzahl der betroffenen Personen",
+          "Wahrscheinliche Folgen der Verletzung",
+          "Ergriffene oder vorgeschlagene Maßnahmen zur Behebung der Verletzung"
+        ]
+      },
+      "audit": {
+        "title": "10. Auditrechte",
+        "content": "Der Verantwortliche kann Audits durchführen, um die Einhaltung dieses AVV zu überprüfen. Der Auftragsverarbeiter wird bei solchen Audits kooperieren und Zugang zu relevanter Dokumentation gewähren."
+      },
+      "termination": {
+        "title": "11. Laufzeit und Beendigung",
+        "content": "Dieser AVV bleibt für die Dauer der Vereinbarung in Kraft. Bei Beendigung löscht der Auftragsverarbeiter alle personenbezogenen Daten innerhalb von 30 Tagen, es sei denn, die Aufbewahrung ist gesetzlich vorgeschrieben."
+      },
+      "contact": {
+        "title": "12. Kontakt",
+        "content": "Bei Fragen zu diesem AVV kontaktieren Sie bitte:"
+      }
+    }
+  },
+  "gdprPage": {
+    "title": "DSGVO-Konformität",
+    "subtitle": "Der Schutz Ihrer Daten hat für uns höchste Priorität.",
+    "sections": {
+      "commitment": {
+        "title": "Unser Engagement für die DSGVO",
+        "content": "ServerFlow verpflichtet sich voll und ganz zur Einhaltung der Datenschutz-Grundverordnung (DSGVO). Wir haben umfassende Maßnahmen implementiert, um sicherzustellen, dass Ihre personenbezogenen Daten rechtmäßig, fair und transparent verarbeitet werden."
+      },
+      "controller": {
+        "title": "Verantwortlicher",
+        "content": "ServerFlow Inc. fungiert als Verantwortlicher für personenbezogene Daten, die über unsere Dienste erfasst werden. Bei DSGVO-bezogenen Anfragen wenden Sie sich bitte an unseren Datenschutzbeauftragten unter"
+      },
+      "rights": {
+        "title": "Ihre Rechte nach der DSGVO",
+        "intro": "Als betroffene Person haben Sie folgende Rechte:",
+        "items": [
+          {
+            "name": "Auskunftsrecht",
+            "description": "Eine Kopie Ihrer personenbezogenen Daten anfordern"
+          },
+          {
+            "name": "Recht auf Berichtigung",
+            "description": "Unrichtige personenbezogene Daten korrigieren"
+          },
+          {
+            "name": "Recht auf Löschung",
+            "description": "Die Löschung Ihrer personenbezogenen Daten verlangen"
+          },
+          {
+            "name": "Recht auf Einschränkung der Verarbeitung",
+            "description": "Die Nutzung Ihrer Daten einschränken"
+          },
+          {
+            "name": "Recht auf Datenübertragbarkeit",
+            "description": "Ihre Daten in einem portablen Format erhalten"
+          },
+          {
+            "name": "Widerspruchsrecht",
+            "description": "Der Verarbeitung auf Basis berechtigter Interessen widersprechen"
+          },
+          {
+            "name": "Recht auf Widerruf der Einwilligung",
+            "description": "Ihre Einwilligung jederzeit widerrufen"
+          }
+        ]
+      },
+      "lawfulBasis": {
+        "title": "Rechtsgrundlage für die Verarbeitung",
+        "intro": "Wir verarbeiten personenbezogene Daten auf folgenden Rechtsgrundlagen:",
+        "items": [
+          { "name": "Vertragserfüllung", "description": "Um Ihnen unsere Dienste bereitzustellen" },
+          {
+            "name": "Berechtigte Interessen",
+            "description": "Für Geschäftsbetrieb und Verbesserungen"
+          },
+          {
+            "name": "Rechtliche Verpflichtungen",
+            "description": "Zur Einhaltung geltender Gesetze"
+          },
+          {
+            "name": "Einwilligung",
+            "description": "Für Marketingkommunikation (sofern zutreffend)"
+          }
+        ]
+      },
+      "processing": {
+        "title": "Datenverarbeitungsaktivitäten",
+        "collect": {
+          "title": "Daten, die wir erheben",
+          "items": [
+            "Kontoinformationen (E-Mail, Name)",
+            "Zahlungsinformationen (verarbeitet durch Stripe)",
+            "Nutzungsdaten (Deployment-Logs, Funktionsnutzung)",
+            "Technische Daten (IP-Adresse, Browsertyp)"
+          ]
+        },
+        "notCollect": {
+          "title": "Daten, die wir NICHT erheben",
+          "intro": "Aufgrund unserer Zero-Trust-Architektur haben wir niemals Zugriff auf:",
+          "items": [
+            "Ihre Server-Anmeldedaten (SSH-Schlüssel, Passwörter)",
+            "Ihren Anwendungs-Quellcode",
+            "Ihre Datenbankinhalte",
+            "Die personenbezogenen Daten Ihrer Endbenutzer"
+          ]
+        }
+      },
+      "transfers": {
+        "title": "Internationale Datenübermittlungen",
+        "content": "Unsere Server befinden sich in der Europäischen Union. Wenn Daten außerhalb der EU übermittelt werden, stellen wir sicher, dass angemessene Garantien vorhanden sind, wie z.B. Standardvertragsklauseln."
+      },
+      "retention": {
+        "title": "Datenaufbewahrung",
+        "content": "Wir bewahren Ihre personenbezogenen Daten nur so lange auf, wie es für die Erfüllung der Zwecke erforderlich ist, für die sie erhoben wurden. Kontodaten werden innerhalb von 30 Tagen nach Kontoschließung gelöscht."
+      },
+      "protection": {
+        "title": "Datenschutzmaßnahmen",
+        "items": [
+          "Ende-zu-Ende-Verschlüsselung für Daten im Transit (TLS 1.3)",
+          "Verschlüsselung im Ruhezustand für gespeicherte Daten",
+          "Regelmäßige Sicherheitsaudits und Penetrationstests",
+          "Mitarbeiterschulung zum Datenschutz",
+          "Zugriffskontrollen und Protokollierung"
+        ]
+      },
+      "exercising": {
+        "title": "Ausübung Ihrer Rechte",
+        "content": "Um eines Ihrer DSGVO-Rechte auszuüben, kontaktieren Sie uns bitte unter",
+        "response": "Wir werden auf Ihre Anfrage innerhalb von 30 Tagen antworten."
+      },
+      "authority": {
+        "title": "Aufsichtsbehörde",
+        "content": "Wenn Sie glauben, dass Ihre Datenschutzrechte verletzt wurden, haben Sie das Recht, eine Beschwerde bei Ihrer lokalen Aufsichtsbehörde einzureichen."
+      }
     }
   }
 }

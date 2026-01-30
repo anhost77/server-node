@@ -48,7 +48,8 @@ wss.on('connection', (ws) => {
  */
 function notifyReload() {
   clients.forEach((client) => {
-    if (client.readyState === 1) { // OPEN
+    if (client.readyState === 1) {
+      // OPEN
       client.send('reload');
     }
   });
@@ -115,6 +116,24 @@ app.use((req, res, next) => {
   next();
 });
 
+// Proxy pour l'API contact vers le control-plane
+app.use('/api/contact', express.json(), async (req, res) => {
+  try {
+    const response = await fetch('http://localhost:3000/api/contact', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(req.body),
+    });
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error('[Proxy] Erreur:', error.message);
+    res.status(500).json({ error: 'Failed to reach API server' });
+  }
+});
+
 // Servir les fichiers statiques
 app.use(express.static(DIST_DIR));
 
@@ -135,9 +154,7 @@ app.use((req, res) => {
 async function startWatcher() {
   console.log('[Watch] Surveillance des fichiers source...');
 
-  const watcher = chokidar.watch([
-    path.join(SRC_DIR, '**/*'),
-  ], {
+  const watcher = chokidar.watch([path.join(SRC_DIR, '**/*')], {
     ignored: /node_modules/,
     persistent: true,
     ignoreInitial: true,
