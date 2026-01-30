@@ -697,23 +697,13 @@
       }
     }
 
-    // Store user message texts and clear them
+    // Prepare user messages: copy text from data-text to paragraph (text stays in HTML, hidden by CSS)
     messages.forEach(msg => {
       if (msg.dataset.type === 'user') {
         const p = msg.querySelector('p');
         if (p && p.dataset.text) {
-          p.textContent = '';
+          p.textContent = p.dataset.text; // Text is there, just hidden by CSS
         }
-      }
-    });
-
-    // Hide assistant messages content initially
-    messages.forEach(msg => {
-      if (msg.dataset.type === 'assistant') {
-        const content = msg.querySelector('p, .stats-mini');
-        const status = msg.querySelector('.deploy-status');
-        if (content) content.style.opacity = '0';
-        if (status) status.style.opacity = '0';
       }
     });
 
@@ -748,25 +738,24 @@
       messageArray.forEach((msg) => {
         if (msg.dataset.type === 'user') {
           const p = msg.querySelector('p');
-          const text = p?.dataset.text || '';
+          const text = p?.dataset.text || p?.textContent || '';
 
           // Step 1: Type in input field
           setTimeout(() => {
             chatInput?.classList.add('active');
             typeInField(inputField, text, 30, () => {
-              // Step 2: "Press Enter" - clear input, show user bubble
+              // Step 2: "Press Enter" - clear input, show user bubble instantly
               setTimeout(() => {
                 if (inputField) inputField.value = '';
                 chatInput?.classList.remove('active');
-                // Show the user message bubble instantly with full text
-                if (p) p.textContent = text;
+                // Bubble appears with text already inside (was hidden by CSS)
                 msg.classList.add('visible');
                 scrollToBottom();
-              }, 300);
+              }, 200);
             });
           }, delay);
 
-          delay += text.length * 30 + 500;
+          delay += text.length * 30 + 400;
 
         } else if (msg.dataset.type === 'assistant') {
           // Step 3: Show thinking dots
@@ -777,27 +766,11 @@
             // Step 4: Show response after "thinking"
             setTimeout(() => {
               msg.classList.remove('thinking');
-              const content = msg.querySelector('p, .stats-mini');
-              const status = msg.querySelector('.deploy-status');
-
-              if (content) {
-                content.style.transition = 'opacity 0.3s ease';
-                content.style.opacity = '1';
-              }
               scrollToBottom();
-
-              // Show status after content
-              setTimeout(() => {
-                if (status) {
-                  status.style.transition = 'opacity 0.3s ease';
-                  status.style.opacity = '1';
-                }
-                scrollToBottom();
-              }, 400);
-            }, 1000);
+            }, 1200);
           }, delay);
 
-          delay += 1800;
+          delay += 1600;
         }
       });
     }
@@ -810,23 +783,6 @@
       function type() {
         if (i < text.length) {
           field.value += text.charAt(i);
-          i++;
-          setTimeout(type, speed);
-        } else {
-          callback?.();
-        }
-      }
-      type();
-    }
-
-    function typeText(element, text, speed, callback) {
-      if (!element) { callback?.(); return; }
-      let i = 0;
-      element.textContent = '';
-
-      function type() {
-        if (i < text.length) {
-          element.textContent += text.charAt(i);
           i++;
           setTimeout(type, speed);
         } else {

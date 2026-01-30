@@ -1599,6 +1599,24 @@ img {
     color: rgba(255, 255, 255, 0.5);
 }
 
+/* Hide content while thinking, show when done */
+#chat-mockup .message.assistant.thinking > p,
+#chat-mockup .message.assistant.thinking > .stats-mini,
+#chat-mockup .message.assistant.thinking > .deploy-status {
+    display: none;
+}
+
+#chat-mockup .message.assistant > p,
+#chat-mockup .message.assistant > .stats-mini,
+#chat-mockup .message.assistant > .deploy-status {
+    animation: fadeInContent 0.3s ease forwards;
+}
+
+@keyframes fadeInContent {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 @keyframes thinking-dots {
     0%, 100% { opacity: 0.3; }
     50% { opacity: 1; }
