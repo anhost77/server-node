@@ -682,9 +682,20 @@
     if (!mockup) return;
 
     const header = mockup.querySelector('.chat-header');
+    const messagesContainer = mockup.querySelector('.chat-messages');
     const messages = mockup.querySelectorAll('.message');
     const chatInput = mockup.querySelector('.chat-input');
     const inputField = mockup.querySelector('#chat-input-field');
+
+    // Auto-scroll to bottom of messages container
+    function scrollToBottom() {
+      if (messagesContainer) {
+        messagesContainer.scrollTo({
+          top: messagesContainer.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
+    }
 
     // Store user message texts and clear them
     messages.forEach(msg => {
@@ -750,6 +761,7 @@
                 // Show the user message bubble instantly with full text
                 if (p) p.textContent = text;
                 msg.classList.add('visible');
+                scrollToBottom();
               }, 300);
             });
           }, delay);
@@ -760,6 +772,7 @@
           // Step 3: Show thinking dots
           setTimeout(() => {
             msg.classList.add('visible', 'thinking');
+            scrollToBottom();
 
             // Step 4: Show response after "thinking"
             setTimeout(() => {
@@ -771,6 +784,7 @@
                 content.style.transition = 'opacity 0.3s ease';
                 content.style.opacity = '1';
               }
+              scrollToBottom();
 
               // Show status after content
               setTimeout(() => {
@@ -778,6 +792,7 @@
                   status.style.transition = 'opacity 0.3s ease';
                   status.style.opacity = '1';
                 }
+                scrollToBottom();
               }, 400);
             }, 1000);
           }, delay);
