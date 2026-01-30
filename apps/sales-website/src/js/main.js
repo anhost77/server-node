@@ -731,38 +731,37 @@
       setTimeout(() => chatInput?.classList.add('visible'), delay);
       delay += 200;
 
-      // 3. Animate each message pair
+      // 3. Animate each message in sequence
       const messageArray = Array.from(messages);
 
-      messageArray.forEach((msg, index) => {
+      messageArray.forEach((msg) => {
         if (msg.dataset.type === 'user') {
-          // User message: type in input field, then show message
           const p = msg.querySelector('p');
           const text = p?.dataset.text || '';
 
+          // Step 1: Type in input field
           setTimeout(() => {
-            // Show typing in input field
             chatInput?.classList.add('active');
-            typeInField(inputField, text, 25, () => {
-              // After typing, clear input and show message
+            typeInField(inputField, text, 30, () => {
+              // Step 2: "Press Enter" - clear input, show user bubble
               setTimeout(() => {
                 if (inputField) inputField.value = '';
                 chatInput?.classList.remove('active');
-                msg.classList.add('visible', 'typing');
-                typeText(p, text, 20, () => {
-                  msg.classList.remove('typing');
-                });
-              }, 200);
+                // Show the user message bubble instantly with full text
+                if (p) p.textContent = text;
+                msg.classList.add('visible');
+              }, 300);
             });
           }, delay);
 
-          delay += text.length * 25 + text.length * 20 + 600;
+          delay += text.length * 30 + 500;
 
         } else if (msg.dataset.type === 'assistant') {
-          // Assistant message: show thinking, then reveal
+          // Step 3: Show thinking dots
           setTimeout(() => {
             msg.classList.add('visible', 'thinking');
 
+            // Step 4: Show response after "thinking"
             setTimeout(() => {
               msg.classList.remove('thinking');
               const content = msg.querySelector('p, .stats-mini');
@@ -773,16 +772,17 @@
                 content.style.opacity = '1';
               }
 
+              // Show status after content
               setTimeout(() => {
                 if (status) {
                   status.style.transition = 'opacity 0.3s ease';
                   status.style.opacity = '1';
                 }
-              }, 300);
-            }, 800);
+              }, 400);
+            }, 1000);
           }, delay);
 
-          delay += 1400;
+          delay += 1800;
         }
       });
     }
