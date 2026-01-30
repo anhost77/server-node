@@ -1560,15 +1560,33 @@ img {
 }
 
 /* Chat Mockup Animation States */
-#chat-mockup .chat-anim {
+/* Header and input use opacity animation */
+#chat-mockup .chat-header.chat-anim,
+#chat-mockup .chat-input.chat-anim {
     opacity: 0;
     transform: translateY(15px);
     transition: opacity 0.4s ease, transform 0.4s ease;
 }
 
-#chat-mockup .chat-anim.visible {
+#chat-mockup .chat-header.chat-anim.visible,
+#chat-mockup .chat-input.chat-anim.visible {
     opacity: 1;
     transform: translateY(0);
+}
+
+/* Messages don't exist until sent */
+#chat-mockup .message.chat-anim {
+    display: none;
+}
+
+#chat-mockup .message.chat-anim.visible {
+    display: block;
+    animation: messageAppear 0.3s ease forwards;
+}
+
+@keyframes messageAppear {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 #chat-mockup .message.user p {

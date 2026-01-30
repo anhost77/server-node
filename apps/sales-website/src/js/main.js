@@ -707,13 +707,12 @@
       }
     }
 
-    // Prepare user messages: copy text from data-text to paragraph (text stays in HTML, hidden by CSS)
+    // Keep user message paragraphs empty until they are "sent"
+    // Text will be set right before showing the bubble
     messages.forEach(msg => {
       if (msg.dataset.type === 'user') {
         const p = msg.querySelector('p');
-        if (p && p.dataset.text) {
-          p.textContent = p.dataset.text; // Text is there, just hidden by CSS
-        }
+        if (p) p.textContent = '';
       }
     });
 
@@ -754,11 +753,12 @@
           setTimeout(() => {
             chatInput?.classList.add('active');
             typeInField(inputField, text, 30, () => {
-              // Step 2: "Press Enter" - clear input, show user bubble instantly
+              // Step 2: "Press Enter" - clear input, show user bubble
               setTimeout(() => {
                 if (inputField) inputField.value = '';
                 chatInput?.classList.remove('active');
-                // Bubble appears with text already inside (was hidden by CSS)
+                // Set text content and show the bubble
+                if (p) p.textContent = text;
                 msg.classList.add('visible');
                 scrollToMessage(msg);
               }, 200);
