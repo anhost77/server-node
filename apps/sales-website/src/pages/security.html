@@ -1,95 +1,172 @@
+<link rel="stylesheet" href="/css/security-page.css">
+
 <!-- Security Page -->
-<section class="page-header">
+<section class="security-hero">
     <div class="container">
-        <h1 class="animate-fade-in">{{footer.product.security}}</h1>
-        <p class="animate-fade-in" style="animation-delay: 0.1s; max-width: 600px; margin: 0 auto;">
-            Zero-Trust security is not just a feature. It's our architecture.
+        <h1 class="animate-fade-in">{{securityPage.hero.title}}</h1>
+        <p class="subtitle animate-fade-in" style="animation-delay: 0.1s;">
+            {{securityPage.hero.subtitle}}
         </p>
     </div>
 </section>
 
-{{> sections/security}}
-
-<section class="section">
+<!-- Intro Section -->
+<section class="security-intro">
     <div class="container">
-        <div class="security-details reveal">
-            <h2>Security Architecture</h2>
-
-            <div class="security-points">
-                <div class="security-point">
-                    <h3>Ed25519 Cryptographic Signatures</h3>
-                    <p>
-                        Every command sent through ServerFlow is cryptographically signed using Ed25519,
-                        the same elliptic curve cryptography used by Signal, OpenSSH, and TLS 1.3.
-                        This mathematically guarantees that commands cannot be forged or tampered with.
-                    </p>
-                </div>
-
-                <div class="security-point">
-                    <h3>Outbound-Only Connections</h3>
-                    <p>
-                        The ServerFlow agent on your server initiates all connections to our orchestrator.
-                        We never connect to your server. This means:
-                    </p>
-                    <ul>
-                        <li>No SSH keys to manage or leak</li>
-                        <li>No open ports required on your firewall</li>
-                        <li>No way for us to access your server directly</li>
-                    </ul>
-                </div>
-
-                <div class="security-point">
-                    <h3>Zero Credential Storage</h3>
-                    <p>
-                        We don't store your server credentials. Period. If ServerFlow's infrastructure
-                        is compromised, attackers find nothing they can use to access your servers.
-                        Your keys live only on your servers.
-                    </p>
-                </div>
-
-                <div class="security-point">
-                    <h3>Open Source Agent</h3>
-                    <p>
-                        Our agent is 100% open source. You can audit every line of code that runs
-                        on your server. We encourage security researchers to review our code and
-                        report any vulnerabilities through our responsible disclosure program.
-                    </p>
-                </div>
-
-                <div class="security-point">
-                    <h3>Data Privacy</h3>
-                    <p>
-                        ServerFlow processes minimal data: deployment commands and basic telemetry.
-                        We never access your application code, database contents, or user data.
-                        All data transmission is encrypted using TLS 1.3.
-                    </p>
-                </div>
-            </div>
-
-            <h2 style="margin-top: 4rem;">Compliance</h2>
-            <div class="compliance-grid">
-                <div class="compliance-card">
-                    <h4>GDPR</h4>
-                    <p>Fully compliant with EU data protection regulations. Data processing agreements available.</p>
-                </div>
-                <div class="compliance-card">
-                    <h4>SOC 2 Type II</h4>
-                    <p>In progress. Expected completion Q2 2025.</p>
-                </div>
-                <div class="compliance-card">
-                    <h4>ISO 27001</h4>
-                    <p>Planned for 2025.</p>
-                </div>
-            </div>
-
-            <h2 style="margin-top: 4rem;">Vulnerability Disclosure</h2>
-            <p>
-                If you discover a security vulnerability in ServerFlow, please report it to
-                <a href="mailto:security@serverflow.io">security@serverflow.io</a>.
-                We take all reports seriously and will respond within 24 hours.
-            </p>
+        <div class="intro-content reveal">
+            <h2>{{securityPage.intro.title}}</h2>
+            <p>{{securityPage.intro.subtitle}}</p>
         </div>
     </div>
 </section>
 
-{{> sections/cta}}
+<!-- Architecture Diagram -->
+<section class="security-diagram-section">
+    <div class="container">
+        <h2 class="reveal">{{securityPage.diagram.title}}</h2>
+
+        <div class="diagram-container reveal">
+            <svg class="security-diagram-svg" viewBox="0 0 800 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Your VPS -->
+                <rect x="50" y="50" width="180" height="100" rx="16" fill="rgba(16, 185, 129, 0.1)" stroke="rgba(16, 185, 129, 0.4)" stroke-width="2" />
+                <text x="140" y="95" text-anchor="middle" fill="#fff" font-size="16" font-weight="600">{{securityPage.diagram.yourVps}}</text>
+                <text x="140" y="120" text-anchor="middle" fill="#10b981" font-size="12" font-weight="700">{{securityPage.diagram.agentActive}}</text>
+
+                <!-- ServerFlow -->
+                <rect x="570" y="50" width="180" height="100" rx="16" fill="rgba(139, 92, 246, 0.1)" stroke="rgba(139, 92, 246, 0.4)" stroke-width="2" />
+                <text x="660" y="105" text-anchor="middle" fill="#fff" font-size="16" font-weight="600">{{securityPage.diagram.serverflow}}</text>
+
+                <!-- Arrow -->
+                <path d="M230 100 L570 100" stroke="#10b981" stroke-width="4" stroke-linecap="round" stroke-dasharray="8 4" class="animated-dash" />
+                <polygon points="560,92 578,100 560,108" fill="#10b981" />
+
+                <!-- Labels -->
+                <text x="400" y="70" text-anchor="middle" fill="#10b981" font-size="13" font-weight="700">{{securityPage.diagram.connection}}</text>
+                <text x="400" y="160" text-anchor="middle" fill="#888" font-size="11">{{securityPage.diagram.details}}</text>
+            </svg>
+        </div>
+    </div>
+</section>
+
+<!-- Architecture Details -->
+<section class="security-architecture">
+    <div class="container">
+        <h2 class="reveal">{{securityPage.architecture.title}}</h2>
+
+        <div class="architecture-grid reveal">
+            <div class="arch-card">
+                <div class="arch-icon">🔐</div>
+                <h3>{{securityPage.architecture.ed25519.title}}</h3>
+                <p>{{securityPage.architecture.ed25519.description}}</p>
+            </div>
+
+            <div class="arch-card">
+                <div class="arch-icon">📤</div>
+                <h3>{{securityPage.architecture.outbound.title}}</h3>
+                <p>{{securityPage.architecture.outbound.description}}</p>
+                <ul class="arch-list">
+                    {{#each securityPage.architecture.outbound.points}}
+                    <li>{{this}}</li>
+                    {{/each}}
+                </ul>
+            </div>
+
+            <div class="arch-card">
+                <div class="arch-icon">🗑️</div>
+                <h3>{{securityPage.architecture.zeroStorage.title}}</h3>
+                <p>{{securityPage.architecture.zeroStorage.description}}</p>
+            </div>
+
+            <div class="arch-card">
+                <div class="arch-icon">📖</div>
+                <h3>{{securityPage.architecture.openSource.title}}</h3>
+                <p>{{securityPage.architecture.openSource.description}}</p>
+            </div>
+
+            <div class="arch-card">
+                <div class="arch-icon">🛡️</div>
+                <h3>{{securityPage.architecture.dataPrivacy.title}}</h3>
+                <p>{{securityPage.architecture.dataPrivacy.description}}</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- What We Do / What We Don't -->
+<section class="security-honesty">
+    <div class="container">
+        <div class="honesty-grid">
+            <!-- What We Do -->
+            <div class="honesty-column do-column reveal">
+                <h3>{{securityPage.whatWeDo.title}}</h3>
+                <div class="honesty-cards">
+                    {{#each securityPage.whatWeDo.items}}
+                    <div class="honesty-card good">
+                        <div class="card-icon">✓</div>
+                        <h4>{{this.title}}</h4>
+                        <p>{{this.description}}</p>
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+
+            <!-- What We Don't -->
+            <div class="honesty-column dont-column reveal">
+                <h3>{{securityPage.whatWeDont.title}}</h3>
+                <p class="honesty-subtitle">{{securityPage.whatWeDont.subtitle}}</p>
+                <div class="honesty-cards">
+                    {{#each securityPage.whatWeDont.items}}
+                    <div class="honesty-card neutral">
+                        <div class="card-icon">—</div>
+                        <h4>{{this.title}}</h4>
+                        <p>{{this.description}}</p>
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Vulnerability Disclosure -->
+<section class="security-disclosure">
+    <div class="container">
+        <div class="disclosure-card reveal">
+            <h3>{{securityPage.disclosure.title}}</h3>
+            <p>
+                {{securityPage.disclosure.description}}
+                <a href="mailto:{{securityPage.disclosure.email}}">{{securityPage.disclosure.email}}</a>
+            </p>
+            <p class="response-time">{{securityPage.disclosure.response}}</p>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="security-cta">
+    <div class="container">
+        <div class="cta-buttons reveal">
+            <a href="https://github.com/serverflow/agent" target="_blank" rel="noopener" class="btn btn-secondary">
+                {{securityPage.cta.auditCode}} →
+            </a>
+            <a href="/{{lang}}/pricing/" class="btn btn-primary">
+                {{securityPage.cta.getStarted}}
+            </a>
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Reveal on scroll
+    const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+});
+</script>

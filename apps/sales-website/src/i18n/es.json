@@ -593,5 +593,96 @@
       "text": "Todos estos servicios instalables en un clic desde tu dashboard.",
       "button": "Probar gratis"
     }
+  },
+  "securityPage": {
+    "hero": {
+      "title": "Seguridad",
+      "subtitle": "La seguridad Zero-Trust no es una función. Es nuestra arquitectura."
+    },
+    "intro": {
+      "title": "No podemos acceder a tus servidores",
+      "subtitle": "La mayoría de plataformas almacenan tus claves SSH y \"prometen\" no mirar. Nosotros elegimos otro enfoque: literalmente no podemos acceder a tus servidores. Así es como funciona."
+    },
+    "architecture": {
+      "title": "Arquitectura de seguridad",
+      "ed25519": {
+        "title": "Firmas criptográficas Ed25519",
+        "description": "Cada comando enviado a través de ServerFlow está firmado criptográficamente con Ed25519, la misma criptografía de curva elíptica usada por Signal, OpenSSH y TLS 1.3. Esto garantiza matemáticamente que los comandos no pueden ser falsificados."
+      },
+      "outbound": {
+        "title": "Solo conexiones salientes",
+        "description": "El agente ServerFlow en tu servidor inicia todas las conexiones a nuestro orquestador. Nunca nos conectamos a tu servidor.",
+        "points": [
+          "Sin claves SSH que gestionar o que puedan filtrarse",
+          "Sin puertos abiertos requeridos en tu firewall",
+          "Sin forma de acceder directamente a tu servidor"
+        ]
+      },
+      "zeroStorage": {
+        "title": "Cero almacenamiento de credenciales",
+        "description": "No almacenamos tus credenciales de servidor. Punto. Si la infraestructura de ServerFlow es comprometida, los atacantes no encuentran nada para acceder a tus servidores. Tus claves permanecen solo en tus servidores."
+      },
+      "openSource": {
+        "title": "Agente Open Source",
+        "description": "Nuestro agente es 100% open source. Puedes auditar cada línea de código que se ejecuta en tu servidor. Animamos a investigadores de seguridad a revisar nuestro código."
+      },
+      "dataPrivacy": {
+        "title": "Privacidad de datos",
+        "description": "ServerFlow procesa datos mínimos: comandos de despliegue y telemetría básica. Nunca accedemos a tu código de aplicación, contenido de bases de datos o datos de usuario. Todas las transmisiones están cifradas con TLS 1.3."
+      }
+    },
+    "diagram": {
+      "title": "Cómo funciona",
+      "yourVps": "Tu VPS",
+      "agentActive": "AGENTE",
+      "serverflow": "ServerFlow",
+      "connection": "CONEXIÓN SALIENTE CIFRADA",
+      "details": "SIN SSH • SIN PUERTOS ABIERTOS • TUS DATOS SON TUYOS"
+    },
+    "whatWeDo": {
+      "title": "Lo que realmente hacemos",
+      "items": [
+        {
+          "title": "Compatible RGPD",
+          "description": "Procesamos datos personales mínimos y somos totalmente compatibles con las regulaciones europeas."
+        },
+        {
+          "title": "Comunicaciones cifradas",
+          "description": "Todas las comunicaciones entre tu agente y nuestros servidores usan cifrado TLS 1.3."
+        },
+        {
+          "title": "Sin vendor lock-in",
+          "description": "Si ServerFlow desaparece mañana, tus servidores siguen funcionando. No tenemos kill switch."
+        }
+      ]
+    },
+    "whatWeDont": {
+      "title": "Lo que no tenemos (aún)",
+      "subtitle": "Creemos en la transparencia. Esto es hacia lo que trabajamos:",
+      "items": [
+        {
+          "title": "Certificación SOC 2",
+          "description": "Todavía no. Somos un equipo pequeño enfocado primero en crear buen software."
+        },
+        {
+          "title": "ISO 27001",
+          "description": "Todavía no. Quizás llegue cuando crezcamos."
+        },
+        {
+          "title": "Programa Bug Bounty",
+          "description": "Próximamente. Por ahora, reporta problemas a security@serverflow.io"
+        }
+      ]
+    },
+    "disclosure": {
+      "title": "Divulgación de vulnerabilidades",
+      "description": "Si descubres una vulnerabilidad de seguridad en ServerFlow, repórtala a",
+      "email": "security@serverflow.io",
+      "response": "Tomamos todos los reportes en serio y respondemos en 48 horas."
+    },
+    "cta": {
+      "auditCode": "Auditar el código del agente",
+      "getStarted": "Empezar gratis"
+    }
   }
 }
