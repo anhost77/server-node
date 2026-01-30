@@ -4,6 +4,7 @@
 
 <!-- Hero Section -->
 <section class="pricing-hero">
+    <div class="pricing-hero-bg"></div>
     <div class="container">
         <h1 class="animate-fade-in">
             {{pricingPage.hero.title}}
@@ -92,9 +93,11 @@
                 <div class="price-display">
                     <span class="price-currency">€</span>
                     <span class="price-amount" data-monthly="9" data-annually="7">9</span>
-                    <span class="price-period" data-monthly="{{pricingPage.perMonth}}" data-annually="{{pricingPage.perMonth}}">{{pricingPage.perMonth}}</span>
+                    <span class="price-period" data-monthly="{{pricingPage.perMonth}}"
+                        data-annually="{{pricingPage.perMonth}}">{{pricingPage.perMonth}}</span>
                 </div>
-                <div class="price-old" id="price-old-pro" style="display: none;">€9{{pricingPage.perMonth}} → €84{{pricingPage.billing.perYear}}</div>
+                <div class="price-old" id="price-old-pro" style="display: none;">€9{{pricingPage.perMonth}} →
+                    €84{{pricingPage.billing.perYear}}</div>
 
                 <ul class="pricing-features-enhanced">
                     {{#each pricingPage.pro.features}}
@@ -120,7 +123,8 @@
                     <span class="price-amount" data-monthly="29" data-annually="23">29</span>
                     <span class="price-period">{{pricingPage.perMonth}}</span>
                 </div>
-                <div class="price-old" id="price-old-team" style="display: none;">€29{{pricingPage.perMonth}} → €276{{pricingPage.billing.perYear}}</div>
+                <div class="price-old" id="price-old-team" style="display: none;">€29{{pricingPage.perMonth}} →
+                    €276{{pricingPage.billing.perYear}}</div>
 
                 <ul class="pricing-features-enhanced">
                     {{#each pricingPage.team.features}}
@@ -159,88 +163,45 @@
     </div>
 </section>
 
-<!-- Comparison Section -->
-<section class="comparison-section">
+<!-- What ServerFlow Does Well -->
+<section class="highlights-section">
     <div class="container">
-        <div class="comparison-header reveal">
-            <h2>{{pricingPage.comparison.title}}</h2>
-            <p>{{pricingPage.comparison.subtitle}}</p>
+        <div class="highlights-header reveal">
+            <h2>{{pricingPage.highlights.title}}</h2>
+            <p>{{pricingPage.highlights.subtitle}}</p>
         </div>
 
-        <div class="comparison-table-wrapper reveal">
-            <table class="comparison-table">
-                <thead>
-                    <tr>
-                        <th>{{pricingPage.comparison.feature}}</th>
-                        <th>Vercel</th>
-                        <th>Railway</th>
-                        <th>Render</th>
-                        <th class="highlight">ServerFlow</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="has-tooltip">
-                            {{pricingPage.comparison.pricePerMonth}}
-                            <span class="tooltip">{{pricingPage.comparison.tooltips.price}}</span>
-                        </td>
-                        <td class="comp-price">€20 <small>{{pricingPage.comparison.priceNote}}</small></td>
-                        <td class="comp-price">€5 <small>{{pricingPage.comparison.priceNote}}</small></td>
-                        <td class="comp-price">€7 <small>{{pricingPage.comparison.priceNote}}</small></td>
-                        <td class="highlight comp-price" style="color: #22c55e;">€9 <small>HT</small></td>
-                    </tr>
-                    <tr>
-                        <td class="has-tooltip">
-                            {{pricingPage.comparison.mcpIntegration}}
-                            <span class="tooltip">{{pricingPage.comparison.tooltips.mcp}}</span>
-                        </td>
-                        <td class="comp-cross">✗</td>
-                        <td class="comp-cross">✗</td>
-                        <td class="comp-cross">✗</td>
-                        <td class="highlight comp-check">✓</td>
-                    </tr>
-                    <tr>
-                        <td class="has-tooltip">
-                            {{pricingPage.comparison.hotPatching}}
-                            <span class="tooltip">{{pricingPage.comparison.tooltips.hotPatch}}</span>
-                        </td>
-                        <td class="comp-cross">✗</td>
-                        <td class="comp-cross">✗</td>
-                        <td class="comp-cross">✗</td>
-                        <td class="highlight comp-check">✓</td>
-                    </tr>
-                    <tr>
-                        <td class="has-tooltip">
-                            {{pricingPage.comparison.zeroTrust}}
-                            <span class="tooltip">{{pricingPage.comparison.tooltips.zeroTrust}}</span>
-                        </td>
-                        <td class="comp-cross">✗</td>
-                        <td class="comp-cross">✗</td>
-                        <td class="comp-cross">✗</td>
-                        <td class="highlight comp-check">✓</td>
-                    </tr>
-                    <tr>
-                        <td class="has-tooltip">
-                            {{pricingPage.comparison.noUsageFees}}
-                            <span class="tooltip">{{pricingPage.comparison.tooltips.noFees}}</span>
-                        </td>
-                        <td class="comp-cross">✗</td>
-                        <td class="comp-cross">✗</td>
-                        <td class="comp-cross">✗</td>
-                        <td class="highlight comp-check">✓</td>
-                    </tr>
-                    <tr>
-                        <td class="has-tooltip">
-                            {{pricingPage.comparison.yourInfra}}
-                            <span class="tooltip">{{pricingPage.comparison.tooltips.yourInfra}}</span>
-                        </td>
-                        <td class="comp-cross">✗</td>
-                        <td class="comp-cross">✗</td>
-                        <td class="comp-cross">✗</td>
-                        <td class="highlight comp-check">✓</td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="highlights-grid reveal">
+            <div class="highlight-card">
+                <div class="highlight-icon">🤖</div>
+                <h3>{{pricingPage.highlights.mcp.title}}</h3>
+                <p>{{pricingPage.highlights.mcp.desc}}</p>
+            </div>
+            <div class="highlight-card">
+                <div class="highlight-icon">⚡</div>
+                <h3>{{pricingPage.highlights.hotPatch.title}}</h3>
+                <p>{{pricingPage.highlights.hotPatch.desc}}</p>
+            </div>
+            <div class="highlight-card">
+                <div class="highlight-icon">🔐</div>
+                <h3>{{pricingPage.highlights.zeroTrust.title}}</h3>
+                <p>{{pricingPage.highlights.zeroTrust.desc}}</p>
+            </div>
+            <div class="highlight-card">
+                <div class="highlight-icon">💰</div>
+                <h3>{{pricingPage.highlights.pricing.title}}</h3>
+                <p>{{pricingPage.highlights.pricing.desc}}</p>
+            </div>
+            <div class="highlight-card">
+                <div class="highlight-icon">🖥️</div>
+                <h3>{{pricingPage.highlights.yourInfra.title}}</h3>
+                <p>{{pricingPage.highlights.yourInfra.desc}}</p>
+            </div>
+            <div class="highlight-card">
+                <div class="highlight-icon">📖</div>
+                <h3>{{pricingPage.highlights.openSource.title}}</h3>
+                <p>{{pricingPage.highlights.openSource.desc}}</p>
+            </div>
         </div>
     </div>
 </section>
@@ -393,50 +354,71 @@
 
 <!-- Pricing Page Script -->
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    // Billing Toggle
-    const billingOptions = document.querySelectorAll('.billing-option');
-    const priceAmounts = document.querySelectorAll('.price-amount');
-    const savingsBadge = document.getElementById('savings-badge');
-    const priceOldPro = document.getElementById('price-old-pro');
-    const priceOldTeam = document.getElementById('price-old-team');
+    document.addEventListener('DOMContentLoaded', () => {
+        // Billing Toggle
+        const billingOptions = document.querySelectorAll('.billing-option');
+        const priceAmounts = document.querySelectorAll('.price-amount');
+        const savingsBadge = document.getElementById('savings-badge');
+        const priceOldPro = document.getElementById('price-old-pro');
+        const priceOldTeam = document.getElementById('price-old-team');
 
-    billingOptions.forEach(option => {
-        option.addEventListener('click', () => {
-            // Update active state
-            billingOptions.forEach(opt => opt.classList.remove('active'));
-            option.classList.add('active');
+        billingOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                // Update active state
+                billingOptions.forEach(opt => opt.classList.remove('active'));
+                option.classList.add('active');
 
-            const billing = option.dataset.billing;
+                const billing = option.dataset.billing;
 
-            // Update prices
-            priceAmounts.forEach(amount => {
-                const price = amount.dataset[billing];
-                amount.textContent = price;
+                // Update prices
+                priceAmounts.forEach(amount => {
+                    const price = amount.dataset[billing];
+                    amount.textContent = price;
+                });
+
+                // Show/hide savings badge and old prices
+                if (billing === 'annually') {
+                    savingsBadge.style.display = 'inline-flex';
+                    if (priceOldPro) priceOldPro.style.display = 'block';
+                    if (priceOldTeam) priceOldTeam.style.display = 'block';
+                } else {
+                    savingsBadge.style.display = 'none';
+                    if (priceOldPro) priceOldPro.style.display = 'none';
+                    if (priceOldTeam) priceOldTeam.style.display = 'none';
+                }
             });
+        });
 
-            // Show/hide savings badge and old prices
-            if (billing === 'annually') {
-                savingsBadge.style.display = 'inline-flex';
-                if (priceOldPro) priceOldPro.style.display = 'block';
-                if (priceOldTeam) priceOldTeam.style.display = 'block';
-            } else {
-                savingsBadge.style.display = 'none';
-                if (priceOldPro) priceOldPro.style.display = 'none';
-                if (priceOldTeam) priceOldTeam.style.display = 'none';
-            }
+        // Reveal on scroll
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+        // Animation de flottement infinie pour le background
+        gsap.to(".pricing-hero-bg", {
+            duration: 25,
+            x: "3%",
+            y: "2%",
+            rotation: 0.01,
+            ease: "sine.inOut",
+            repeat: -1,
+            yoyo: true
+        });
+
+        gsap.to(".pricing-hero-bg", {
+            duration: 18,
+            x: "-2%",
+            y: "-1%",
+            ease: "sine.inOut",
+            repeat: -1,
+            yoyo: true,
+            delay: 4
         });
     });
-
-    // Reveal on scroll
-    const revealObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-            }
-        });
-    }, { threshold: 0.1 });
-
-    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
-});
 </script>

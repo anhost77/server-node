@@ -228,26 +228,32 @@
       "cancelAnytime": "Jederzeit kündbar",
       "noLockIn": "Kein Vendor Lock-in"
     },
-    "comparison": {
-      "title": "Warum mehr zahlen?",
-      "subtitle": "Sehen Sie wie ServerFlow im Vergleich zu teuren PaaS-Alternativen abschneidet.",
-      "feature": "Funktion",
-      "basicVps": "Einfacher VPS",
-      "pricePerMonth": "Preis / Monat",
-      "priceNote": "+ Nutzungsgebühren",
-      "mcpIntegration": "MCP / KI Integration",
-      "hotPatching": "Hot Patching < 5s",
-      "zeroTrust": "Zero-Trust Sicherheit",
-      "unlimitedApps": "Unbegrenzte Apps",
-      "noUsageFees": "Keine Nutzungsgebühren",
-      "yourInfra": "Ihre Infrastruktur",
-      "tooltips": {
-        "price": "Fester Monatspreis. Keine Überraschungen auf der Rechnung, keine versteckten Bandbreiten- oder Anfragegebühren.",
-        "mcp": "Deployen Sie direkt aus Claude, Cursor oder jedem MCP-Client. Bitten Sie Ihre KI zu deployen und es ist erledigt.",
-        "hotPatch": "Ihre Änderungen sind in unter 5 Sekunden live. Kein kompletter Rebuild, nur die geänderten Dateien.",
-        "zeroTrust": "Der Agent speichert keine SSH-Schlüssel. Nur ausgehende Verbindungen. Ed25519-Signatur für jeden Befehl.",
-        "noFees": "Bei PaaS kostet jede Anfrage und jedes GB Bandbreite extra. Hier ist es inklusive.",
-        "yourInfra": "Ihre Server, Ihre Daten, Ihre volle Kontrolle. Kein Vendor Lock-in, exportieren Sie alles wann Sie wollen."
+    "highlights": {
+      "title": "Was ServerFlow gut macht",
+      "subtitle": "Unsere Stärken, entwickelt aus echten Entwicklerbedürfnissen.",
+      "mcp": {
+        "title": "MCP / KI Integration",
+        "desc": "Deployen Sie direkt aus Claude, Cursor oder jedem MCP-Client. Bitten Sie Ihre KI zu deployen und es ist erledigt."
+      },
+      "hotPatch": {
+        "title": "Hot Patching < 5s",
+        "desc": "Ihre Änderungen sind in unter 5 Sekunden live. Kein kompletter Rebuild, nur die geänderten Dateien."
+      },
+      "zeroTrust": {
+        "title": "Zero-Trust Sicherheit",
+        "desc": "Der Agent speichert keine SSH-Schlüssel. Nur ausgehende Verbindungen. Ed25519-Signatur für jeden Befehl."
+      },
+      "pricing": {
+        "title": "Fester Monatspreis",
+        "desc": "Keine Überraschungen auf der Rechnung. Keine versteckten Bandbreitengebühren. Zahlen Sie 9€/Monat und das war's."
+      },
+      "yourInfra": {
+        "title": "Ihre Infrastruktur",
+        "desc": "Ihre Server, Ihre Daten, Ihre volle Kontrolle. Kein Vendor Lock-in, exportieren Sie alles wann Sie wollen."
+      },
+      "openSource": {
+        "title": "100% Open Source Agent",
+        "desc": "Überprüfen Sie jede Codezeile vor der Installation. Vertrauen wird durch Transparenz verdient, nicht durch Versprechen."
       }
     },
     "calculator": {

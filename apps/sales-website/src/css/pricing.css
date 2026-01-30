@@ -9,23 +9,23 @@
    ======================================== */
 
 .pricing-hero {
-    padding: 8rem 0 4rem;
+    padding: 10rem 0 6rem;
     text-align: center;
     position: relative;
     overflow: hidden;
 }
 
-.pricing-hero::before {
-    content: '';
+.pricing-hero-bg {
     position: absolute;
-    top: -50%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 150%;
-    height: 100%;
-    background: radial-gradient(ellipse at center, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
-    pointer-events: none;
+    inset: 0;
+    background: url('/assets/pricing-hero-bg.png') center/cover no-repeat;
+    opacity: 0.4;
+    z-index: -1;
+    transform: scale(1.1);
+    -webkit-mask-image: radial-gradient(circle at 50% 40%, black 10%, transparent 70%);
+    mask-image: radial-gradient(circle at 50% 40%, black 10%, transparent 70%);
 }
+
 
 .pricing-hero h1 {
     font-size: 3.5rem;
@@ -147,8 +147,15 @@
 }
 
 @keyframes pulse-green {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
-    50% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+    }
 }
 
 /* ========================================
@@ -201,8 +208,17 @@
 }
 
 @keyframes featured-glow {
-    0%, 100% { opacity: 0.3; filter: blur(20px); }
-    50% { opacity: 0.5; filter: blur(30px); }
+
+    0%,
+    100% {
+        opacity: 0.3;
+        filter: blur(20px);
+    }
+
+    50% {
+        opacity: 0.5;
+        filter: blur(30px);
+    }
 }
 
 .pricing-card-enhanced.featured:hover {
@@ -396,113 +412,90 @@
 }
 
 /* ========================================
-   COMPARISON TABLE - vs Competition
+   HIGHLIGHTS SECTION - What ServerFlow Does Well
    ======================================== */
 
-.comparison-section {
+.highlights-section {
     padding: 6rem 0;
     background: linear-gradient(180deg, transparent 0%, rgba(139, 92, 246, 0.03) 50%, transparent 100%);
 }
 
-.comparison-header {
+.highlights-header {
     text-align: center;
     margin-bottom: 3rem;
 }
 
-.comparison-header h2 {
+.highlights-header h2 {
     font-size: 2.5rem;
     font-weight: 800;
     margin-bottom: 1rem;
 }
 
-.comparison-header p {
+.highlights-header p {
     color: var(--text-secondary);
     font-size: 1.1rem;
     max-width: 600px;
     margin: 0 auto;
 }
 
-.comparison-table-wrapper {
-    max-width: 1000px;
+.highlights-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    max-width: 1100px;
     margin: 0 auto;
-    overflow-x: auto;
-    overflow-y: visible;
+    padding: 0 1rem;
 }
 
-.comparison-table {
-    width: 100%;
-    border-collapse: collapse;
+.highlight-card {
     background: rgba(10, 10, 10, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
-    overflow: hidden;
+    border-radius: 20px;
+    padding: 2rem;
+    transition: all 0.3s ease;
 }
 
-.comparison-table th,
-.comparison-table td {
-    padding: 1.25rem 1.5rem;
-    text-align: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+.highlight-card:hover {
+    border-color: rgba(139, 92, 246, 0.3);
+    transform: translateY(-4px);
 }
 
-.comparison-table th {
-    background: rgba(255, 255, 255, 0.02);
-    font-weight: 700;
-    font-size: 1rem;
-    color: #fff;
-}
-
-.comparison-table th:first-child {
-    text-align: left;
-}
-
-.comparison-table td:first-child {
-    text-align: left;
-    color: var(--text-secondary);
-}
-
-.comparison-table tr:last-child td {
-    border-bottom: none;
-}
-
-/* ServerFlow Column Highlight */
-.comparison-table th.highlight,
-.comparison-table td.highlight {
+.highlight-icon {
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: rgba(139, 92, 246, 0.1);
-    position: relative;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 16px;
+    font-size: 1.5rem;
+    margin-bottom: 1.25rem;
 }
 
-.comparison-table th.highlight {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(59, 130, 246, 0.2));
-}
-
-.comparison-table th.highlight::before {
-    content: '⭐';
-    position: absolute;
-    top: -12px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 0.9rem;
-}
-
-/* Check / Cross icons */
-.comp-check {
-    color: #22c55e;
-    font-weight: 700;
-}
-
-.comp-cross {
-    color: #ef4444;
-    opacity: 0.6;
-}
-
-.comp-price {
-    font-weight: 700;
+.highlight-card h3 {
     font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.75rem;
 }
 
-.comp-price.highlight {
-    color: #22c55e;
+.highlight-card p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+    .highlights-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .highlights-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Tooltips for comparison table */

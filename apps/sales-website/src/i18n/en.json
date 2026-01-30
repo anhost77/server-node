@@ -235,26 +235,32 @@
       "cancelAnytime": "Cancel anytime",
       "noLockIn": "No vendor lock-in"
     },
-    "comparison": {
-      "title": "Why Pay More?",
-      "subtitle": "See how ServerFlow compares to expensive PaaS alternatives.",
-      "feature": "Feature",
-      "basicVps": "Basic VPS",
-      "pricePerMonth": "Price / month",
-      "priceNote": "+ usage fees",
-      "mcpIntegration": "MCP / AI Integration",
-      "hotPatching": "Hot Patching < 5s",
-      "zeroTrust": "Zero-Trust Security",
-      "unlimitedApps": "Unlimited Apps",
-      "noUsageFees": "No usage fees",
-      "yourInfra": "Your infrastructure",
-      "tooltips": {
-        "price": "Fixed monthly price. No surprises on your bill, no hidden bandwidth or request fees.",
-        "mcp": "Deploy directly from Claude, Cursor or any MCP client. Ask your AI to deploy and it's done.",
-        "hotPatch": "Your changes go live in under 5 seconds. No full rebuild, just the modified files.",
-        "zeroTrust": "The agent stores no SSH keys. Outbound connections only. Ed25519 signature for every command.",
-        "noFees": "With PaaS, every request and every GB of bandwidth costs extra. Here, it's included.",
-        "yourInfra": "Your servers, your data, your full control. No vendor lock-in, export everything whenever you want."
+    "highlights": {
+      "title": "What ServerFlow Does Well",
+      "subtitle": "Our core strengths, built from real developer needs.",
+      "mcp": {
+        "title": "MCP / AI Integration",
+        "desc": "Deploy directly from Claude, Cursor or any MCP client. Ask your AI to deploy and it's done."
+      },
+      "hotPatch": {
+        "title": "Hot Patching < 5s",
+        "desc": "Your changes go live in under 5 seconds. No full rebuild, just the modified files."
+      },
+      "zeroTrust": {
+        "title": "Zero-Trust Security",
+        "desc": "The agent stores no SSH keys. Outbound connections only. Ed25519 signature for every command."
+      },
+      "pricing": {
+        "title": "Fixed Monthly Price",
+        "desc": "No surprises on your bill. No hidden bandwidth or request fees. Pay €9/mo and that's it."
+      },
+      "yourInfra": {
+        "title": "Your Infrastructure",
+        "desc": "Your servers, your data, your full control. No vendor lock-in, export everything whenever you want."
+      },
+      "openSource": {
+        "title": "100% Open Source Agent",
+        "desc": "Audit every line of code before installing. Trust is earned through transparency, not promises."
       }
     },
     "calculator": {

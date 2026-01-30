@@ -228,26 +228,32 @@
       "cancelAnytime": "Annulla quando vuoi",
       "noLockIn": "Nessun vendor lock-in"
     },
-    "comparison": {
-      "title": "Perché pagare di più?",
-      "subtitle": "Confronta ServerFlow con le costose alternative PaaS.",
-      "feature": "Funzionalità",
-      "basicVps": "VPS Base",
-      "pricePerMonth": "Prezzo / mese",
-      "priceNote": "+ costi di utilizzo",
-      "mcpIntegration": "Integrazione MCP / IA",
-      "hotPatching": "Hot Patching < 5s",
-      "zeroTrust": "Sicurezza Zero-Trust",
-      "unlimitedApps": "App illimitate",
-      "noUsageFees": "Senza costi di utilizzo",
-      "yourInfra": "La tua infrastruttura",
-      "tooltips": {
-        "price": "Prezzo mensile fisso. Nessuna sorpresa in fattura, nessun costo nascosto per banda o richieste.",
-        "mcp": "Distribuisci direttamente da Claude, Cursor o qualsiasi client MCP. Chiedi alla tua IA di deployare e fatto.",
-        "hotPatch": "Le tue modifiche sono online in meno di 5 secondi. Nessun rebuild completo, solo i file modificati.",
-        "zeroTrust": "L'agente non memorizza chiavi SSH. Solo connessioni in uscita. Firma Ed25519 per ogni comando.",
-        "noFees": "Con i PaaS, ogni richiesta e ogni GB di banda costa extra. Qui è incluso.",
-        "yourInfra": "I tuoi server, i tuoi dati, il tuo controllo totale. Nessun vendor lock-in, esporta tutto quando vuoi."
+    "highlights": {
+      "title": "Cosa fa bene ServerFlow",
+      "subtitle": "I nostri punti di forza, costruiti da reali esigenze di sviluppatori.",
+      "mcp": {
+        "title": "Integrazione MCP / IA",
+        "desc": "Distribuisci direttamente da Claude, Cursor o qualsiasi client MCP. Chiedi alla tua IA di deployare e fatto."
+      },
+      "hotPatch": {
+        "title": "Hot Patching < 5s",
+        "desc": "Le tue modifiche sono online in meno di 5 secondi. Nessun rebuild completo, solo i file modificati."
+      },
+      "zeroTrust": {
+        "title": "Sicurezza Zero-Trust",
+        "desc": "L'agente non memorizza chiavi SSH. Solo connessioni in uscita. Firma Ed25519 per ogni comando."
+      },
+      "pricing": {
+        "title": "Prezzo mensile fisso",
+        "desc": "Nessuna sorpresa in fattura. Nessun costo nascosto di banda. Paga 9€/mese e basta."
+      },
+      "yourInfra": {
+        "title": "La tua infrastruttura",
+        "desc": "I tuoi server, i tuoi dati, il tuo controllo totale. Nessun vendor lock-in, esporta tutto quando vuoi."
+      },
+      "openSource": {
+        "title": "Agente 100% Open Source",
+        "desc": "Verifica ogni riga di codice prima di installare. La fiducia si guadagna con la trasparenza, non con le promesse."
       }
     },
     "calculator": {
