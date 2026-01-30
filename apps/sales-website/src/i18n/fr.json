@@ -283,13 +283,9 @@
       "mcp": "Intégration MCP",
       "hotPatch": "Hot Patching",
       "rollback": "Rollback Auto",
-      "team": "Collaboration équipe",
-      "rbac": "Contrôle d'accès par rôle",
-      "audit": "Logs d'audit",
       "support": "Niveau de support",
       "community": "Communauté",
       "priority": "Prioritaire",
-      "dedicated": "Email Prioritaire",
       "unlimited": "Illimité",
       "tooltips": {
         "servers": "Nombre de serveurs VPS que vous pouvez connecter à votre dashboard ServerFlow.",
@@ -297,10 +293,7 @@
         "mcp": "Déployez depuis Claude, Cursor ou tout client MCP. Demandez à votre IA et c'est en prod.",
         "hotPatch": "Vos modifications sont en ligne en < 5s. Pas de rebuild, juste les fichiers modifiés.",
         "rollback": "Revenez à n'importe quel commit précédent en un clic si quelque chose casse.",
-        "team": "Invitez des collaborateurs sur vos projets. (Bientôt disponible)",
-        "rbac": "Définissez qui peut déployer, qui peut juste voir. (Bientôt disponible)",
-        "audit": "Historique complet de toutes les actions : qui a fait quoi et quand. (Bientôt disponible)",
-        "support": "Discord communautaire gratuit. Email prioritaire réponse < 4h pour Pro/Team."
+        "support": "Discord communautaire gratuit. Email prioritaire réponse < 4h pour Pro."
       }
     },
     "perMonth": "/mois HT",
@@ -327,19 +320,6 @@
         "Hot patching (< 5s)",
         "Rollbacks automatiques",
         "Support prioritaire"
-      ],
-      "cta": "Choisir Pro"
-    },
-    "team": {
-      "name": "Team",
-      "desc": "Pour les équipes qui grandissent",
-      "features": [
-        "Serveurs illimités",
-        "Collaboration d'équipe",
-        "Contrôle d'accès par rôle",
-        "Logs d'audit",
-        "Domaines personnalisés",
-        "Support email prioritaire"
       ],
       "cta": "Choisir Pro"
     },

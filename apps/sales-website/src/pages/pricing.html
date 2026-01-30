@@ -113,32 +113,6 @@
                 </a>
             </div>
 
-            <!-- Team Tier -->
-            <div class="pricing-card-enhanced">
-                <h3 class="pricing-plan-name">{{pricingPage.team.name}}</h3>
-                <p class="pricing-plan-desc">{{pricingPage.team.desc}}</p>
-
-                <div class="price-display">
-                    <span class="price-currency">€</span>
-                    <span class="price-amount" data-monthly="29" data-annually="23">29</span>
-                    <span class="price-period">{{pricingPage.perMonth}}</span>
-                </div>
-                <div class="price-old" id="price-old-team" style="display: none;">€29{{pricingPage.perMonth}} →
-                    €276{{pricingPage.billing.perYear}}</div>
-
-                <ul class="pricing-features-enhanced">
-                    {{#each pricingPage.team.features}}
-                    <li>
-                        <span class="feature-check">✓</span>
-                        <span>{{this}}</span>
-                    </li>
-                    {{/each}}
-                </ul>
-
-                <a href="https://app.serverflow.io/signup?plan=team" class="pricing-cta pricing-cta-secondary">
-                    {{pricingPage.team.cta}}
-                </a>
-            </div>
         </div>
 
         <!-- Guarantees / Risk Reversal -->
@@ -232,7 +206,6 @@
                         <th></th>
                         <th>{{pricingPage.free.name}}</th>
                         <th>{{pricingPage.pro.name}}</th>
-                        <th>{{pricingPage.team.name}}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -243,7 +216,6 @@
                         </td>
                         <td>1</td>
                         <td>5</td>
-                        <td>{{pricingPage.featureTable.unlimited}}</td>
                     </tr>
                     <tr>
                         <td class="has-tooltip">
@@ -251,7 +223,6 @@
                             <span class="tooltip">{{pricingPage.featureTable.tooltips.apps}}</span>
                         </td>
                         <td>3</td>
-                        <td>{{pricingPage.featureTable.unlimited}}</td>
                         <td>{{pricingPage.featureTable.unlimited}}</td>
                     </tr>
                     <tr>
@@ -261,7 +232,6 @@
                         </td>
                         <td class="cross-icon">—</td>
                         <td class="check-icon">✓</td>
-                        <td class="check-icon">✓</td>
                     </tr>
                     <tr>
                         <td class="has-tooltip">
@@ -270,41 +240,12 @@
                         </td>
                         <td class="cross-icon">—</td>
                         <td class="check-icon">✓</td>
-                        <td class="check-icon">✓</td>
                     </tr>
                     <tr>
                         <td class="has-tooltip">
                             {{pricingPage.featureTable.rollback}}
                             <span class="tooltip">{{pricingPage.featureTable.tooltips.rollback}}</span>
                         </td>
-                        <td class="cross-icon">—</td>
-                        <td class="check-icon">✓</td>
-                        <td class="check-icon">✓</td>
-                    </tr>
-                    <tr>
-                        <td class="has-tooltip">
-                            {{pricingPage.featureTable.team}}
-                            <span class="tooltip">{{pricingPage.featureTable.tooltips.team}}</span>
-                        </td>
-                        <td class="cross-icon">—</td>
-                        <td class="cross-icon">—</td>
-                        <td class="check-icon">✓</td>
-                    </tr>
-                    <tr>
-                        <td class="has-tooltip">
-                            {{pricingPage.featureTable.rbac}}
-                            <span class="tooltip">{{pricingPage.featureTable.tooltips.rbac}}</span>
-                        </td>
-                        <td class="cross-icon">—</td>
-                        <td class="cross-icon">—</td>
-                        <td class="check-icon">✓</td>
-                    </tr>
-                    <tr>
-                        <td class="has-tooltip">
-                            {{pricingPage.featureTable.audit}}
-                            <span class="tooltip">{{pricingPage.featureTable.tooltips.audit}}</span>
-                        </td>
-                        <td class="cross-icon">—</td>
                         <td class="cross-icon">—</td>
                         <td class="check-icon">✓</td>
                     </tr>
@@ -315,7 +256,6 @@
                         </td>
                         <td>{{pricingPage.featureTable.community}}</td>
                         <td>{{pricingPage.featureTable.priority}}</td>
-                        <td>{{pricingPage.featureTable.dedicated}}</td>
                     </tr>
                 </tbody>
             </table>
@@ -360,7 +300,6 @@
         const priceAmounts = document.querySelectorAll('.price-amount');
         const savingsBadge = document.getElementById('savings-badge');
         const priceOldPro = document.getElementById('price-old-pro');
-        const priceOldTeam = document.getElementById('price-old-team');
 
         billingOptions.forEach(option => {
             option.addEventListener('click', () => {
@@ -380,11 +319,9 @@
                 if (billing === 'annually') {
                     savingsBadge.style.display = 'inline-flex';
                     if (priceOldPro) priceOldPro.style.display = 'block';
-                    if (priceOldTeam) priceOldTeam.style.display = 'block';
                 } else {
                     savingsBadge.style.display = 'none';
                     if (priceOldPro) priceOldPro.style.display = 'none';
-                    if (priceOldTeam) priceOldTeam.style.display = 'none';
                 }
             });
         });

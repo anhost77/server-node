@@ -356,6 +356,26 @@
   }
 
   // ==========================================================================
+  // FEATURE CARDS SPOTLIGHT (Apple/Railway style)
+  // ==========================================================================
+  function initFeatureCardsSpotlight() {
+    const grid = document.querySelector('.features-grid-section .grid');
+    if (!grid) return;
+
+    grid.addEventListener('mousemove', (e) => {
+      const cards = grid.querySelectorAll('.feature-card');
+      cards.forEach((card) => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        card.style.setProperty('--mouse-x', `${x}px`);
+        card.style.setProperty('--mouse-y', `${y}px`);
+      });
+    });
+  }
+
+  // ==========================================================================
   // INITIALIZE ALL
   // ==========================================================================
   function init() {
@@ -372,6 +392,7 @@
     initFooterLanguageSelect();
     initAccessibility();
     initReducedMotion();
+    initFeatureCardsSpotlight();
   }
 
   // Run when DOM is ready
