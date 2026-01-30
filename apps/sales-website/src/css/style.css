@@ -1103,6 +1103,48 @@ img {
     border-color: var(--accent-primary);
 }
 
+/* Badge animation in How it Works section */
+.how-step .badge {
+    opacity: 0;
+    transform: translateY(10px) scale(0.9);
+    transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.how-step .badge.badge-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.how-step .badge.badge-visible:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+    border-color: var(--accent-primary);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
+}
+
+/* Shimmer effect on badges */
+.how-step .badge.badge-visible::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    animation: badge-shimmer 3s ease-in-out infinite;
+    animation-delay: var(--shimmer-delay, 0s);
+}
+
+.how-step .badge {
+    position: relative;
+    overflow: hidden;
+}
+
+@keyframes badge-shimmer {
+    0%, 100% { left: -100%; }
+    50% { left: 100%; }
+}
+
 /* Terminal Mockup Enhanced */
 .terminal-mockup {
     background: #1a1a1a;

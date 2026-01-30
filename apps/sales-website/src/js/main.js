@@ -387,22 +387,25 @@
     const infoContent = infoBox.querySelector('.info-content');
 
     const data = {
-      'vps': {
+      vps: {
         tag: 'VOTRE VPS - AGENT ACTIF',
-        content: 'L\'agent ServeFlow est l\'unique point d\'entrée. Il initie une connexion chiffrée vers l\'extérieur. Aucune porte n\'est ouverte aux pirates.'
+        content:
+          "L'agent ServeFlow est l'unique point d'entrée. Il initie une connexion chiffrée vers l'extérieur. Aucune porte n'est ouverte aux pirates.",
       },
-      'sf': {
+      sf: {
         tag: 'SERVERFLOW - ORCHESTRATEUR',
-        content: 'Notre plateforme reçoit les signaux de votre agent et prépare les instructions. On ne peut pas se connecter à votre machine, on attend que vous nous parliez.'
+        content:
+          'Notre plateforme reçoit les signaux de votre agent et prépare les instructions. On ne peut pas se connecter à votre machine, on attend que vous nous parliez.',
       },
-      'connection': {
+      connection: {
         tag: 'WEBSOCKET TLS 1.3 - SENS UNIQUE',
-        content: 'Un tunnel chiffré "sortant uniquement". Les données circulent sur un canal privé Ed25519. Confidentialité totale garantie par le matériel.'
+        content:
+          'Un tunnel chiffré "sortant uniquement". Les données circulent sur un canal privé Ed25519. Confidentialité totale garantie par le matériel.',
       },
-      'default': {
+      default: {
         tag: 'SÉCURITÉ ARCHITECTURE',
-        content: 'Survolez les éléments pour comprendre le fonctionnement du flux.'
-      }
+        content: 'Survolez les éléments pour comprendre le fonctionnement du flux.',
+      },
     };
 
     function update(key) {
@@ -417,7 +420,7 @@
       update('default');
     }
 
-    svg.querySelectorAll('.diag-node, .diag-hitbox').forEach(el => {
+    svg.querySelectorAll('.diag-node, .diag-hitbox').forEach((el) => {
       el.addEventListener('mouseenter', () => update(el.dataset.info));
       el.addEventListener('mouseleave', reset);
     });
@@ -495,9 +498,12 @@
         const text = line.dataset.text || '';
         line.textContent = text;
 
-        setTimeout(() => {
-          line.classList.add('visible');
-        }, 200 + (index * 400)); // Stagger each line by 400ms
+        setTimeout(
+          () => {
+            line.classList.add('visible');
+          },
+          200 + index * 400,
+        ); // Stagger each line by 400ms
       });
     }
 
@@ -522,7 +528,7 @@
     commandSpan.textContent = '';
 
     // Hide output lines initially
-    outputLines.forEach(line => {
+    outputLines.forEach((line) => {
       line.style.opacity = '0';
       line.style.transform = 'translateY(5px)';
     });
@@ -530,15 +536,18 @@
     let hasAnimated = false;
 
     // Observe when terminal is visible
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting && !hasAnimated) {
-          hasAnimated = true;
-          startTerminalAnimation();
-          observer.disconnect();
-        }
-      });
-    }, { threshold: 0.5 });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !hasAnimated) {
+            hasAnimated = true;
+            startTerminalAnimation();
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.5 },
+    );
 
     observer.observe(terminal);
 
@@ -566,12 +575,15 @@
           const text = line.dataset.text || '';
           const prefix = line.dataset.prefix || '';
 
-          setTimeout(() => {
-            line.innerHTML = prefix ? `<span class="success">${prefix}</span> ${text}` : text;
-            line.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-            line.style.opacity = '1';
-            line.style.transform = 'translateY(0)';
-          }, 150 + (index * 300)); // Stagger each line
+          setTimeout(
+            () => {
+              line.innerHTML = prefix ? `<span class="success">${prefix}</span> ${text}` : text;
+              line.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+              line.style.opacity = '1';
+              line.style.transform = 'translateY(0)';
+            },
+            150 + index * 300,
+          ); // Stagger each line
         });
       }
 
@@ -601,15 +613,18 @@
 
     let hasAnimated = false;
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting && !hasAnimated) {
-          hasAnimated = true;
-          startAnimation();
-          observer.disconnect();
-        }
-      });
-    }, { threshold: 0.4 });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !hasAnimated) {
+            hasAnimated = true;
+            startAnimation();
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.4 },
+    );
 
     observer.observe(mockup);
 
@@ -702,14 +717,14 @@
         const newScrollTop = messageBottom - containerHeight + 20; // 20px padding
         messagesContainer.scrollTo({
           top: newScrollTop,
-          behavior: 'smooth'
+          behavior: 'smooth',
         });
       }
     }
 
     // Keep user message paragraphs empty until they are "sent"
     // Text will be set right before showing the bubble
-    messages.forEach(msg => {
+    messages.forEach((msg) => {
       if (msg.dataset.type === 'user') {
         const p = msg.querySelector('p');
         if (p) p.textContent = '';
@@ -718,15 +733,18 @@
 
     let hasAnimated = false;
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting && !hasAnimated) {
-          hasAnimated = true;
-          startChatAnimation();
-          observer.disconnect();
-        }
-      });
-    }, { threshold: 0.3 });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !hasAnimated) {
+            hasAnimated = true;
+            startChatAnimation();
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.3 },
+    );
 
     observer.observe(mockup);
 
@@ -766,7 +784,6 @@
           }, delay);
 
           delay += text.length * 30 + 400;
-
         } else if (msg.dataset.type === 'assistant') {
           // Step 3: Show thinking dots
           setTimeout(() => {
@@ -786,7 +803,10 @@
     }
 
     function typeInField(field, text, speed, callback) {
-      if (!field) { callback?.(); return; }
+      if (!field) {
+        callback?.();
+        return;
+      }
       let i = 0;
       field.value = '';
 
@@ -804,6 +824,51 @@
   }
 
   // ==========================================================================
+  // BADGE ANIMATIONS (How it Works section)
+  // ==========================================================================
+  function initBadgeAnimations() {
+    const howSteps = document.querySelectorAll('.how-step');
+    if (!howSteps.length) return;
+
+    howSteps.forEach((step) => {
+      const badges = step.querySelectorAll('.badge');
+      if (!badges.length) return;
+
+      // Set shimmer delay for each badge
+      badges.forEach((badge, index) => {
+        badge.style.setProperty('--shimmer-delay', `${index * 0.5}s`);
+      });
+
+      let hasAnimated = false;
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && !hasAnimated) {
+              hasAnimated = true;
+
+              // Animate badges one by one with staggered delay
+              badges.forEach((badge, index) => {
+                setTimeout(
+                  () => {
+                    badge.classList.add('badge-visible');
+                  },
+                  200 + index * 150,
+                );
+              });
+
+              observer.disconnect();
+            }
+          });
+        },
+        { threshold: 0.4 },
+      );
+
+      observer.observe(step);
+    });
+  }
+
+  // ==========================================================================
   // ACTIVE NAV LINK
   // ==========================================================================
   function initActiveNavLink() {
@@ -818,7 +883,7 @@
     else if (path.includes('/security')) currentPage = 'security';
 
     // Applique la classe active au lien correspondant
-    navLinks.forEach(link => {
+    navLinks.forEach((link) => {
       if (link.dataset.page === currentPage) {
         link.classList.add('active');
       }
@@ -834,6 +899,7 @@
     initInstallTerminal();
     initDeployMockup();
     initChatMockup();
+    initBadgeAnimations();
     initActiveNavLink();
     initScrollProgress();
     initRevealOnScroll();
