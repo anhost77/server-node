@@ -184,7 +184,7 @@
       {
         "name": "Sarah Miller",
         "role": "Full Stack Entwicklerin, Freelance",
-        "text": "Endlich etwas, das lokales KI-Coding und echte Produktion ohne den Vercel-Aufpreis verbindet. Ich behalte meine Infrastruktur, ich behalte mein Geld. ServerFlow kümmert sich um die Deployment-Magie."
+        "text": "Endlich etwas, das lokales KI-Coding und echte Produktion auf meinen eigenen Servern verbindet. Ich behalte meine Infrastruktur, ich behalte mein Geld. ServerFlow kümmert sich um die Deployment-Magie."
       },
       {
         "name": "Thomas Dubois",
@@ -258,14 +258,14 @@
     },
     "calculator": {
       "title": "Berechnen Sie Ihre Ersparnis",
-      "subtitle": "Sehen Sie wie viel Sie im Vergleich zu Vercel oder Railway sparen könnten.",
+      "subtitle": "Sehen Sie wie viel Sie mit Ihrem eigenen VPS sparen könnten.",
       "currentSpend": "Aktuelle monatliche Ausgaben",
       "provider": "Aktueller Anbieter",
       "result": "Mit ServerFlow Pro",
       "savePerYear": "pro Jahr"
     },
     "testimonial": {
-      "quote": "Ich zahlte 89$/Monat bei Vercel für mein SaaS. Gewechselt zu einem 4€ Hetzner VPS + ServerFlow Pro. Gleiche Leistung, 10x günstiger. Die MCP-Integration mit Claude ist das i-Tüpfelchen.",
+      "quote": "Ich habe mein SaaS auf einen 4€ Hetzner VPS + ServerFlow Pro migriert. Volle Kontrolle über meine Infrastruktur, keine Überraschungsrechnungen. Die MCP-Integration mit Claude ist das i-Tüpfelchen.",
       "author": "Marcus K.",
       "role": "Indie Hacker, 3 Produkte gelauncht"
     },
