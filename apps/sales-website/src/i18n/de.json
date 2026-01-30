@@ -416,8 +416,8 @@
     "subtitle": "Wir bauen die Zukunft des AI-nativen Deployments.",
     "mission": {
       "title": "Unsere Mission",
-      "p1": "ServerFlow entstand aus einer einfachen Frustration: Code zu deployen sollte keinen Doktortitel in DevOps erfordern. Da KI-Coding-Assistenten wie Claude und Cursor immer leistungsfähiger werden, wird die Kluft zwischen „Code, der lokal funktioniert" und „Code in Produktion" zum größten Engpass.",
-      "p2": "Wir glauben, dass Deployment so einfach sein sollte wie mit Ihrem KI-Assistenten zu sprechen. Sagen Sie „deploy to production" und schauen Sie zu. Keine YAML-Dateien. Keine CI/CD-Konfiguration. Keine SSH-Tunnel. Einfach liefern."
+      "p1": "ServerFlow entstand aus einer einfachen Frustration: Code zu deployen sollte keinen Doktortitel in DevOps erfordern. Da KI-Coding-Assistenten wie Claude und Cursor immer leistungsfähiger werden, wird die Kluft zwischen 'Code, der lokal funktioniert' und 'Code in Produktion' zum größten Engpass.",
+      "p2": "Wir glauben, dass Deployment so einfach sein sollte wie mit Ihrem KI-Assistenten zu sprechen. Sagen Sie 'deploy to production' und schauen Sie zu. Keine YAML-Dateien. Keine CI/CD-Konfiguration. Keine SSH-Tunnel. Einfach liefern."
     },
     "values": {
       "title": "Unsere Werte",
