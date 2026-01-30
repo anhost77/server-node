@@ -506,6 +506,80 @@
   }
 
   // ==========================================================================
+  // INSTALL TERMINAL ANIMATION (How it Works section)
+  // ==========================================================================
+  function initInstallTerminal() {
+    const terminal = document.getElementById('install-terminal');
+    if (!terminal) return;
+
+    const commandSpan = terminal.querySelector('.terminal-command');
+    const cursor = terminal.querySelector('.terminal-cursor');
+    const outputLines = terminal.querySelectorAll('.output-line');
+
+    if (!commandSpan) return;
+
+    const commandText = commandSpan.dataset.text || '';
+    commandSpan.textContent = '';
+
+    // Hide output lines initially
+    outputLines.forEach(line => {
+      line.style.opacity = '0';
+      line.style.transform = 'translateY(5px)';
+    });
+
+    let hasAnimated = false;
+
+    // Observe when terminal is visible
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && !hasAnimated) {
+          hasAnimated = true;
+          startTerminalAnimation();
+          observer.disconnect();
+        }
+      });
+    }, { threshold: 0.5 });
+
+    observer.observe(terminal);
+
+    function startTerminalAnimation() {
+      let charIndex = 0;
+      const typingSpeed = 30; // ms per character (faster for longer command)
+
+      // Step 1: Type the command
+      function typeCommand() {
+        if (charIndex < commandText.length) {
+          commandSpan.textContent += commandText.charAt(charIndex);
+          charIndex++;
+          setTimeout(typeCommand, typingSpeed);
+        } else {
+          // Command finished - simulate "Enter" press
+          setTimeout(simulateEnter, 300);
+        }
+      }
+
+      // Step 2: Show output lines one by one
+      function simulateEnter() {
+        cursor.classList.add('hidden');
+
+        outputLines.forEach((line, index) => {
+          const text = line.dataset.text || '';
+          const prefix = line.dataset.prefix || '';
+
+          setTimeout(() => {
+            line.innerHTML = prefix ? `<span class="success">${prefix}</span> ${text}` : text;
+            line.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            line.style.opacity = '1';
+            line.style.transform = 'translateY(0)';
+          }, 150 + (index * 300)); // Stagger each line
+        });
+      }
+
+      typeCommand();
+    }
+  }
+
+  // ==========================================================================
   // ACTIVE NAV LINK
   // ==========================================================================
   function initActiveNavLink() {
@@ -533,6 +607,7 @@
   function init() {
     initConsoleTyping();
     initHeroTerminal();
+    initInstallTerminal();
     initActiveNavLink();
     initScrollProgress();
     initRevealOnScroll();

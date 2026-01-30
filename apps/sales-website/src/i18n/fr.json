@@ -34,7 +34,7 @@
       "title": "Une commande. Serveur prêt.",
       "description": "Pas de Plesk. Pas de cPanel. Pas de panel qui bouffe votre RAM. Juste l'essentiel, parfaitement configuré.",
       "badges": ["Nginx", "SSL Auto", "Firewall", "Monitoring", "PM2"],
-      "quote": "\"47 secondes contre 2 heures de config manuelle. Votre RAM reste pour vos apps, pas pour cPanel.\"",
+      "quote": "\"90 secondes contre 2 heures de config manuelle. Votre RAM reste pour vos apps, pas pour cPanel.\"",
       "terminalTitle": "root@mon-vps:~",
       "lines": [
         "$ curl -fsSL https://get.serverflow.io | sh",
@@ -44,7 +44,7 @@
         "Activation de Let's Encrypt auto-SSL...",
         "Démarrage du process manager PM2...",
         "Connecté au dashboard !",
-        "Serveur prêt en 47 secondes"
+        "Serveur prêt en 90 secondes"
       ]
     },
     "step2": {
@@ -346,7 +346,7 @@
   "cta": {
     "title": "Fini la config.",
     "titleGradient": "Place au code.",
-    "subtitle": "Votre prochain projet est à 47 secondes de la prod.",
+    "subtitle": "Votre prochain projet est à 90 secondes de la prod.",
     "subtitleSecond": "Une commande. Serveur prêt. Plus d'excuses.",
     "primary": "Commencer",
     "primarySubtext": "Gratuit à vie",
@@ -604,7 +604,7 @@
       "journeyCode": "Code avec IA",
       "journeyServerflow": "ServerFlow",
       "journeyLive": "En ligne !",
-      "journeyTerminalResult": "✓ Prêt en 47 secondes",
+      "journeyTerminalResult": "✓ Prêt en 90 secondes",
       "postfixTitle": "Postfix Gateway",
       "postfixDesc": "Gestion des flux mail entrant / sortant",
       "securityProtectTitle": "Rspamd / ClamAV",

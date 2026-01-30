@@ -34,7 +34,7 @@
       "title": "One Command. Full Server.",
       "description": "No Plesk. No cPanel. No bloated panels eating your RAM. Just the essentials, configured perfectly.",
       "badges": ["Nginx", "SSL Auto", "Firewall", "Monitoring", "PM2"],
-      "quote": "\"47 seconds vs 2 hours of manual config. Your RAM stays free for your apps, not for cPanel.\"",
+      "quote": "\"90 seconds vs 2 hours of manual config. Your RAM stays free for your apps, not for cPanel.\"",
       "terminalTitle": "root@my-vps:~",
       "lines": [
         "$ curl -fsSL https://get.serverflow.io | sh",
@@ -44,7 +44,7 @@
         "Enabling Let's Encrypt auto-SSL...",
         "Starting PM2 process manager...",
         "Connected to dashboard!",
-        "Server ready in 47 seconds"
+        "Server ready in 90 seconds"
       ]
     },
     "step2": {
@@ -341,7 +341,7 @@
   "cta": {
     "title": "Stop Configuring.",
     "titleGradient": "Start Shipping.",
-    "subtitle": "Your next project is 47 seconds away from production.",
+    "subtitle": "Your next project is 90 seconds away from production.",
     "subtitleSecond": "One command. Full server. Zero excuses.",
     "primary": "Deploy Your First App",
     "primarySubtext": "Free forever",
@@ -599,7 +599,7 @@
       "journeyCode": "Code with AI",
       "journeyServerflow": "ServerFlow",
       "journeyLive": "Live!",
-      "journeyTerminalResult": "✓ Ready in 47 seconds",
+      "journeyTerminalResult": "✓ Ready in 90 seconds",
       "postfixTitle": "Postfix Gateway",
       "postfixDesc": "Incoming/outgoing mail handling",
       "securityProtectTitle": "Rspamd / ClamAV",

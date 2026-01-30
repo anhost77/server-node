@@ -33,7 +33,7 @@
       "title": "Un Comando. Server Completo.",
       "description": "Niente Plesk. Niente cPanel. Niente pannelli gonfiati che mangiano la RAM. Solo l'essenziale, configurato perfettamente.",
       "badges": ["Nginx", "SSL Auto", "Firewall", "Monitoring", "PM2"],
-      "quote": "\"47 secondi vs 2 ore di configurazione manuale. La tua RAM resta libera per le tue app, non per cPanel.\"",
+      "quote": "\"90 secondi vs 2 ore di configurazione manuale. La tua RAM resta libera per le tue app, non per cPanel.\"",
       "terminalTitle": "root@mio-vps:~",
       "lines": [
         "$ curl -fsSL https://get.serverflow.io | sh",
@@ -43,7 +43,7 @@
         "Abilitazione Let's Encrypt auto-SSL...",
         "Avvio gestore processi PM2...",
         "Connesso al dashboard!",
-        "Server pronto in 47 secondi"
+        "Server pronto in 90 secondi"
       ]
     },
     "step2": {
@@ -345,7 +345,7 @@
   "cta": {
     "title": "Smetti di Configurare.",
     "titleGradient": "Inizia a Spedire.",
-    "subtitle": "Il tuo prossimo progetto è a 47 secondi dalla produzione.",
+    "subtitle": "Il tuo prossimo progetto è a 90 secondi dalla produzione.",
     "subtitleSecond": "Un comando. Server completo. Zero scuse.",
     "primary": "Distribuisci la Tua Prima App",
     "primarySubtext": "Gratis per sempre",
@@ -554,7 +554,7 @@
       "feature1Title": "Programmato con IA?",
       "feature1Desc": "Hai costruito la tua app con Cursor, Claude o ChatGPT? Rileviamo lo stack e distribuiamo automaticamente.",
       "feature2Title": "Senior: Saltate lo YAML",
-      "feature2Desc": "Sai configurare Nginx. Ma ne hai voglia? Lascia che ServerFlow lo faccia in 47 secondi.",
+      "feature2Desc": "Sai configurare Nginx. Ma ne hai voglia? Lascia che ServerFlow lo faccia in 90 secondi.",
       "feature3Title": "Senza Terminal",
       "feature3Desc": "Tutto dalla dashboard o via chat IA. La linea di comando è opzionale, non obbligatoria.",
       "feature4Title": "Config Pro di Default",

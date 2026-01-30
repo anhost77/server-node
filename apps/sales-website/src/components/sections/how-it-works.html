@@ -26,28 +26,18 @@
                     <span class="dot green"></span>
                     <span class="terminal-title">{{howItWorks.step1.terminalTitle}}</span>
                 </div>
-                <div class="terminal-body">
-                    <div class="line typing">{{howItWorks.step1.lines.0}}</div>
-                    <div class="line fade-in delay-1">
-                        <span class="success">&#x2713;</span> {{howItWorks.step1.lines.1}}
+                <div class="terminal-body" id="install-terminal">
+                    <div class="terminal-line command-line">
+                        <span class="terminal-command" data-text="{{howItWorks.step1.lines.0}}"></span><span class="terminal-cursor">▋</span>
                     </div>
-                    <div class="line fade-in delay-2">
-                        <span class="success">&#x2713;</span> {{howItWorks.step1.lines.2}}
-                    </div>
-                    <div class="line fade-in delay-3">
-                        <span class="success">&#x2713;</span> {{howItWorks.step1.lines.3}}
-                    </div>
-                    <div class="line fade-in delay-4">
-                        <span class="success">&#x2713;</span> {{howItWorks.step1.lines.4}}
-                    </div>
-                    <div class="line fade-in delay-5">
-                        <span class="success">&#x2713;</span> {{howItWorks.step1.lines.5}}
-                    </div>
-                    <div class="line fade-in delay-6">
-                        <span class="success">&#x2713;</span> {{howItWorks.step1.lines.6}}
-                    </div>
-                    <div class="line fade-in delay-7 highlight">
-                        &#x1F680; {{howItWorks.step1.lines.7}}
+                    <div class="terminal-output">
+                        <div class="terminal-line output-line" data-text="{{howItWorks.step1.lines.1}}" data-prefix="✓"></div>
+                        <div class="terminal-line output-line" data-text="{{howItWorks.step1.lines.2}}" data-prefix="✓"></div>
+                        <div class="terminal-line output-line" data-text="{{howItWorks.step1.lines.3}}" data-prefix="✓"></div>
+                        <div class="terminal-line output-line" data-text="{{howItWorks.step1.lines.4}}" data-prefix="✓"></div>
+                        <div class="terminal-line output-line" data-text="{{howItWorks.step1.lines.5}}" data-prefix="✓"></div>
+                        <div class="terminal-line output-line" data-text="{{howItWorks.step1.lines.6}}" data-prefix="✓"></div>
+                        <div class="terminal-line output-line success-line" data-text="{{howItWorks.step1.lines.7}}" data-prefix="🚀"></div>
                     </div>
                 </div>
             </div>

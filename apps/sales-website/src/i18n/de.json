@@ -33,7 +33,7 @@
       "title": "Ein Befehl. Vollständiger Server.",
       "description": "Kein Plesk. Kein cPanel. Keine aufgeblähten Panels, die Ihren RAM fressen. Nur das Wesentliche, perfekt konfiguriert.",
       "badges": ["Nginx", "SSL Auto", "Firewall", "Monitoring", "PM2"],
-      "quote": "\"47 Sekunden vs 2 Stunden manuelle Konfiguration. Ihr RAM bleibt frei für Ihre Apps, nicht für cPanel.\"",
+      "quote": "\"90 Sekunden vs 2 Stunden manuelle Konfiguration. Ihr RAM bleibt frei für Ihre Apps, nicht für cPanel.\"",
       "terminalTitle": "root@mein-vps:~",
       "lines": [
         "$ curl -fsSL https://get.serverflow.io | sh",
@@ -43,7 +43,7 @@
         "Let's Encrypt auto-SSL wird aktiviert...",
         "PM2 Prozess-Manager wird gestartet...",
         "Mit Dashboard verbunden!",
-        "Server bereit in 47 Sekunden"
+        "Server bereit in 90 Sekunden"
       ]
     },
     "step2": {
@@ -345,7 +345,7 @@
   "cta": {
     "title": "Hören Sie auf zu Konfigurieren.",
     "titleGradient": "Beginnen Sie zu Liefern.",
-    "subtitle": "Ihr nächstes Projekt ist 47 Sekunden von der Produktion entfernt.",
+    "subtitle": "Ihr nächstes Projekt ist 90 Sekunden von der Produktion entfernt.",
     "subtitleSecond": "Ein Befehl. Vollständiger Server. Null Ausreden.",
     "primary": "Erste App Bereitstellen",
     "primarySubtext": "Für immer kostenlos",
@@ -554,7 +554,7 @@
       "feature1Title": "Mit KI Programmiert?",
       "feature1Desc": "App mit Cursor, Claude oder ChatGPT gebaut? Wir erkennen den Stack und deployen automatisch.",
       "feature2Title": "Seniors: Überspringt das YAML",
-      "feature2Desc": "Sie wissen, wie man Nginx konfiguriert. Aber wollen Sie? Lassen Sie ServerFlow das in 47 Sekunden machen.",
+      "feature2Desc": "Sie wissen, wie man Nginx konfiguriert. Aber wollen Sie? Lassen Sie ServerFlow das in 90 Sekunden machen.",
       "feature3Title": "Kein Terminal Nötig",
       "feature3Desc": "Alles vom Dashboard oder per KI-Chat. Kommandozeile ist optional, nicht obligatorisch.",
       "feature4Title": "Produktionsreife Defaults",
