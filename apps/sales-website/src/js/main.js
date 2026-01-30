@@ -675,6 +675,154 @@
   }
 
   // ==========================================================================
+  // CHAT MOCKUP ANIMATION (How it Works step 3)
+  // ==========================================================================
+  function initChatMockup() {
+    const mockup = document.getElementById('chat-mockup');
+    if (!mockup) return;
+
+    const header = mockup.querySelector('.chat-header');
+    const messages = mockup.querySelectorAll('.message');
+    const chatInput = mockup.querySelector('.chat-input');
+    const inputField = mockup.querySelector('#chat-input-field');
+
+    // Store user message texts and clear them
+    messages.forEach(msg => {
+      if (msg.dataset.type === 'user') {
+        const p = msg.querySelector('p');
+        if (p && p.dataset.text) {
+          p.textContent = '';
+        }
+      }
+    });
+
+    // Hide assistant messages content initially
+    messages.forEach(msg => {
+      if (msg.dataset.type === 'assistant') {
+        const content = msg.querySelector('p, .stats-mini');
+        const status = msg.querySelector('.deploy-status');
+        if (content) content.style.opacity = '0';
+        if (status) status.style.opacity = '0';
+      }
+    });
+
+    let hasAnimated = false;
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && !hasAnimated) {
+          hasAnimated = true;
+          startChatAnimation();
+          observer.disconnect();
+        }
+      });
+    }, { threshold: 0.3 });
+
+    observer.observe(mockup);
+
+    function startChatAnimation() {
+      let delay = 0;
+
+      // 1. Header appears
+      setTimeout(() => header?.classList.add('visible'), delay);
+      delay += 300;
+
+      // 2. Chat input appears
+      setTimeout(() => chatInput?.classList.add('visible'), delay);
+      delay += 200;
+
+      // 3. Animate each message pair
+      const messageArray = Array.from(messages);
+
+      messageArray.forEach((msg, index) => {
+        if (msg.dataset.type === 'user') {
+          // User message: type in input field, then show message
+          const p = msg.querySelector('p');
+          const text = p?.dataset.text || '';
+
+          setTimeout(() => {
+            // Show typing in input field
+            chatInput?.classList.add('active');
+            typeInField(inputField, text, 25, () => {
+              // After typing, clear input and show message
+              setTimeout(() => {
+                if (inputField) inputField.value = '';
+                chatInput?.classList.remove('active');
+                msg.classList.add('visible', 'typing');
+                typeText(p, text, 20, () => {
+                  msg.classList.remove('typing');
+                });
+              }, 200);
+            });
+          }, delay);
+
+          delay += text.length * 25 + text.length * 20 + 600;
+
+        } else if (msg.dataset.type === 'assistant') {
+          // Assistant message: show thinking, then reveal
+          setTimeout(() => {
+            msg.classList.add('visible', 'thinking');
+
+            setTimeout(() => {
+              msg.classList.remove('thinking');
+              const content = msg.querySelector('p, .stats-mini');
+              const status = msg.querySelector('.deploy-status');
+
+              if (content) {
+                content.style.transition = 'opacity 0.3s ease';
+                content.style.opacity = '1';
+              }
+
+              setTimeout(() => {
+                if (status) {
+                  status.style.transition = 'opacity 0.3s ease';
+                  status.style.opacity = '1';
+                }
+              }, 300);
+            }, 800);
+          }, delay);
+
+          delay += 1400;
+        }
+      });
+    }
+
+    function typeInField(field, text, speed, callback) {
+      if (!field) { callback?.(); return; }
+      let i = 0;
+      field.value = '';
+
+      function type() {
+        if (i < text.length) {
+          field.value += text.charAt(i);
+          i++;
+          setTimeout(type, speed);
+        } else {
+          callback?.();
+        }
+      }
+      type();
+    }
+
+    function typeText(element, text, speed, callback) {
+      if (!element) { callback?.(); return; }
+      let i = 0;
+      element.textContent = '';
+
+      function type() {
+        if (i < text.length) {
+          element.textContent += text.charAt(i);
+          i++;
+          setTimeout(type, speed);
+        } else {
+          callback?.();
+        }
+      }
+      type();
+    }
+  }
+
+  // ==========================================================================
   // ACTIVE NAV LINK
   // ==========================================================================
   function initActiveNavLink() {
@@ -704,6 +852,7 @@
     initHeroTerminal();
     initInstallTerminal();
     initDeployMockup();
+    initChatMockup();
     initActiveNavLink();
     initScrollProgress();
     initRevealOnScroll();
