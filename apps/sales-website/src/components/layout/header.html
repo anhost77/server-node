@@ -3,16 +3,17 @@
         <a href="/{{lang}}/" class="logo" aria-label="ServerFlow Home">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 aria-hidden="true">
-                <path d="M4 17l6-6-6-6M12 19h8" stroke="white" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M4 17l6-6-6-6" stroke="white" stroke-linecap="round" stroke-linejoin="round" />
+                <path class="cursor-blink" d="M12 19h8" stroke="white" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
-            ServerFlow
+            <span class="console-text">ServerFlow</span>
         </a>
 
         <div class="nav-links">
-            <a href="/{{lang}}/#how-it-works">{{nav.howItWorks}}</a>
-            <a href="/{{lang}}/features/">{{nav.features}}</a>
-            <a href="/{{lang}}/deployments/">{{nav.deployments}}</a>
-            <a href="/{{lang}}/pricing/">{{nav.pricing}}</a>
+            <a href="/{{lang}}/#how-it-works" data-page="home">{{nav.howItWorks}}</a>
+            <a href="/{{lang}}/features/" data-page="features">{{nav.features}}</a>
+            <a href="/{{lang}}/deployments/" data-page="deployments">{{nav.deployments}}</a>
+            <a href="/{{lang}}/pricing/" data-page="pricing">{{nav.pricing}}</a>
             <a href="https://github.com/serverflow" target="_blank" rel="noopener noreferrer">{{nav.github}}</a>
         </div>
 

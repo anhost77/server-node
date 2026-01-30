@@ -382,6 +382,181 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
+    // 8. Info Box Animations (Stats + Text Highlights)
+    initInfoBoxAnimations();
+    function initInfoBoxAnimations() {
+        const infoBoxes = document.querySelectorAll('.section-info-box');
+        if (!infoBoxes.length) return;
+
+        // Observe each info box - trigger when 60% visible (prevents early trigger)
+        const boxObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && !entry.target.classList.contains('animated')) {
+                    entry.target.classList.add('animated');
+                    animateInfoBox(entry.target);
+                }
+            });
+        }, { threshold: 0.6 });
+
+        infoBoxes.forEach(box => boxObserver.observe(box));
+
+        function animateInfoBox(box) {
+            let currentDelay = 0;
+
+            // 1. Animate badge with typing effect (first)
+            const badge = box.querySelector('.info-box-badge');
+            let badgeDuration = 0;
+            if (badge) {
+                badgeDuration = animateBadge(badge);
+                currentDelay = badgeDuration + 200;
+            }
+
+            // 2. Animate title with typing effect (after badge)
+            const title = box.querySelector('.info-box-title');
+            let titleDuration = 0;
+            if (title) {
+                const titleLength = title.textContent.length;
+                titleDuration = titleLength * 30 + 300;
+                setTimeout(() => {
+                    animateTitle(title);
+                }, currentDelay);
+                currentDelay += titleDuration;
+            }
+
+            // 3. Animate strong elements in description (highlight effect)
+            const description = box.querySelector('.info-box-description');
+            if (description) {
+                const strongElements = description.querySelectorAll('strong');
+                strongElements.forEach((strong, index) => {
+                    setTimeout(() => {
+                        strong.classList.add('highlight-animate');
+                    }, currentDelay + (index * 150));
+                });
+            }
+
+            // 4. Animate stat values with counter effect
+            const statValues = box.querySelectorAll('.info-stat-value');
+            statValues.forEach((stat, index) => {
+                setTimeout(() => {
+                    animateStatValue(stat);
+                }, currentDelay + 300 + (index * 200));
+            });
+        }
+
+        function animateBadge(element) {
+            const text = element.textContent.trim();
+            const duration = text.length * 40 + 200; // Return estimated duration
+            element.textContent = '';
+            element.classList.add('badge-typing');
+
+            let i = 0;
+            const typingSpeed = 40; // ms per char
+
+            function typeChar() {
+                if (i < text.length) {
+                    element.textContent += text.charAt(i);
+                    i++;
+                    setTimeout(typeChar, typingSpeed);
+                } else {
+                    setTimeout(() => {
+                        element.classList.remove('badge-typing');
+                        element.classList.add('badge-typed');
+                    }, 200);
+                }
+            }
+
+            typeChar();
+            return duration;
+        }
+
+        function animateTitle(element) {
+            const text = element.textContent.trim();
+            element.textContent = '';
+            element.classList.add('title-typing');
+
+            let i = 0;
+            const typingSpeed = 30; // ms per char (fast but visible)
+
+            function typeChar() {
+                if (i < text.length) {
+                    element.textContent += text.charAt(i);
+                    i++;
+                    setTimeout(typeChar, typingSpeed);
+                } else {
+                    // Typing done - remove cursor after short delay
+                    setTimeout(() => {
+                        element.classList.remove('title-typing');
+                        element.classList.add('title-typed');
+                    }, 500);
+                }
+            }
+
+            typeChar();
+        }
+
+        function animateStatValue(element) {
+            const text = element.textContent.trim();
+            const duration = 1000; // ms
+
+            // Check if it's a numeric value we can animate
+            const numericMatch = text.match(/^([<>]?\s*)(\d+(?:\.\d+)?)(.*)/);
+
+            if (numericMatch) {
+                // Numeric value: animate the counter
+                const prefix = numericMatch[1] || '';
+                const targetNum = parseFloat(numericMatch[2]);
+                const suffix = numericMatch[3] || '';
+                const isDecimal = text.includes('.');
+                const startTime = performance.now();
+
+                element.textContent = prefix + '0' + suffix;
+
+                function update(currentTime) {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+
+                    // Easing function (ease-out cubic)
+                    const easeProgress = 1 - Math.pow(1 - progress, 3);
+                    const currentValue = targetNum * easeProgress;
+
+                    if (isDecimal) {
+                        element.textContent = prefix + currentValue.toFixed(1) + suffix;
+                    } else {
+                        element.textContent = prefix + Math.round(currentValue) + suffix;
+                    }
+
+                    if (progress < 1) {
+                        requestAnimationFrame(update);
+                    } else {
+                        element.textContent = text;
+                    }
+                }
+
+                requestAnimationFrame(update);
+            } else {
+                // Text value (Ed25519, TLS 1.3, etc.): typing effect
+                const chars = text.split('');
+                element.textContent = '';
+                element.classList.add('typing-stat');
+
+                let i = 0;
+                const typingSpeed = 40; // ms per char
+
+                function typeChar() {
+                    if (i < chars.length) {
+                        element.textContent += chars[i];
+                        i++;
+                        setTimeout(typeChar, typingSpeed);
+                    } else {
+                        element.classList.remove('typing-stat');
+                    }
+                }
+
+                typeChar();
+            }
+        }
+    }
+
     // 7. CI/CD Section Animation
     const cicdSection = document.querySelector('.cicd-section');
     if (cicdSection) {

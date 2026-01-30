@@ -424,9 +424,64 @@
   }
 
   // ==========================================================================
+  // CONSOLE TYPING EFFECT (Logo)
+  // ==========================================================================
+  function initConsoleTyping() {
+    const consoleText = document.querySelector('.console-text');
+    if (!consoleText) return;
+
+    const text = consoleText.textContent || 'ServerFlow';
+    consoleText.textContent = '';
+    consoleText.classList.add('typing-ready');
+
+    let index = 0;
+    const typingSpeed = 100; // ms per character
+
+    function typeChar() {
+      if (index < text.length) {
+        consoleText.textContent += text.charAt(index);
+        index++;
+        setTimeout(typeChar, typingSpeed);
+      } else {
+        // Animation complete - hide caret after a short delay
+        setTimeout(() => {
+          consoleText.classList.add('typing-done');
+        }, 1500);
+      }
+    }
+
+    // Start typing after a small delay for page load
+    setTimeout(typeChar, 500);
+  }
+
+  // ==========================================================================
+  // ACTIVE NAV LINK
+  // ==========================================================================
+  function initActiveNavLink() {
+    const path = window.location.pathname;
+    const navLinks = document.querySelectorAll('.nav-links a[data-page]');
+
+    // Détecte la page courante depuis l'URL
+    let currentPage = 'home';
+    if (path.includes('/features')) currentPage = 'features';
+    else if (path.includes('/deployments')) currentPage = 'deployments';
+    else if (path.includes('/pricing')) currentPage = 'pricing';
+    else if (path.includes('/security')) currentPage = 'security';
+
+    // Applique la classe active au lien correspondant
+    navLinks.forEach(link => {
+      if (link.dataset.page === currentPage) {
+        link.classList.add('active');
+      }
+    });
+  }
+
+  // ==========================================================================
   // INITIALIZE ALL
   // ==========================================================================
   function init() {
+    initConsoleTyping();
+    initActiveNavLink();
     initScrollProgress();
     initRevealOnScroll();
     initSmoothScroll();

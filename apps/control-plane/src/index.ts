@@ -3892,6 +3892,98 @@ fastify.get('/api/admin/support/metrics', async (req, reply) => {
     };
 });
 
+// ============================================
+// CONTACT FORM (Public endpoint - no auth)
+// ============================================
+
+/**
+ * **POST /api/contact** - Envoie un email de contact via Brevo
+ *
+ * Endpoint public qui reçoit les messages du formulaire de contact
+ * du site de vente et les envoie par email via l'API Brevo.
+ *
+ * Variables d'environnement requises :
+ * - BREVO_API_KEY : Clé API Brevo (créer un compte gratuit sur brevo.com)
+ * - CONTACT_EMAIL : Email de destination (défaut: hello@serverflow.io)
+ */
+fastify.post('/api/contact', async (req, reply) => {
+    const { name, email, subject, message } = req.body as {
+        name: string;
+        email: string;
+        subject: string;
+        message: string;
+    };
+
+    // Validation basique
+    if (!name || !email || !subject || !message) {
+        return reply.code(400).send({ error: 'All fields are required' });
+    }
+
+    // Validation email simple
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return reply.code(400).send({ error: 'Invalid email format' });
+    }
+
+    const brevoApiKey = process.env.BREVO_API_KEY;
+    const contactEmail = process.env.CONTACT_EMAIL || 'hello@serverflow.io';
+
+    if (!brevoApiKey) {
+        console.error('BREVO_API_KEY not configured');
+        return reply.code(500).send({ error: 'Email service not configured' });
+    }
+
+    // Sujets possibles (pour affichage dans l'email)
+    const subjectLabels: Record<string, string> = {
+        general: 'Question générale',
+        support: 'Support technique',
+        sales: 'Demande commerciale',
+        partnership: 'Partenariat',
+        press: 'Presse'
+    };
+
+    const subjectLabel = subjectLabels[subject] || subject;
+
+    try {
+        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: {
+                'accept': 'application/json',
+                'api-key': brevoApiKey,
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+                sender: {
+                    name: 'ServerFlow Contact',
+                    email: 'noreply@serverflow.io'
+                },
+                to: [{ email: contactEmail }],
+                replyTo: { email, name },
+                subject: `[Contact] ${subjectLabel} - ${name}`,
+                htmlContent: `
+                    <h2>Nouveau message de contact</h2>
+                    <p><strong>De :</strong> ${name} (${email})</p>
+                    <p><strong>Sujet :</strong> ${subjectLabel}</p>
+                    <hr>
+                    <p>${message.replace(/\n/g, '<br>')}</p>
+                    <hr>
+                    <p><em>Message envoyé depuis le formulaire de contact ServerFlow</em></p>
+                `
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Brevo API error:', errorData);
+            return reply.code(500).send({ error: 'Failed to send email' });
+        }
+
+        return { success: true, message: 'Email sent successfully' };
+    } catch (error) {
+        console.error('Contact form error:', error);
+        return reply.code(500).send({ error: 'Failed to send email' });
+    }
+});
+
 // Initialize default free plan on startup
 createDefaultFreePlan().catch(console.error);
 

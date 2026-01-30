@@ -202,6 +202,9 @@ img {
     gap: 0.5rem;
     transition: all 0.3s ease;
     animation: logo-gradient 4s ease infinite;
+    min-width: 170px;
+    /* Prevents layout shift during typing */
+    white-space: nowrap;
 }
 
 @keyframes logo-gradient {
@@ -227,6 +230,64 @@ img {
 
 .logo:hover svg {
     filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.8));
+}
+
+.cursor-blink {
+    animation: blink-animation 1.2s step-end infinite;
+}
+
+@keyframes blink-animation {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+}
+
+/* Console Typing Effect */
+.console-text {
+    display: inline-block;
+    white-space: nowrap;
+    font-family: var(--font-mono);
+    background: linear-gradient(135deg, #fff 0%, #a855f7 50%, #3b82f6 100%);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    vertical-align: middle;
+    letter-spacing: -1px;
+    margin-left: 0.25rem;
+    border-right: 3px solid transparent;
+}
+
+/* When JS is ready to type */
+.console-text.typing-ready {
+    border-right-color: var(--accent-primary);
+    animation: caret-blink 0.75s step-end infinite;
+}
+
+/* When typing is done - fade out caret */
+.console-text.typing-done {
+    animation: caret-fade 0.5s ease forwards;
+}
+
+@keyframes caret-blink {
+    from, to {
+        border-color: var(--accent-primary);
+    }
+    50% {
+        border-color: transparent;
+    }
+}
+
+@keyframes caret-fade {
+    to {
+        border-color: transparent;
+    }
 }
 
 .nav-links {
@@ -263,6 +324,93 @@ img {
 
 .nav-links a:hover::after {
     width: 100%;
+}
+
+/* Active page indicator - Zero-Gravity Bubbles */
+.nav-links a.active {
+    color: var(--text-primary);
+    background: transparent;
+    text-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
+    position: relative;
+    z-index: 1;
+}
+
+/* Bubble 1 - Purple (Balanced) */
+.nav-links a.active::before {
+    content: '';
+    position: absolute;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    /* Balanced opacity and vibrancy */
+    background: radial-gradient(circle at 30% 30%, rgba(167, 139, 250, 0.7), rgba(139, 92, 246, 0.3) 60%, transparent 85%);
+    top: 50%;
+    left: 50%;
+    z-index: -1;
+    filter: blur(4px);
+    animation: float-bubble-1 6s ease-in-out infinite;
+    pointer-events: none;
+}
+
+/* Bubble 2 - Blue (Balanced) */
+.nav-links a.active::after {
+    content: '';
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    /* Balanced opacity and vibrancy */
+    background: radial-gradient(circle at 70% 30%, rgba(96, 165, 250, 0.7), rgba(59, 130, 246, 0.3) 60%, transparent 85%);
+    top: 50%;
+    left: 50%;
+    z-index: -1;
+    filter: blur(3px);
+    animation: float-bubble-2 5s ease-in-out infinite reverse;
+    pointer-events: none;
+}
+
+@keyframes float-bubble-1 {
+    0% {
+        transform: translate(-80%, -40%) scale(1);
+        opacity: 0.7;
+    }
+
+    33% {
+        transform: translate(-20%, -70%) scale(1.1);
+        opacity: 0.9;
+    }
+
+    66% {
+        transform: translate(-40%, -10%) scale(0.95);
+        opacity: 0.6;
+    }
+
+    100% {
+        transform: translate(-80%, -40%) scale(1);
+        opacity: 0.7;
+    }
+}
+
+@keyframes float-bubble-2 {
+    0% {
+        transform: translate(-20%, -30%) scale(1);
+        opacity: 0.7;
+    }
+
+    33% {
+        transform: translate(-60%, -20%) scale(1.2);
+        opacity: 0.5;
+    }
+
+    66% {
+        transform: translate(-30%, -60%) scale(0.9);
+        opacity: 0.9;
+    }
+
+    100% {
+        transform: translate(-20%, -30%) scale(1);
+        opacity: 0.7;
+    }
 }
 
 .nav-actions {
@@ -670,6 +818,16 @@ img {
     background-clip: text;
     color: transparent;
     animation: gradient-move 8s linear infinite;
+}
+
+.text-gradient-animate-faded {
+    background: linear-gradient(90deg, #60a5fa, #a78bfa, #93c5fd, #60a5fa);
+    background-size: 300% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    opacity: 0.7;
+    animation: gradient-move 10s linear infinite;
 }
 
 @keyframes gradient-move {
