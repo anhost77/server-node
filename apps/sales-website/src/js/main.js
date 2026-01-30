@@ -869,6 +869,156 @@
   }
 
   // ==========================================================================
+  // SECTION INDICATOR (Fixed bottom nav dots)
+  // ==========================================================================
+  function initSectionIndicator() {
+    const indicator = document.getElementById('section-indicator');
+    const label = document.getElementById('section-indicator-label');
+    if (!indicator) return;
+
+    const dots = indicator.querySelectorAll('.section-indicator-dot');
+    if (!dots.length) return;
+
+    // Map section IDs to their elements
+    const sections = [];
+    dots.forEach((dot) => {
+      const sectionId = dot.dataset.section;
+      let section = null;
+
+      // Special handling for different section selectors
+      if (sectionId === 'hero') {
+        section = document.querySelector('.hero');
+      } else if (sectionId === 'how-it-works') {
+        section = document.getElementById('how-it-works');
+      } else if (sectionId === 'security') {
+        section = document.querySelector('.security-section, #security');
+      } else if (sectionId === 'features') {
+        section = document.querySelector('.features-grid-section, #features');
+      } else if (sectionId === 'testimonials') {
+        section = document.querySelector('.testimonials, #testimonials');
+      }
+
+      if (section) {
+        sections.push({ id: sectionId, element: section, dot: dot });
+      }
+    });
+
+    // If no sections found, hide indicator and exit
+    if (sections.length === 0) {
+      indicator.style.display = 'none';
+      return;
+    }
+
+    let currentSection = null;
+    let isIndicatorVisible = false;
+
+    // Show/hide indicator based on scroll position
+    function updateIndicatorVisibility() {
+      const scrollY = window.scrollY;
+      const windowHeight = window.innerHeight;
+      const docHeight = document.documentElement.scrollHeight;
+
+      // Show after scrolling past 20% of the hero
+      const showThreshold = windowHeight * 0.2;
+      // Hide when near the footer (last 300px)
+      const hideThreshold = docHeight - windowHeight - 300;
+
+      if (scrollY > showThreshold && scrollY < hideThreshold) {
+        if (!isIndicatorVisible) {
+          indicator.classList.add('visible');
+          indicator.classList.remove('hidden');
+          isIndicatorVisible = true;
+        }
+      } else {
+        if (isIndicatorVisible) {
+          indicator.classList.remove('visible');
+          indicator.classList.add('hidden');
+          isIndicatorVisible = false;
+        }
+      }
+    }
+
+    // Update active section based on scroll
+    function updateActiveSection() {
+      const scrollY = window.scrollY;
+      const windowHeight = window.innerHeight;
+      const scrollCenter = scrollY + windowHeight * 0.4;
+
+      let activeSection = null;
+
+      // Find which section is currently in view
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const section = sections[i];
+        const rect = section.element.getBoundingClientRect();
+        const sectionTop = rect.top + scrollY;
+
+        if (scrollCenter >= sectionTop) {
+          activeSection = section;
+          break;
+        }
+      }
+
+      // Default to first section if none found
+      if (!activeSection && sections.length > 0) {
+        activeSection = sections[0];
+      }
+
+      // Update active dot
+      if (activeSection && activeSection.id !== currentSection) {
+        currentSection = activeSection.id;
+
+        dots.forEach((dot) => dot.classList.remove('active'));
+        activeSection.dot.classList.add('active');
+
+        // Update label text
+        if (label) {
+          label.textContent = activeSection.dot.dataset.label || '';
+        }
+      }
+    }
+
+    // Click handler for dots
+    dots.forEach((dot) => {
+      dot.addEventListener('click', () => {
+        const sectionId = dot.dataset.section;
+        const section = sections.find((s) => s.id === sectionId);
+
+        if (section) {
+          const navbarHeight = document.querySelector('.navbar')?.offsetHeight || 80;
+          const targetPosition =
+            section.element.getBoundingClientRect().top + window.scrollY - navbarHeight;
+
+          window.scrollTo({
+            top: targetPosition,
+            behavior: 'smooth',
+          });
+        }
+      });
+    });
+
+    // Throttled scroll handler
+    let ticking = false;
+    window.addEventListener(
+      'scroll',
+      () => {
+        if (!ticking) {
+          requestAnimationFrame(() => {
+            updateIndicatorVisibility();
+            updateActiveSection();
+            ticking = false;
+          });
+          ticking = true;
+        }
+      },
+      { passive: true },
+    );
+
+    // Initial update
+    updateIndicatorVisibility();
+    updateActiveSection();
+  }
+
+  // ==========================================================================
   // ACTIVE NAV LINK
   // ==========================================================================
   function initActiveNavLink() {
@@ -900,6 +1050,7 @@
     initDeployMockup();
     initChatMockup();
     initBadgeAnimations();
+    initSectionIndicator();
     initActiveNavLink();
     initScrollProgress();
     initRevealOnScroll();

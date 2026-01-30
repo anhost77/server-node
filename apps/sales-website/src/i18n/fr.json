@@ -413,6 +413,13 @@
     "getStarted": "Commencer",
     "backToHome": "Retour à l'accueil"
   },
+  "sectionIndicator": {
+    "hero": "Accueil",
+    "howItWorks": "Comment ça marche",
+    "security": "Sécurité",
+    "features": "Fonctionnalités",
+    "testimonials": "Témoignages"
+  },
   "aboutPage": {
     "subtitle": "Nous construisons le futur du déploiement AI-native.",
     "mission": {
