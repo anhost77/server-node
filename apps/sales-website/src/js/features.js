@@ -393,6 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
         infoBoxes.forEach(box => {
             const badge = box.querySelector('.info-box-badge');
             const title = box.querySelector('.info-box-title');
+            const description = box.querySelector('.info-box-description');
 
             if (badge) {
                 badge.dataset.text = badge.textContent.trim();
@@ -401,6 +402,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (title) {
                 title.dataset.text = title.textContent.trim();
                 title.textContent = '';
+            }
+            if (description) {
+                description.classList.add('description-hidden');
             }
         });
 
@@ -439,14 +443,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentDelay += titleDuration;
             }
 
-            // 3. Animate strong elements in description (highlight effect)
+            // 3. Reveal description with fade-in, then animate strong elements
             const description = box.querySelector('.info-box-description');
             if (description) {
+                // First, reveal the description
+                setTimeout(() => {
+                    description.classList.remove('description-hidden');
+                    description.classList.add('description-visible');
+                }, currentDelay);
+
+                // Then animate strong elements after description appears
                 const strongElements = description.querySelectorAll('strong');
                 strongElements.forEach((strong, index) => {
                     setTimeout(() => {
                         strong.classList.add('highlight-animate');
-                    }, currentDelay + (index * 150));
+                    }, currentDelay + 400 + (index * 150));
                 });
             }
 

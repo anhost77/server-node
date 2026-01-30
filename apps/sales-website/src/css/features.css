@@ -1169,6 +1169,19 @@ canvas {
     line-height: 1.7;
     color: var(--text-secondary);
     max-width: 800px;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+/* Hidden state before animation */
+.info-box-description.description-hidden {
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+/* Visible state after title animation */
+.info-box-description.description-visible {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .info-box-description strong {
