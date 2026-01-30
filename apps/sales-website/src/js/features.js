@@ -388,6 +388,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const infoBoxes = document.querySelectorAll('.section-info-box');
         if (!infoBoxes.length) return;
 
+        // IMMEDIATELY hide text content and store it in data attributes
+        // This prevents any flash before the animation starts
+        infoBoxes.forEach(box => {
+            const badge = box.querySelector('.info-box-badge');
+            const title = box.querySelector('.info-box-title');
+
+            if (badge) {
+                badge.dataset.text = badge.textContent.trim();
+                badge.textContent = '';
+            }
+            if (title) {
+                title.dataset.text = title.textContent.trim();
+                title.textContent = '';
+            }
+        });
+
         // Observe each info box - trigger when 60% visible (prevents early trigger)
         const boxObserver = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
@@ -415,7 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const title = box.querySelector('.info-box-title');
             let titleDuration = 0;
             if (title) {
-                const titleLength = title.textContent.length;
+                const titleLength = (title.dataset.text || title.textContent).length;
                 titleDuration = titleLength * 30 + 300;
                 setTimeout(() => {
                     animateTitle(title);
@@ -444,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function animateBadge(element) {
-            const text = element.textContent.trim();
+            const text = element.dataset.text || element.textContent.trim();
             const duration = text.length * 40 + 200; // Return estimated duration
             element.textContent = '';
             element.classList.add('badge-typing');
@@ -470,7 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function animateTitle(element) {
-            const text = element.textContent.trim();
+            const text = element.dataset.text || element.textContent.trim();
             element.textContent = '';
             element.classList.add('title-typing');
 
