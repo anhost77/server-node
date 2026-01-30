@@ -21,15 +21,15 @@
                 <div class="dot" style="background: #eab308"></div>
                 <div class="dot" style="background: #22c55e"></div>
             </div>
-            <div class="terminal-content">
-                <div class="command">
-                    <span class="prompt">$</span> {{terminal.command}}
+            <div class="terminal-content" id="hero-terminal">
+                <div class="terminal-line command-line">
+                    <span class="prompt">$</span> <span class="terminal-command" data-text="{{terminal.command}}"></span><span class="terminal-cursor">▋</span>
                 </div>
-                <div style="color: #a1a1aa; margin-top: 0.5rem">
-                    {{terminal.line1}}<br>
-                    {{terminal.line2}}<br>
-                    {{terminal.line3}}<br>
-                    <span style="color: var(--success)">{{terminal.line4}}</span>
+                <div class="terminal-output">
+                    <div class="terminal-line output-line" data-text="{{terminal.line1}}"></div>
+                    <div class="terminal-line output-line" data-text="{{terminal.line2}}"></div>
+                    <div class="terminal-line output-line" data-text="{{terminal.line3}}"></div>
+                    <div class="terminal-line output-line success-line" data-text="{{terminal.line4}}"></div>
                 </div>
             </div>
         </div>

@@ -455,6 +455,57 @@
   }
 
   // ==========================================================================
+  // HERO TERMINAL ANIMATION
+  // ==========================================================================
+  function initHeroTerminal() {
+    const terminal = document.getElementById('hero-terminal');
+    if (!terminal) return;
+
+    const commandSpan = terminal.querySelector('.terminal-command');
+    const cursor = terminal.querySelector('.terminal-cursor');
+    const outputLines = terminal.querySelectorAll('.output-line');
+
+    if (!commandSpan) return;
+
+    const commandText = commandSpan.dataset.text || '';
+    commandSpan.textContent = '';
+
+    let charIndex = 0;
+    const typingSpeed = 50; // ms per character
+
+    // Step 1: Type the command
+    function typeCommand() {
+      if (charIndex < commandText.length) {
+        commandSpan.textContent += commandText.charAt(charIndex);
+        charIndex++;
+        setTimeout(typeCommand, typingSpeed);
+      } else {
+        // Command finished - simulate "Enter" press
+        setTimeout(simulateEnter, 300);
+      }
+    }
+
+    // Step 2: Simulate Enter and show output lines one by one
+    function simulateEnter() {
+      // Hide cursor
+      cursor.classList.add('hidden');
+
+      // Show output lines one by one
+      outputLines.forEach((line, index) => {
+        const text = line.dataset.text || '';
+        line.textContent = text;
+
+        setTimeout(() => {
+          line.classList.add('visible');
+        }, 200 + (index * 400)); // Stagger each line by 400ms
+      });
+    }
+
+    // Start animation after page loads and terminal is visible
+    setTimeout(typeCommand, 800);
+  }
+
+  // ==========================================================================
   // ACTIVE NAV LINK
   // ==========================================================================
   function initActiveNavLink() {
@@ -481,6 +532,7 @@
   // ==========================================================================
   function init() {
     initConsoleTyping();
+    initHeroTerminal();
     initActiveNavLink();
     initScrollProgress();
     initRevealOnScroll();

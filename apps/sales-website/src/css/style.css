@@ -779,6 +779,52 @@ img {
     color: var(--success);
 }
 
+/* Terminal Animation Styles */
+.terminal-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 1.4em;
+}
+
+.terminal-command {
+    color: #fff;
+}
+
+.terminal-cursor {
+    color: var(--success);
+    animation: cursor-blink 1s step-end infinite;
+}
+
+.terminal-cursor.hidden {
+    display: none;
+}
+
+@keyframes cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+.terminal-output {
+    margin-top: 0.5rem;
+    color: #a1a1aa;
+}
+
+.output-line {
+    opacity: 0;
+    transform: translateY(5px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.output-line.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.output-line.success-line {
+    color: var(--success);
+}
+
 /* ==========================================================================
    ANIMATIONS
    ========================================================================== */
