@@ -141,47 +141,34 @@
 
                 <div class="chat-messages">
                     <div class="message user">
-                        <p>Deploy the latest changes to production</p>
+                        <p>{{howItWorks.step3.chatMessages.user1}}</p>
                     </div>
 
                     <div class="message assistant">
-                        <p>Deploying to <strong>srv_7xK2mP9</strong>...</p>
+                        <p>{{howItWorks.step3.chatMessages.assistant1}}</p>
                         <div class="deploy-status">
-                            <span class="success">&#x2705;</span> Deployed in 1.8s
-                            <br>
-                            <a href="#" style="color:#3b82f6; text-decoration:none">&#x1F30D; https://my-app.com</a>
+                            <span class="success">&#x2705;</span> {{howItWorks.step3.chatMessages.assistant1Status}}
                         </div>
                     </div>
 
                     <div class="message user">
-                        <p>Something's wrong, rollback to yesterday</p>
+                        <p>{{howItWorks.step3.chatMessages.user2}}</p>
                     </div>
 
                     <div class="message assistant">
-                        <p>Rolling back to commit <code>a3f2c1b</code>...</p>
+                        <p>{{howItWorks.step3.chatMessages.assistant2}}</p>
                         <div class="deploy-status">
-                            <span class="success">&#x2705;</span> Rollback complete
-                            <br>
-                            <span class="muted" style="color:#888; font-size:0.8rem">Previous version restored</span>
+                            <span class="success">&#x2705;</span> {{howItWorks.step3.chatMessages.assistant2Status}}
                         </div>
                     </div>
 
                     <div class="message user">
-                        <p>Show me the CPU usage</p>
+                        <p>{{howItWorks.step3.chatMessages.user3}}</p>
                     </div>
 
                     <div class="message assistant">
                         <div class="stats-mini">
-                            <div class="stat">
-                                <span class="label">CPU</span>
-                                <span class="value">12%</span>
-                                <div class="bar" style="width: 12%"></div>
-                            </div>
-                            <div class="stat">
-                                <span class="label">RAM</span>
-                                <span class="value">847 MB</span>
-                                <div class="bar" style="width: 42%"></div>
-                            </div>
+                            <span style="font-size: 0.85rem; color: #888;">{{howItWorks.step3.chatMessages.assistant3Stats}}</span>
                         </div>
                     </div>
                 </div>

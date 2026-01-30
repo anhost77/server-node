@@ -8,12 +8,14 @@
                 {{security.hook.title}}<br>
                 <span style="opacity: 0.4;">{{security.hook.titleFaded}}</span>
             </h2>
-            <p style="font-size: clamp(0.9rem, 2vw, 1.25rem); color: var(--text-secondary); margin-top: 1.5rem; text-align: center; max-width: 800px; margin-left: auto; margin-right: auto;">
+            <p
+                style="font-size: clamp(0.9rem, 2vw, 1.25rem); color: var(--text-secondary); margin-top: 1.5rem; text-align: center; max-width: 800px; margin-left: auto; margin-right: auto;">
                 {{security.hook.subtitle}}
             </p>
         </div>
         <div class="reveal" style="margin-top: 4rem; animation-delay: 0.3s">
-            <div class="floating" style="color: var(--text-secondary); opacity: 0.6; font-size: 0.9rem; letter-spacing: 0.2em; text-transform: uppercase;">
+            <div class="floating"
+                style="color: var(--text-secondary); opacity: 0.6; font-size: 0.9rem; letter-spacing: 0.2em; text-transform: uppercase;">
                 {{security.hook.scrollHint}} &#x2193;
             </div>
         </div>
@@ -21,21 +23,28 @@
 
     <!-- Slide 2: The Comparison -->
     <section class="security-slide slide-comparison">
-        <h3 class="reveal" style="font-size: clamp(1.5rem, 4vw, 2.5rem); margin-bottom: 2rem; font-weight: 800; letter-spacing: -0.02em;">
+        <h3 class="reveal"
+            style="font-size: clamp(1.5rem, 4vw, 2.5rem); margin-bottom: 2rem; font-weight: 800; letter-spacing: -0.02em;">
             {{security.comparison.title}}
         </h3>
         <div class="split-screen reveal">
             <div class="split-pane pane-bad">
                 <div class="split-icon" style="font-size: 2rem;">&#x1F630;</div>
-                <h4 class="pane-title" style="color: #ef4444; font-size: clamp(1rem, 2vw, 1.3rem);">{{security.comparison.legacy.title}}</h4>
-                <p class="pane-text" style="font-size: clamp(0.8rem, 1.5vw, 1rem);">{{security.comparison.legacy.text}}</p>
-                <div class="quote-bubble" style="color: #ef4444; font-size: clamp(0.75rem, 1.3vw, 0.9rem);">{{security.comparison.legacy.quote}}</div>
+                <h4 class="pane-title" style="color: #ef4444; font-size: clamp(1rem, 2vw, 1.3rem);">
+                    {{security.comparison.legacy.title}}</h4>
+                <p class="pane-text" style="font-size: clamp(0.8rem, 1.5vw, 1rem);">{{security.comparison.legacy.text}}
+                </p>
+                <div class="quote-bubble" style="color: #ef4444; font-size: clamp(0.75rem, 1.3vw, 0.9rem);">
+                    {{security.comparison.legacy.quote}}</div>
             </div>
             <div class="split-pane pane-good">
                 <div class="split-icon" style="font-size: 2rem;">&#x1F60C;</div>
-                <h4 class="pane-title" style="color: #10b981; font-size: clamp(1rem, 2vw, 1.3rem);">{{security.comparison.serverflow.title}}</h4>
-                <p class="pane-text" style="font-size: clamp(0.8rem, 1.5vw, 1rem);">{{security.comparison.serverflow.text}}</p>
-                <div class="quote-bubble" style="color: #10b981; font-size: clamp(0.75rem, 1.3vw, 0.9rem);">{{security.comparison.serverflow.quote}}</div>
+                <h4 class="pane-title" style="color: #10b981; font-size: clamp(1rem, 2vw, 1.3rem);">
+                    {{security.comparison.serverflow.title}}</h4>
+                <p class="pane-text" style="font-size: clamp(0.8rem, 1.5vw, 1rem);">
+                    {{security.comparison.serverflow.text}}</p>
+                <div class="quote-bubble" style="color: #10b981; font-size: clamp(0.75rem, 1.3vw, 0.9rem);">
+                    {{security.comparison.serverflow.quote}}</div>
             </div>
         </div>
     </section>
@@ -49,32 +58,70 @@
             </h3>
 
             <div class="security-diagram-container" style="border: none; background: transparent; padding: 0;">
-                <svg class="security-diagram-svg" viewBox="0 0 800 240" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 30px rgba(16, 185, 129, 0.1));" aria-label="Security diagram showing outbound-only connection">
-                    <!-- Entities -->
-                    <rect x="50" y="70" width="140" height="100" rx="20" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.1)" stroke-width="2" />
-                    <text x="120" y="125" text-anchor="middle" fill="#fff" font-size="16" font-weight="600">{{security.mechanics.diagram.yourVps}}</text>
-                    <text x="120" y="145" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700" letter-spacing="0.1em">{{security.mechanics.diagram.agentActive}}</text>
+                <svg class="security-diagram-svg" viewBox="0 0 800 240" fill="none" xmlns="http://www.w3.org/2000/svg"
+                    id="home-security-svg" style="filter: drop-shadow(0 0 30px rgba(16, 185, 129, 0.1));">
+                    <defs>
+                        <filter id="glow-home" x="-20%" y="-20%" width="140%" height="140%">
+                            <feGaussianBlur stdDeviation="5" result="blur" />
+                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                        </filter>
+                    </defs>
 
-                    <rect x="610" y="70" width="140" height="100" rx="20" fill="rgba(139, 92, 246, 0.05)" stroke="rgba(139, 92, 246, 0.2)" stroke-width="2" />
-                    <text x="680" y="125" text-anchor="middle" fill="#fff" font-size="16" font-weight="600">{{security.mechanics.diagram.serverflow}}</text>
+                    <!-- Connection Line Hitbox -->
+                    <path d="M190 120 L610 120" stroke="rgba(255,255,255,0.01)" stroke-width="30" stroke-linecap="round"
+                        class="diag-hitbox" data-info="connection" />
 
                     <!-- Connection Line (Outbound) -->
-                    <path class="diagram-path" d="M190 120 L610 120" stroke="#10b981" stroke-width="6" stroke-linecap="round" />
+                    <path class="diagram-path" d="M190 120 L610 120" stroke="#10b981" stroke-width="4"
+                        stroke-linecap="round" stroke-dasharray="10 6" id="home-dash" filter="url(#glow-home)" />
                     <polygon points="600,112 615,120 600,128" fill="#10b981" />
 
+                    <!-- Your VPS -->
+                    <g class="diag-node" data-info="vps">
+                        <rect x="50" y="70" width="160" height="100" rx="20" fill="rgba(255,255,255,0.03)"
+                            stroke="rgba(16, 185, 129, 0.3)" stroke-width="2" class="node-rect" />
+                        <text x="130" y="115" text-anchor="middle" fill="#fff" font-size="16"
+                            font-weight="700">{{security.mechanics.diagram.yourVps}}</text>
+                        <text x="130" y="135" text-anchor="middle" fill="#10b981" font-size="10" font-weight="800"
+                            letter-spacing="0.1em">{{security.mechanics.diagram.agentActive}}</text>
+                    </g>
+
+                    <!-- ServerFlow -->
+                    <g class="diag-node" data-info="sf">
+                        <rect x="590" y="70" width="160" height="100" rx="20" fill="rgba(139, 92, 246, 0.05)"
+                            stroke="rgba(139, 92, 246, 0.3)" stroke-width="2" class="node-rect" />
+                        <text x="670" y="125" text-anchor="middle" fill="#fff" font-size="16"
+                            font-weight="700">{{security.mechanics.diagram.serverflow}}</text>
+                    </g>
+
                     <!-- Data Packets -->
-                    <circle cx="260" cy="120" r="6" fill="#fff" class="pulse-icon" style="animation-delay: 0s" />
-                    <circle cx="400" cy="120" r="6" fill="#fff" class="pulse-icon" style="animation-delay: 0.6s" />
-                    <circle cx="540" cy="120" r="6" fill="#fff" class="pulse-icon" style="animation-delay: 1.2s" />
+                    <circle class="home-packet" r="4" fill="#10b981">
+                        <animateMotion dur="3s" repeatCount="indefinite" path="M190 120 L610 120" />
+                    </circle>
+                    <circle class="home-packet" r="3" fill="#10b981" opacity="0.6">
+                        <animateMotion dur="3s" repeatCount="indefinite" path="M190 120 L610 120" begin="1s" />
+                    </circle>
+                    <circle class="home-packet" r="2" fill="#10b981" opacity="0.4">
+                        <animateMotion dur="3s" repeatCount="indefinite" path="M190 120 L610 120" begin="2s" />
+                    </circle>
 
                     <!-- Labels -->
-                    <text x="400" y="90" text-anchor="middle" fill="#10b981" font-size="14" font-weight="800">{{security.mechanics.diagram.connection}}</text>
-                    <text x="400" y="180" text-anchor="middle" fill="#888" font-size="12">{{security.mechanics.diagram.details}}</text>
+                    <text x="400" y="90" text-anchor="middle" fill="#10b981" font-size="13" font-weight="800"
+                        pointer-events="none">{{security.mechanics.diagram.connection}}</text>
+                    <text x="400" y="210" text-anchor="middle" fill="#555" font-size="11" font-weight="600"
+                        letter-spacing="0.05em" pointer-events="none">{{security.mechanics.diagram.details}}</text>
                 </svg>
+            </div>
+
+            <!-- Home Diagram Info Box -->
+            <div class="home-diag-info" id="home-diag-info">
+                <span class="info-tag">{{security.mechanics.homeDiagram.tag}}</span>
+                <p class="info-content">{{security.mechanics.homeDiagram.content}}</p>
             </div>
         </div>
 
-        <p class="reveal" style="margin-top: 4rem; font-size: 1.4rem; color: var(--text-secondary); max-width: 700px; text-align: center; font-weight: 500;">
+        <p class="reveal"
+            style="margin-top: 4rem; font-size: 1.4rem; color: var(--text-secondary); max-width: 700px; text-align: center; font-weight: 500;">
             {{security.mechanics.description}}<br>
             <span style="color: #fff">{{security.mechanics.descriptionHighlight}}</span>
         </p>
@@ -82,7 +129,8 @@
 
     <!-- Slide 4: Benefits Grid -->
     <section class="security-slide slide-benefits">
-        <h3 class="reveal" style="font-size: clamp(1.5rem, 4vw, 2.5rem); margin-bottom: 2rem; font-weight: 800; letter-spacing: -0.04em; text-align: center;">
+        <h3 class="reveal"
+            style="font-size: clamp(1.5rem, 4vw, 2.5rem); margin-bottom: 2rem; font-weight: 800; letter-spacing: -0.04em; text-align: center;">
             {{security.benefits.title}}
         </h3>
 
@@ -110,7 +158,8 @@
         </div>
 
         <div class="reveal" style="margin-top: 3rem;">
-            <a href="/{{lang}}/pricing/" class="btn btn-primary cta-glow" style="padding: 1.2rem 3rem; font-size: 1.1rem; border-radius: 100px;">
+            <a href="/{{lang}}/pricing/" class="btn btn-primary cta-glow"
+                style="padding: 1.2rem 3rem; font-size: 1.1rem; border-radius: 100px;">
                 {{security.benefits.cta}} &#x2192;
             </a>
         </div>

@@ -48,13 +48,13 @@
     },
     "step2": {
       "number": "02",
-      "title": "Conecta GitHub. Push. En Línea.",
-      "description": "Enlaza tu repo una vez. Cada git push dispara auto-deploy. Cero yaml CI/CD que escribir.",
+      "title": "Conecta GitHub. Despliega via MCP.",
+      "description": "Enlaza tu repo de GitHub. Despliega desde el dashboard o pide a Claude/Cursor via MCP. ServerFlow detecta tu stack automáticamente.",
       "badges": [
         "Auto-detectar Stack",
-        "Git push = deploy",
-        "Hot reload < 5s",
-        "Rollback en un clic"
+        "Despliegue via MCP",
+        "Hot reload rápido",
+        "Gestión de procesos"
       ],
       "connectRepo": "Conectar Repositorio",
       "detected": "Detectado:",
@@ -63,17 +63,27 @@
     },
     "step3": {
       "number": "03",
-      "title": "Habla para Desplegar.",
-      "description": "Integración MCP. Pide a Claude o Cursor que despliegue, haga rollback o revise logs. En lenguaje natural.",
+      "title": "Controla via tu IA.",
+      "description": "Integración MCP nativa. Pide a Claude o Cursor que instale servicios, despliegue o consulte métricas. En español.",
       "commands": [
-        "\"Despliega el fix que acabo de pushear\"",
-        "\"Reinicia la API\"",
-        "\"Añade SSL a blog.misitio.com\"",
-        "\"¿Por qué el sitio está lento?\""
+        "\"Instala PostgreSQL\"",
+        "\"Despliega mi app\"",
+        "\"¿Cómo está el servidor?\"",
+        "\"Muéstrame los logs\""
       ],
-      "footer": "Tu asistente IA es ahora tu equipo DevOps. Sin terminal. Sin cambio de contexto. Solo entregar.",
+      "footer": "Tu asistente IA gestiona tu infraestructura. Dashboard o chat, tú decides.",
       "mcpConnected": "MCP Conectado",
-      "placeholder": "Pregunta a Claude lo que quieras sobre tus servidores..."
+      "placeholder": "Pregunta a Claude lo que quieras sobre tus servidores...",
+      "chatMessages": {
+        "user1": "Instala Node.js en el servidor",
+        "assistant1": "Instalando...",
+        "assistant1Status": "Node.js 22 instalado con npm y PM2",
+        "user2": "Despliega mi app desde GitHub",
+        "assistant2": "Desplegando...",
+        "assistant2Status": "App desplegada en https://miapp.com",
+        "user3": "¿Cómo está el servidor?",
+        "assistant3Stats": "CPU: 12% | RAM: 847 MB | Disco: 24%"
+      }
     }
   },
   "security": {
@@ -106,8 +116,12 @@
         "connection": "WEBSOCKET SALIENTE ENCRIPTADO",
         "details": "SIN SSH • SIN PUERTOS ABIERTOS • PRIVACIDAD TOTAL"
       },
-      "description": "No podemos iniciar sesión en tu sistema. No podemos ver tus datos.",
-      "descriptionHighlight": "Nuestro orquestador solo escucha lo que tu agente permite."
+      "description": "No podemos conectarnos por SSH a tu servidor. No podemos ejecutar código arbitrario.",
+      "descriptionHighlight": "Los comandos están firmados. Los datos transitan cifrados. Tu agente controla el flujo.",
+      "homeDiagram": {
+        "tag": "ARQUITECTURA DE SEGURIDAD",
+        "content": "Pasa el cursor sobre los elementos para entender el funcionamiento del flujo."
+      }
     },
     "benefits": {
       "title": "Duerme Mejor Esta Noche.",
@@ -119,8 +133,8 @@
         },
         {
           "icon": "trash",
-          "title": "Nada que Robar",
-          "description": "Almacenamos CERO credenciales. Si ServerFlow es hackeado, los hackers encuentran una habitación vacía. Sin claves que tomar."
+          "title": "Sin Acceso Remoto",
+          "description": "Sin claves SSH. Sin contraseñas root. Si ServerFlow es hackeado, los atacantes no pueden tomar el control de tus servidores."
         },
         {
           "icon": "skull",
@@ -143,32 +157,32 @@
       {
         "icon": "shield",
         "title": "Seguridad Zero-Trust",
-        "description": "Nunca accedemos a tus servidores. El agente solo inicia conexiones salientes. Sin claves SSH almacenadas, jamás."
+        "description": "Nunca accedemos a tus servidores. El agente solo inicia conexiones salientes. Sin claves SSH almacenadas."
       },
       {
         "icon": "zap",
-        "title": "Hot Patching",
-        "description": "Despliega cambios de código en < 2 segundos. Auto-rollback si se detecta crash en 10s. Perfecto para iteración con IA."
+        "title": "25+ servicios instalables",
+        "description": "Runtimes (Node, Python, PHP...), bases de datos (PostgreSQL, MySQL, Redis), herramientas de seguridad y más."
       },
       {
         "icon": "cloud",
-        "title": "Multi-Cloud Nativo",
-        "description": "Hetzner, DigitalOcean, OVH, Vultr, AWS, Scaleway... Tu VPS, tus reglas. Cero vendor lock-in."
+        "title": "Tu VPS, tus reglas",
+        "description": "Hetzner, OVH, Scaleway, DigitalOcean, Vultr, AWS... Conecta cualquier VPS Linux. Cero lock-in."
       },
       {
         "icon": "chat",
         "title": "Integración MCP",
-        "description": "Despliega en lenguaje natural con Claude o Cursor. \"Despliega mi app a producción\" simplemente funciona."
+        "description": "Controla tus servidores desde Claude o Cursor. Instala servicios, despliega, consulta métricas via chat."
       },
       {
         "icon": "ssl",
-        "title": "SSL Auto & Nginx",
-        "description": "Certificados Let's Encrypt generados automáticamente. Nginx configurado en segundos. HTTPS por defecto."
+        "title": "Nginx & Certbot",
+        "description": "Nginx instalado y listo para servir. Certbot disponible para tus certificados SSL Let's Encrypt."
       },
       {
         "icon": "heart",
-        "title": "Auto-Reparación",
-        "description": "Servicios se reinician automáticamente ante fallos. Gestión PM2. Tus apps siguen en línea aunque nosotros no."
+        "title": "Gestión de Procesos",
+        "description": "PM2 para tus apps Node.js con reinicio automático. Tus apps siguen en línea aunque nosotros no."
       }
     ]
   },
@@ -236,8 +250,8 @@
         "desc": "Despliega directamente desde Claude, Cursor o cualquier cliente MCP. Pide a tu IA que despliegue y listo."
       },
       "hotPatch": {
-        "title": "Hot Patching < 5s",
-        "desc": "Tus cambios están en línea en menos de 5 segundos. Sin rebuild completo, solo los archivos modificados."
+        "title": "Despliegue rápido",
+        "desc": "Despliega tus cambios rápidamente. PM2 recarga tus aplicaciones sin interrupciones."
       },
       "zeroTrust": {
         "title": "Seguridad Zero-Trust",
@@ -274,8 +288,8 @@
       "servers": "Servidores",
       "apps": "Aplicaciones",
       "mcp": "Integración MCP",
-      "hotPatch": "Hot Patching",
-      "rollback": "Rollback Auto",
+      "hotPatch": "Despliegue rápido",
+      "rollback": "Historial Git",
       "support": "Nivel de soporte",
       "community": "Comunidad",
       "priority": "Prioritario",
@@ -284,8 +298,8 @@
         "servers": "Número de servidores VPS que puedes conectar a tu dashboard ServerFlow.",
         "apps": "Aplicaciones o sitios web desplegados por servidor. Sin límite de dominios.",
         "mcp": "Despliega desde Claude, Cursor o cualquier cliente MCP. Pide a tu IA y está en producción.",
-        "hotPatch": "Tus cambios están en línea en < 5s. Sin rebuild, solo los archivos modificados.",
-        "rollback": "Vuelve a cualquier commit anterior con un clic si algo se rompe.",
+        "hotPatch": "Despliega tus cambios rápidamente con PM2 para recarga sin interrupciones.",
+        "rollback": "Accede a tu historial Git para volver a un estado anterior si lo necesitas.",
         "support": "Discord comunitario gratis. Email prioritario respuesta < 4h para Pro."
       }
     },
@@ -310,8 +324,8 @@
         "5 servidores",
         "Aplicaciones ilimitadas",
         "Integración MCP (Claude, Cursor)",
-        "Hot patching (< 5s)",
-        "Rollbacks automáticos",
+        "Despliegue rápido (PM2)",
+        "25+ servicios instalables",
         "Soporte prioritario"
       ],
       "cta": "Elegir Pro"
@@ -400,25 +414,25 @@
   },
   "featuresPage": {
     "cicd": {
-      "badge": "CI/CD Zero-Config",
-      "title": "Git push. Eso es todo. Tu código está en producción.",
-      "description": "Conecta tu repo de GitHub una vez. Cada push dispara auto-deploy. <strong>Sin archivos YAML, sin Jenkins, sin GitHub Actions que configurar</strong>. ServerFlow detecta tu stack, compila tu app y despliega sin tiempo de inactividad. Rollback a cualquier commit con un clic si algo se rompe.",
+      "badge": "Despliegue Simplificado",
+      "title": "Despliega tu código en tus servidores.",
+      "description": "Conecta tu repo de GitHub y despliega via dashboard o API MCP. <strong>ServerFlow detecta tu stack y ejecuta el build</strong>. Sin necesidad de configurar Jenkins o GitHub Actions.",
       "stat1Value": "< 5s",
-      "stat1Label": "Tiempo de Deploy",
-      "stat2Value": "1-Clic",
-      "stat2Label": "Rollback",
+      "stat1Label": "Hot Reload",
+      "stat2Value": "MCP",
+      "stat2Label": "Integración IA",
       "stat3Value": "0",
-      "stat3Label": "Config CI/CD",
+      "stat3Label": "Infra a gestionar",
       "tag": "Pipeline de Despliegue",
       "sectionTitle": "Del Código a Producción",
-      "feature1Title": "Auto-Detección de Stack",
-      "feature1Desc": "Node.js, Python, PHP, Go, Docker... Analizamos tu repo y configuramos todo automáticamente.",
-      "feature2Title": "Git Push = Deploy",
-      "feature2Desc": "Integración webhook. Push a main, tu app se reconstruye y despliega instantáneamente.",
-      "feature3Title": "Previews de Ramas",
-      "feature3Desc": "Cada PR obtiene una URL de preview única. Prueba antes de mergear. Se elimina al mergear.",
-      "feature4Title": "Rollback Instantáneo",
-      "feature4Desc": "¿Algo se rompió? Un clic para restaurar cualquier despliegue anterior. Cero tiempo de inactividad."
+      "feature1Title": "Detección del Stack",
+      "feature1Desc": "Node.js, Python, PHP, Go, Docker... ServerFlow identifica tu proyecto y prepara el entorno.",
+      "feature2Title": "Despliegue via MCP",
+      "feature2Desc": "Pide a Claude o Cursor que despliegue. O usa el dashboard para lanzar manualmente.",
+      "feature3Title": "Gestión de Procesos",
+      "feature3Desc": "PM2 gestiona tus apps Node.js con reinicio automático en caso de crash.",
+      "feature4Title": "Logs Centralizados",
+      "feature4Desc": "Consulta logs de despliegue y ejecución desde el dashboard o via MCP."
     },
     "runtimes": {
       "badge": "Listo para Producción",
@@ -429,12 +443,12 @@
       "stat3Label": "Archivos de Config a Escribir"
     },
     "databases": {
-      "badge": "Cero Pérdida de Datos",
-      "title": "Tus datos son sagrados. Los tratamos como tal.",
-      "description": "Un permiso mal configurado y tu negocio sale en Hacker News por las razones equivocadas. ServerFlow blinda tus bases de datos desde el día uno — <strong>aislamiento estricto de usuarios, conexiones cifradas, backups automáticos</strong>. Duerme tranquilo sabiendo que PostgreSQL, MySQL y Redis están fortificados por defecto.",
-      "stat1Label": "Latencia Prom.",
-      "stat2Label": "SLA Uptime",
-      "stat3Label": "Protección Auto"
+      "badge": "Bases Seguras",
+      "title": "Bases de datos con credenciales generadas.",
+      "description": "ServerFlow instala tus bases de datos con configuración segura por defecto. <strong>Credenciales generadas automáticamente, acceso localhost, usuarios anónimos eliminados</strong>. PostgreSQL, MySQL/MariaDB y Redis disponibles.",
+      "stat1Label": "Latencia",
+      "stat2Label": "Uptime",
+      "stat3Label": "Seguridad"
     },
     "security": {
       "badge": "Arquitectura Zero-Trust",
@@ -445,33 +459,33 @@
       "stat3Label": "Protocolo"
     },
     "email": {
-      "badge": "Escapa de Big Tech",
-      "title": "Tu inbox, tus reglas. Google no requerido.",
-      "description": "¿Por qué pagar 6€/usuario/mes por Gmail cuando tienes un VPS de 5€? ServerFlow despliega un stack de email completo — <strong>Postfix, Dovecot, Rspamd, ClamAV</strong> — con configuración automática SPF/DKIM/DMARC. Máxima entregabilidad, cero vigilancia, soberanía total sobre tus comunicaciones.",
-      "stat1Label": "Entregabilidad",
-      "stat2Label": "Auth Auto",
-      "stat3Label": "Tasa de Spam"
+      "badge": "Stack Email",
+      "title": "Aloja tus propios emails.",
+      "description": "ServerFlow instala los componentes de un stack email completo — <strong>Postfix, Dovecot, Rspamd, ClamAV, OpenDKIM</strong>. Tus emails en tu servidor.",
+      "stat1Label": "Componentes",
+      "stat2Label": "Antispam",
+      "stat3Label": "Antivirus"
     },
     "mcp": {
-      "badge": "Infraestructura AI-Nativa",
-      "title": "Habla con tu servidor. Literalmente.",
-      "description": "ServerFlow habla MCP — el protocolo que permite a Claude, Cursor y ChatGPT controlar infraestructura real. <strong>Despliega, rollback, revisa logs, gestiona dominios</strong> — todo en español. Tu asistente IA se convierte en tu equipo DevOps.",
-      "stat1Value": "14+",
-      "stat1Label": "Herramientas MCP",
-      "stat2Value": "< 1s",
-      "stat2Label": "Tiempo de Respuesta",
-      "stat3Value": "∞",
-      "stat3Label": "Posibilidades",
-      "tag": "DevOps Potenciado por IA",
-      "sectionTitle": "Tu IA Habla Infraestructura",
-      "feature1Title": "Despliega Conversando",
-      "feature1Desc": "\"Despliega mi app en producción\" — y sucede. Sin terminal, sin clicks, sin cambio de contexto.",
-      "feature2Title": "Métricas en Tiempo Real",
-      "feature2Desc": "\"¿Cómo está el servidor?\" — CPU, RAM, disco al instante. Diagnostica problemas en lenguaje natural.",
-      "feature3Title": "Gestión de Dominios",
-      "feature3Desc": "\"Añade SSL a blog.misitio.com\" — Nginx configurado, certificado emitido, en línea en segundos.",
-      "feature4Title": "Debug Inteligente",
-      "feature4Desc": "\"¿Por qué la API va lenta?\" — La IA analiza logs, sugiere soluciones y puede aplicarlas al instante."
+      "badge": "Integración MCP",
+      "title": "Controla tus servidores desde Claude o Cursor.",
+      "description": "ServerFlow expone una API MCP. <strong>Instala servicios, consulta métricas, gestiona tus apps</strong> — directamente desde tu asistente IA favorito.",
+      "stat1Value": "MCP",
+      "stat1Label": "Protocolo",
+      "stat2Value": "Claude",
+      "stat2Label": "Compatible",
+      "stat3Value": "Cursor",
+      "stat3Label": "Compatible",
+      "tag": "DevOps via IA",
+      "sectionTitle": "Tu IA gestiona la infraestructura",
+      "feature1Title": "Comandos en lenguaje natural",
+      "feature1Desc": "\"Instala PostgreSQL en mi servidor\" — la IA traduce en acciones concretas.",
+      "feature2Title": "Métricas del servidor",
+      "feature2Desc": "\"¿Cómo está el servidor?\" — CPU, RAM, disco mostrados al instante.",
+      "feature3Title": "Gestión de servicios",
+      "feature3Desc": "Instala, inicia o detén tus servicios via chat.",
+      "feature4Title": "Consulta de logs",
+      "feature4Desc": "Pide a la IA que consulte los logs para diagnosticar un problema."
     },
     "multicloud": {
       "badge": "Trae Tu Propio Servidor",
@@ -485,8 +499,8 @@
       "stat3Label": "Tus Datos",
       "tag": "Compatibilidad Universal",
       "sectionTitle": "Un Dashboard. Todas las Nubes.",
-      "feature1Title": "Cualquier VPS Funciona",
-      "feature1Desc": "Hetzner 4€/mes, OVH starter, Scaleway DEV1... Si corre Linux, corre ServerFlow.",
+      "feature1Title": "Cualquier Servidor Linux",
+      "feature1Desc": "VPS o servidor dedicado — si ejecuta Debian o Ubuntu, ServerFlow funciona.",
       "feature2Title": "Mezcla y Combina",
       "feature2Desc": "Producción en Hetzner, staging en DigitalOcean, dev en tu Raspberry Pi. Todo en una vista.",
       "feature3Title": "Facturación Directa",
@@ -514,84 +528,253 @@
       "feature3Desc": "Todo desde el dashboard o via chat IA. La línea de comandos es opcional, no obligatoria.",
       "feature4Title": "Configuración Pro por Defecto",
       "feature4Desc": "SSL, firewalls, gestores de procesos, auto-reinicio — todo configurado según mejores prácticas."
+    },
+    "comparison": {
+      "badge": "Comparación Honesta",
+      "title": "\"¿Por qué no usar cPanel?\"",
+      "subtitle": "Una pregunta justa. Aquí va una respuesta honesta.",
+      "intro": "cPanel y Plesk tienen <strong>más de 20 años de historia</strong>, miles de plugins y comunidades enormes. Están probados en batalla. Funcionan. ¿Por qué elegir algo nuevo?",
+      "theirStrengths": {
+        "title": "Lo que hacen bien",
+        "items": [
+          {
+            "title": "20+ años probados",
+            "desc": "Millones de servidores, incontables casos extremos manejados. Lo han visto todo."
+          },
+          {
+            "title": "Ecosistema enorme",
+            "desc": "Miles de plugins, integraciones y herramientas de terceros."
+          },
+          {
+            "title": "Interfaz familiar",
+            "desc": "Tu proveedor de hosting conoce cPanel. Tu cliente también."
+          },
+          {
+            "title": "Solución de hosting completa",
+            "desc": "Email, DNS, FTP, bases de datos, gestor de archivos — todo en una GUI."
+          }
+        ]
+      },
+      "ourApproach": {
+        "title": "Por qué ServerFlow es diferente",
+        "items": [
+          {
+            "title": "Construido para devs AI-native",
+            "desc": "Integración MCP. Despliega desde Claude o Cursor en lenguaje natural. Sin hacer clic."
+          },
+          {
+            "title": "Zero-Trust por arquitectura",
+            "desc": "No podemos acceder a tus servidores. No \"prometemos no hacerlo\" — literalmente no podemos. Matemáticas, no confianza."
+          },
+          {
+            "title": "Ligero por diseño",
+            "desc": "cPanel usa 1-2 GB de RAM. Nuestro agente ~50 MB. Tu RAM es para tus apps, no para paneles."
+          },
+          {
+            "title": "Workflow de dev moderno",
+            "desc": "Git push = deploy. Sin uploads manuales. Código → producción en segundos. FTP disponible si lo necesitas."
+          }
+        ]
+      },
+      "table": {
+        "title": "Comparación Rápida",
+        "criteria": "Criterio",
+        "cpanel": "cPanel / Plesk",
+        "serverflow": "ServerFlow",
+        "maturity": "Madurez",
+        "maturityCpanel": "20+ años",
+        "maturitySf": "Nuevo (2025)",
+        "plugins": "Servicios & ecosistema",
+        "pluginsCpanel": "Miles de plugins de terceros",
+        "pluginsSf": "25+ servicios instalables",
+        "ram": "Uso de RAM",
+        "ramCpanel": "1-2 GB",
+        "ramSf": "~50 MB",
+        "aiIntegration": "Integración IA/MCP",
+        "aiCpanel": "Ninguna",
+        "aiSf": "Nativa",
+        "security": "Modelo de seguridad",
+        "securityCpanel": "Claves SSH almacenadas",
+        "securitySf": "Zero-Trust (sin claves)",
+        "workflow": "Workflow de deploy",
+        "workflowCpanel": "FTP / File Manager",
+        "workflowSf": "Git push",
+        "price": "Precio",
+        "priceCpanel": "15-45€/mes/servidor",
+        "priceSf": "9€/mes por 5 servidores"
+      },
+      "honestAnswer": {
+        "title": "Cuándo elegir qué",
+        "cpanel": {
+          "title": "Elige cPanel/Plesk si:",
+          "items": [
+            "Necesitas una solución probada durante décadas",
+            "Tus clientes esperan la interfaz de cPanel",
+            "Necesitas cientos de plugins de terceros",
+            "Gestionas sitios WordPress para clientes no técnicos"
+          ]
+        },
+        "serverflow": {
+          "title": "Elige ServerFlow si:",
+          "items": [
+            "Desarrollas con herramientas IA (Claude, Cursor, ChatGPT)",
+            "La seguridad es innegociable (arquitectura Zero-Trust)",
+            "Quieres deploys basados en Git, no FTP",
+            "Valoras la RAM para apps, no para paneles"
+          ]
+        }
+      },
+      "cta": {
+        "text": "No estamos aquí para reemplazar cPanel para todos. Estamos aquí para desarrolladores que quieren una forma moderna, segura y AI-native de desplegar.",
+        "button": "Prueba el enfoque moderno"
+      }
+    },
+    "html": {
+      "runtimesTag": "7 Runtimes",
+      "runtimesTitle": "Un comando.",
+      "runtimesTitleGradient": "Configurado.",
+      "terminalLine1": "$ serverflow install nodejs@22",
+      "terminalLine2": "→ Node.js 22.x instalado",
+      "terminalLine3": "→ PM2 configurado (auto-restart)",
+      "terminalLine4": "→ App registrada. Lista para deploy.",
+      "terminalLine5": "$ serverflow deploy ./mi-api",
+      "terminalLine6": "→ 12 archivos sincronizados (< 1s)",
+      "terminalLine7": "→ En línea en api.misitio.com",
+      "cicdStepNumber": "01",
+      "cicdStepTitle": "Push de código",
+      "cicdStepDesc": "Git push a branch main",
+      "cicdStep2Number": "02",
+      "cicdStep2Title": "Build Auto",
+      "cicdStep2Desc": "Detecta stack & compila",
+      "cicdStep3Number": "03",
+      "cicdStep3Title": "Deploy < 5s",
+      "cicdStep3Desc": "Actualización sin downtime",
+      "mcpChatUser1": "Despliega el fix que acabo de pushear",
+      "mcpChatAssistant1": "Deploy iniciado. Verificando logs...",
+      "mcpChatAssistant2": "✓ Build exitoso. API en línea en",
+      "mcpChatLink": "api.misitio.com",
+      "mcpChatUser2": "¿Cómo está el servidor?",
+      "mcpChatAssistant3": "CPU: 23% | RAM: 1.2/4GB | Disco: 45%",
+      "mcpChatAssistant4": "Todos los servicios funcionando. 99.9% uptime 30 días.",
+      "multicloudProvidersList": "OVH • Scaleway • Hetzner • DigitalOcean • Vultr • AWS • Linode",
+      "forAllPersona1Title": "Coder IA",
+      "forAllPersona1Quote": "App creada con Claude, desplegada en 5 min",
+      "forAllPersona2Title": "Dev Senior",
+      "forAllPersona2Quote": "Por fin sin YAML para deploys triviales",
+      "forAllPersona3Title": "Freelance",
+      "forAllPersona3Quote": "Apps de clientes en mis propios servidores",
+      "forAllPersona4Title": "Startup",
+      "forAllPersona4Quote": "10x más barato que Vercel para nuestra infra",
+      "comparisonCpanelLogo": "cPanel",
+      "comparisonVsText": "vs",
+      "comparisonServerflowLogo": "ServerFlow",
+      "dbStatsLatency": "~2ms",
+      "dbStatsUptime": "99.9%",
+      "dbStatsBackup": "Activado",
+      "securityStatsCredentials": "0",
+      "securityStatsEncryption": "Ed25519",
+      "securityStatsProtocol": "Solo saliente",
+      "emailStatsDelivery": "99%+",
+      "emailStatsAuth": "SPF/DKIM",
+      "emailStatsSpam": "< 0.1%"
     }
   },
   "deployments": {
-    "badge": "29+ Servicios",
-    "title": "Despliega",
-    "titleGradient": "todo tu stack.",
-    "subtitle": "Runtimes, bases de datos, email, monitoreo, seguridad... Todo lo que necesitas, en un clic.",
+    "badge": "25+ Servicios Instalables",
+    "title": "Instala y gestiona",
+    "titleGradient": "tus servicios de servidor.",
+    "subtitle": "ServerFlow instala, configura y actualiza tus runtimes, bases de datos y servicios en tus propios servidores. Mantienes el control total.",
     "badges": {
-      "protected": "Protegido",
-      "autoConfig": "Config auto",
-      "autoRenew": "Renovación auto",
+      "protected": "Valores seguros",
+      "autoConfig": "Fácil instalación",
+      "autoRenew": "Auto actualización",
       "autoRestart": "Auto-reinicio",
-      "providers": "proveedores"
+      "providers": "proveedores cloud"
     },
     "runtimes": {
       "title": "Runtimes & Lenguajes",
-      "description": "Despliega en tu lenguaje favorito. Detección automática del stack.",
-      "nodejs": "npm, yarn, pnpm. Hot reload < 5s con PM2.",
-      "python": "pip, venv, Uvicorn, Gunicorn. Django, Flask, FastAPI ready.",
-      "php": "PHP-FPM, Composer, extensiones MySQL/PostgreSQL incluidas.",
-      "go": "Go 1.22+, compilación ARM64/amd64 automática.",
-      "rust": "Cargo, rustup, toolchain estable. Compilación optimizada.",
-      "ruby": "Bundler, Puma, Rails-ready. Gems pre-instaladas.",
-      "docker": "docker-compose, Dockerfile. Contenedores orquestados."
+      "description": "Instala tus entornos de ejecución con un comando. Detección de versión, actualizaciones y desinstalación limpia incluidas.",
+      "nodejs": "Node.js con npm/yarn preconfigurado. Gestión de procesos via PM2 con reinicios automáticos.",
+      "python": "Python 3 con pip, venv, uvicorn y gunicorn. Listo para Django, FastAPI o Flask.",
+      "php": "PHP-FPM con extensiones comunes (MySQL, PostgreSQL, SQLite, GD, cURL) y Composer instalado.",
+      "go": "Go 1.22+ instalado desde go.dev. Compilación local para tus binarios.",
+      "rust": "Toolchain Rust estable via rustup. Listo para compilar tus proyectos Cargo.",
+      "ruby": "Ruby con Bundler y Puma. Dependencias de build para gems nativas incluidas.",
+      "docker": "Docker y docker-compose instalados. Daemon configurado para iniciar automáticamente."
     },
     "databases": {
       "title": "Bases de Datos",
-      "description": "Credenciales generadas automáticamente. Seguras por defecto.",
-      "postgresql": "El poder de Postgres. Usuarios dedicados, config HBA segura.",
-      "mysql": "MySQL o MariaDB. Root protegido, usuarios anónimos eliminados.",
-      "redis": "Caché ultra-rápido. Modo protegido, contraseña generada."
+      "description": "Instalación segura con generación automática de credenciales. Las contraseñas se almacenan localmente en tu servidor.",
+      "postgresql": "PostgreSQL con configuración pg_hba.conf segura. Creación automatizada de usuarios y bases de datos.",
+      "mysql": "MySQL/MariaDB con instalación segura: usuarios anónimos eliminados, acceso root remoto deshabilitado.",
+      "redis": "Redis con autenticación por contraseña y acceso solo desde localhost."
+    },
+    "webSecurityIntro": {
+      "title": "Servidores Web & Seguridad",
+      "description": "Herramientas esenciales para servir tus aplicaciones y proteger tu servidor. Nginx para reverse proxy, Fail2ban y UFW para seguridad básica."
     },
     "webProxy": {
-      "title": "Web & Reverse Proxy",
-      "description": "HTTPS automático. Balanceo de carga avanzado.",
-      "nginx": "Reverse proxy auto-configurado para cada app. Zero downtime.",
-      "haproxy": "Balanceador de carga multi-servidor. Failover automático.",
-      "letsencrypt": "Certificados SSL gratuitos. Renovación 30 días antes del vencimiento."
+      "title": "Servidores Web & Reverse Proxy",
+      "description": "Nginx para servir tus sitios, HAProxy para balanceo de carga. Certbot disponible para tus certificados SSL.",
+      "nginx": "Nginx instalado y listo para servir. Reverse proxy y gestión multi-sitio.",
+      "haproxy": "HAProxy para balanceo de carga y alta disponibilidad.",
+      "letsencrypt": "Certbot disponible para tus certificados SSL Let's Encrypt. Ejecuta certbot --nginx para configurar."
     },
     "security": {
-      "title": "Seguridad & Firewall",
-      "description": "Tu servidor blindado desde el día uno.",
-      "fail2ban": "Protección brute-force. Ban 1h después de 3 intentos SSH.",
-      "ufw": "Firewall deny-by-default. Solo puertos 22, 80, 443.",
-      "wireguard": "VPN moderno para comunicaciones inter-servidor cifradas."
+      "title": "Seguridad del Servidor",
+      "description": "Herramientas de seguridad esenciales instaladas con configuración básica. Personaliza según tus necesidades.",
+      "fail2ban": "Fail2ban con jail SSH habilitada por defecto. Protege contra ataques de fuerza bruta.",
+      "ufw": "Firewall UFW configurado: tráfico entrante bloqueado por defecto, SSH/HTTP/HTTPS permitidos.",
+      "wireguard": "WireGuard instalado para crear túneles VPN cifrados entre tus servidores."
     },
     "email": {
-      "title": "Stack de Email Completo",
-      "description": "Envía y recibe emails desde tu propio servidor.",
-      "postfix": "MTA SMTP robusto. Config hostname/dominio automática.",
-      "dovecot": "IMAP/POP3 seguro. Almacenamiento de buzones de usuario.",
-      "rspamd": "Antispam ML. Filtrado inteligente de correo no deseado.",
-      "opendkim": "Firmas DKIM. Tus emails llegan al inbox, no al spam.",
-      "clamav": "Antivirus integrado. Escaneo automático de adjuntos."
+      "title": "Stack de Email",
+      "description": "Componentes para alojar tus propios emails. Postfix, Dovecot, antispam y antivirus incluidos.",
+      "postfix": "Servidor SMTP Postfix para enviar y recibir emails. Configuración básica lista para personalizar.",
+      "dovecot": "Servidor IMAP/POP3 Dovecot para acceder a tus emails desde cualquier cliente.",
+      "rspamd": "Filtro antispam Rspamd para bloquear emails no deseados antes de que lleguen.",
+      "opendkim": "OpenDKIM para firmar emails salientes y mejorar la entregabilidad.",
+      "clamav": "Antivirus ClamAV para escanear adjuntos y bloquear malware.",
+      "tooltips": {
+        "postfixTitle": "Servidor SMTP",
+        "postfixDesc": "Recibe y envía emails. El corazón de tu stack email.",
+        "rspamdTitle": "Filtro Antispam",
+        "rspamdDesc": "Analiza emails entrantes y bloquea spam según reglas configurables.",
+        "clamavTitle": "Antivirus",
+        "clamavDesc": "Escanea adjuntos para detectar malware conocido.",
+        "dovecotTitle": "Servidor IMAP/POP3",
+        "dovecotDesc": "Accede a tus emails desde Thunderbird, Outlook o cualquier cliente email."
+      }
     },
     "monitoring": {
-      "title": "Monitoreo & Observabilidad",
-      "description": "Mantén todo bajo control. En tiempo real.",
-      "pm2": "Gestión de procesos Node.js. Auto-reinicio, clustering, logs.",
-      "netdata": "Dashboard en tiempo real. CPU, RAM, disco, red de un vistazo.",
-      "loki": "Agregación de logs centralizada. Compatible con Grafana."
+      "title": "Monitoreo",
+      "description": "Herramientas de supervisión para tus aplicaciones y servidor. Visualiza métricas y centraliza tus logs.",
+      "pm2": "Gestor de procesos PM2 para tus apps Node.js. Reinicio automático, gestión de logs y modo cluster.",
+      "netdata": "Dashboard Netdata para visualizar CPU, RAM, red y disco en tiempo real via interfaz web.",
+      "loki": "Grafana Loki para centralizar y buscar en tus logs de aplicación.",
+      "dashboard": {
+        "cpuUsage": "Uso de CPU",
+        "memory": "Memoria",
+        "uptime": "Uptime",
+        "latency": "Latencia"
+      }
     },
     "backup": {
-      "title": "Backups & Sync",
-      "description": "Tus datos seguros. Localmente o en la nube.",
-      "rsync": "Sincronización de archivos rápida. Incremental, eficiente.",
-      "rclone": "Sync cloud universal. S3, Google Drive, Dropbox, OneDrive...",
-      "restic": "Backups cifrados. Deduplicación, compresión, seguridad."
+      "title": "Herramientas de Backup",
+      "description": "Rsync, Rclone y Restic para proteger tus datos. Compatible con 40+ destinos cloud.",
+      "rsync": "Rsync para sincronizar tus archivos localmente o a un servidor remoto via SSH.",
+      "rclone": "Rclone para sincronizar con 40+ servicios cloud: AWS S3, Google Drive, Dropbox, Backblaze B2, etc.",
+      "restic": "Restic para backups cifrados y deduplicados. Ideal para backups incrementales."
     },
     "ftp": {
       "title": "Servidores FTP",
-      "description": "Transferencia de archivos clásica si la necesitas.",
-      "vsftpd": "Very Secure FTP. Ligero, simple, efectivo.",
-      "proftpd": "FTP modular estilo Apache. Configuración avanzada."
+      "description": "Dos opciones de servidor FTP según tus necesidades. Solo uno puede ejecutarse a la vez (puerto 21).",
+      "vsftpd": "vsftpd (Very Secure FTP Daemon): ligero y simple para transferencias de archivos básicas.",
+      "proftpd": "ProFTPD: más configurable, con sintaxis de configuración estilo Apache."
     },
     "cta": {
-      "text": "Todos estos servicios instalables en un clic desde tu dashboard.",
-      "button": "Probar gratis"
+      "text": "Todos estos servicios son instalables en tu servidor via el dashboard o API de ServerFlow.",
+      "button": "Empezar gratis"
     }
   },
   "securityPage": {
@@ -601,7 +784,10 @@
     },
     "intro": {
       "title": "No podemos acceder a tus servidores",
-      "subtitle": "La mayoría de plataformas almacenan tus claves SSH y \"prometen\" no mirar. Nosotros elegimos otro enfoque: literalmente no podemos acceder a tus servidores. Así es como funciona."
+      "subtitle": "La mayoría de plataformas almacenan tus claves SSH y \"prometen\" no mirar. Nosotros elegimos otro enfoque: literalmente no podemos acceder a tus servidores. Así es como funciona.",
+      "badge": "CONCEPTO ZERO-TRUST",
+      "zeroTrustTitle": "¿Qué es \"Zero-Trust\"?",
+      "zeroTrustExplainer": "Imagina que aunque alguien tenga la llave de tu casa, verificas su identidad en cada puerta interior. ServerFlow nunca confía por defecto: cada comando debe ser firmado y verificado, y ninguna conexión desde el exterior a tu servidor está permitida."
     },
     "architecture": {
       "title": "Arquitectura de seguridad",
@@ -619,8 +805,8 @@
         ]
       },
       "zeroStorage": {
-        "title": "Cero almacenamiento de credenciales",
-        "description": "No almacenamos tus credenciales de servidor. Punto. Si la infraestructura de ServerFlow es comprometida, los atacantes no encuentran nada para acceder a tus servidores. Tus claves permanecen solo en tus servidores."
+        "title": "Sin claves de acceso al servidor",
+        "description": "Nunca almacenamos claves SSH ni contraseñas root. Las credenciales de servicios (MySQL, Redis) se generan localmente en tu servidor y transitan cifradas una sola vez a tu dashboard. No podemos usarlas para acceder a tus máquinas."
       },
       "openSource": {
         "title": "Agente Open Source",
@@ -628,7 +814,7 @@
       },
       "dataPrivacy": {
         "title": "Privacidad de datos",
-        "description": "ServerFlow procesa datos mínimos: comandos de despliegue y telemetría básica. Nunca accedemos a tu código de aplicación, contenido de bases de datos o datos de usuario. Todas las transmisiones están cifradas con TLS 1.3."
+        "description": "ServerFlow procesa comandos de despliegue, logs y cadenas de conexión de servicios (mostradas una vez en tu dashboard). Nunca accedemos a código de aplicación, contenido de bases de datos o datos de usuario. Todas las transmisiones están cifradas con TLS 1.3."
       }
     },
     "diagram": {
@@ -637,7 +823,17 @@
       "agentActive": "AGENTE",
       "serverflow": "ServerFlow",
       "connection": "CONEXIÓN SALIENTE CIFRADA",
-      "details": "SIN SSH • SIN PUERTOS ABIERTOS • TUS DATOS SON TUYOS"
+      "details": "SIN SSH • SIN PUERTOS ABIERTOS • TUS DATOS SON TUYOS",
+      "infoBox": {
+        "defaultTitle": "ARQUITECTURA DE SEGURIDAD",
+        "defaultText": "Pasa el cursor sobre los elementos del diagrama para entender nuestra arquitectura Zero-Trust y los protocolos de seguridad utilizados (Ed25519, TLS 1.3).",
+        "vpsTitle": "TU VPS - AGENTE AISLADO",
+        "vpsText": "El agente ServerFlow es un centinela. Utiliza el estándar criptográfico Ed25519 para probar su identidad. A diferencia de los métodos tradicionales, tus claves privadas NUNCA salen de tu servidor.",
+        "sfTitle": "SERVERFLOW - ORQUESTADOR",
+        "sfText": "Nuestra plataforma actúa como un centro de comando seguro. Nunca \"entra\" en tu casa. Prepara instrucciones firmadas que solo tu agente puede descifrar y ejecutar a través de un túnel TLS 1.3 (el estándar más alto actual).",
+        "pipeTitle": "TÚNEL DE DATOS - ESTÁNDAR TLS 1.3",
+        "pipeText": "El \"tubo\" es una conexión saliente persistente. El agente inicia el contacto. Esto garantiza que ningún hacker pueda escanear o atacar puertos abiertos en tu servidor: no los hay."
+      }
     },
     "whatWeDo": {
       "title": "Lo que realmente hacemos",

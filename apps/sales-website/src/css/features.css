@@ -757,8 +757,8 @@ canvas {
 }
 
 .section-info-box.cicd {
-    background: rgba(34, 197, 94, 0.06);
-    border-color: rgba(34, 197, 94, 0.15);
+    background: linear-gradient(rgba(10, 10, 10, 0.75), rgba(10, 10, 10, 0.75)), url('/assets/cicd-info-bg.png') center/cover no-repeat;
+    border-color: rgba(34, 197, 94, 0.2);
 }
 
 .section-info-box.cicd .info-box-icon,
@@ -1174,8 +1174,8 @@ canvas {
 
 /* Variantes de couleurs pour chaque section */
 .section-info-box.runtimes {
-    background: rgba(59, 130, 246, 0.06);
-    border-color: rgba(59, 130, 246, 0.15);
+    background: linear-gradient(rgba(10, 10, 10, 0.7), rgba(10, 10, 10, 0.7)), url('/assets/deployments-bg.png') center/cover no-repeat;
+    border-color: rgba(59, 130, 246, 0.2);
 }
 
 .section-info-box.runtimes .info-box-icon,
@@ -1191,8 +1191,8 @@ canvas {
 }
 
 .section-info-box.databases {
-    background: rgba(16, 185, 129, 0.06);
-    border-color: rgba(16, 185, 129, 0.15);
+    background: linear-gradient(rgba(10, 10, 10, 0.75), rgba(10, 10, 10, 0.75)), url('/assets/databases-bg.png') center/cover no-repeat;
+    border-color: rgba(16, 185, 129, 0.2);
 }
 
 .section-info-box.databases .info-box-icon,
@@ -1208,8 +1208,8 @@ canvas {
 }
 
 .section-info-box.security {
-    background: rgba(239, 68, 68, 0.06);
-    border-color: rgba(239, 68, 68, 0.15);
+    background: linear-gradient(rgba(10, 10, 10, 0.8), rgba(10, 10, 10, 0.8)), url('/assets/security-info-bg.png') center/cover no-repeat;
+    border-color: rgba(239, 68, 68, 0.2);
 }
 
 .section-info-box.security .info-box-icon,
@@ -1225,8 +1225,8 @@ canvas {
 }
 
 .section-info-box.email {
-    background: rgba(245, 158, 11, 0.06);
-    border-color: rgba(245, 158, 11, 0.15);
+    background: linear-gradient(rgba(10, 10, 10, 0.75), rgba(10, 10, 10, 0.75)), url('/assets/email-info-bg.png') center/cover no-repeat;
+    border-color: rgba(245, 158, 11, 0.2);
 }
 
 .section-info-box.email .info-box-icon,
@@ -1293,8 +1293,8 @@ canvas {
    ======================================== */
 
 .section-info-box.mcp {
-    background: rgba(168, 85, 247, 0.06);
-    border-color: rgba(168, 85, 247, 0.15);
+    background: linear-gradient(rgba(10, 10, 10, 0.75), rgba(10, 10, 10, 0.75)), url('/assets/mcp-info-bg.png') center/cover no-repeat;
+    border-color: rgba(168, 85, 247, 0.2);
 }
 
 .section-info-box.mcp .info-box-icon,
@@ -1440,8 +1440,8 @@ canvas {
    ======================================== */
 
 .section-info-box.multicloud {
-    background: rgba(6, 182, 212, 0.06);
-    border-color: rgba(6, 182, 212, 0.15);
+    background: linear-gradient(rgba(10, 10, 10, 0.75), rgba(10, 10, 10, 0.75)), url('/assets/multicloud-info-bg.png') center/cover no-repeat;
+    border-color: rgba(6, 182, 212, 0.2);
 }
 
 .section-info-box.multicloud .info-box-icon,
@@ -1555,8 +1555,8 @@ canvas {
    ======================================== */
 
 .section-info-box.forall {
-    background: rgba(34, 197, 94, 0.06);
-    border-color: rgba(34, 197, 94, 0.15);
+    background: linear-gradient(rgba(10, 10, 10, 0.75), rgba(10, 10, 10, 0.75)), url('/assets/forall-info-bg.png') center/cover no-repeat;
+    border-color: rgba(34, 197, 94, 0.2);
 }
 
 .section-info-box.forall .info-box-icon,
@@ -1723,5 +1723,307 @@ canvas {
 
     .chat-messages {
         min-height: 180px;
+    }
+}
+
+/* ========================================
+   COMPARISON SECTION - ServerFlow vs cPanel
+   ======================================== */
+
+.section-info-box.comparison {
+    background: linear-gradient(rgba(10, 10, 10, 0.8), rgba(10, 10, 10, 0.8)), url('/assets/comparison-info-bg.png') center/cover no-repeat;
+    border-color: rgba(251, 191, 36, 0.2);
+}
+
+.section-info-box.comparison .info-box-icon,
+.section-info-box.comparison .info-box-badge {
+    background: rgba(251, 191, 36, 0.15);
+    border-color: rgba(251, 191, 36, 0.2);
+}
+
+.section-info-box.comparison .info-box-badge {
+    color: #fbbf24;
+}
+
+.comparison-content {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.comparison-intro {
+    font-size: 1.2rem;
+    line-height: 1.8;
+    color: var(--text-secondary);
+    text-align: center;
+    max-width: 800px;
+    margin: 3rem auto;
+}
+
+.comparison-intro strong {
+    color: #fff;
+    font-weight: 600;
+}
+
+/* Two columns layout */
+.comparison-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 4rem;
+}
+
+.comparison-col {
+    background: rgba(10, 10, 10, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 2rem;
+    transition: border-color 0.3s ease;
+}
+
+.comparison-col.theirs {
+    border-color: rgba(113, 113, 122, 0.3);
+}
+
+.comparison-col.theirs:hover {
+    border-color: rgba(113, 113, 122, 0.5);
+}
+
+.comparison-col.ours {
+    border-color: rgba(139, 92, 246, 0.3);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, transparent 100%);
+}
+
+.comparison-col.ours:hover {
+    border-color: rgba(139, 92, 246, 0.5);
+}
+
+.comparison-col-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: #fff;
+}
+
+.col-icon {
+    font-size: 1.5rem;
+}
+
+.comparison-items {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.comparison-item {
+    padding-left: 1rem;
+    border-left: 2px solid rgba(255, 255, 255, 0.1);
+    transition: border-color 0.3s ease;
+}
+
+.comparison-col.theirs .comparison-item:hover {
+    border-color: #71717a;
+}
+
+.comparison-col.ours .comparison-item:hover {
+    border-color: var(--accent-primary);
+}
+
+.comparison-item strong {
+    display: block;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+    color: #fff;
+}
+
+.comparison-item p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* Comparison Table */
+.comparison-table-wrapper {
+    background: rgba(10, 10, 10, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 4rem;
+    overflow-x: auto;
+}
+
+.table-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    color: #fff;
+}
+
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.comparison-table th,
+.comparison-table td {
+    padding: 1rem 1.25rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 0.9rem;
+}
+
+.comparison-table th {
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+}
+
+.comparison-table td {
+    color: var(--text-secondary);
+}
+
+.comparison-table th.cpanel-col,
+.comparison-table td.cpanel-col {
+    background: rgba(113, 113, 122, 0.05);
+    text-align: center;
+}
+
+.comparison-table th.sf-col,
+.comparison-table td.sf-col {
+    background: rgba(139, 92, 246, 0.05);
+    text-align: center;
+}
+
+.comparison-table td.highlight-good {
+    color: #22c55e;
+    font-weight: 600;
+}
+
+.comparison-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.comparison-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Honest Answer Section */
+.honest-answer {
+    margin-bottom: 4rem;
+}
+
+.honest-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 2rem;
+    color: #fff;
+}
+
+.honest-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.honest-col {
+    background: rgba(10, 10, 10, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 2rem;
+}
+
+.honest-col.cpanel {
+    border-color: rgba(113, 113, 122, 0.2);
+}
+
+.honest-col.serverflow {
+    border-color: rgba(139, 92, 246, 0.3);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, transparent 100%);
+}
+
+.honest-col h5 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 1.25rem;
+    color: #fff;
+}
+
+.honest-col.cpanel h5 {
+    color: #a1a1aa;
+}
+
+.honest-col.serverflow h5 {
+    color: var(--accent-primary);
+}
+
+.honest-col ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.honest-col li {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    padding-left: 1.5rem;
+    position: relative;
+    line-height: 1.5;
+}
+
+.honest-col li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: #71717a;
+}
+
+.honest-col.serverflow li::before {
+    color: var(--accent-primary);
+}
+
+/* CTA */
+.comparison-cta {
+    text-align: center;
+    padding: 3rem;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 24px;
+}
+
+.comparison-cta p {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    max-width: 700px;
+    margin: 0 auto 1.5rem;
+    line-height: 1.7;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+
+    .comparison-columns,
+    .honest-columns {
+        grid-template-columns: 1fr;
+    }
+
+    .comparison-table th,
+    .comparison-table td {
+        padding: 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .comparison-intro {
+        font-size: 1rem;
     }
 }

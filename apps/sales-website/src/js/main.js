@@ -376,6 +376,54 @@
   }
 
   // ==========================================================================
+  // HOME SECURITY DIAGRAM INTERACTIVITY
+  // ==========================================================================
+  function initHomeSecurityDiagram() {
+    const svg = document.getElementById('home-security-svg');
+    const infoBox = document.getElementById('home-diag-info');
+    if (!svg || !infoBox) return;
+
+    const infoTag = infoBox.querySelector('.info-tag');
+    const infoContent = infoBox.querySelector('.info-content');
+
+    const data = {
+      'vps': {
+        tag: 'VOTRE VPS - AGENT ACTIF',
+        content: 'L\'agent ServeFlow est l\'unique point d\'entrée. Il initie une connexion chiffrée vers l\'extérieur. Aucune porte n\'est ouverte aux pirates.'
+      },
+      'sf': {
+        tag: 'SERVERFLOW - ORCHESTRATEUR',
+        content: 'Notre plateforme reçoit les signaux de votre agent et prépare les instructions. On ne peut pas se connecter à votre machine, on attend que vous nous parliez.'
+      },
+      'connection': {
+        tag: 'WEBSOCKET TLS 1.3 - SENS UNIQUE',
+        content: 'Un tunnel chiffré "sortant uniquement". Les données circulent sur un canal privé Ed25519. Confidentialité totale garantie par le matériel.'
+      },
+      'default': {
+        tag: 'SÉCURITÉ ARCHITECTURE',
+        content: 'Survolez les éléments pour comprendre le fonctionnement du flux.'
+      }
+    };
+
+    function update(key) {
+      const item = data[key] || data['default'];
+      infoBox.classList.add('active');
+      infoTag.textContent = item.tag;
+      infoContent.textContent = item.content;
+    }
+
+    function reset() {
+      infoBox.classList.remove('active');
+      update('default');
+    }
+
+    svg.querySelectorAll('.diag-node, .diag-hitbox').forEach(el => {
+      el.addEventListener('mouseenter', () => update(el.dataset.info));
+      el.addEventListener('mouseleave', reset);
+    });
+  }
+
+  // ==========================================================================
   // INITIALIZE ALL
   // ==========================================================================
   function init() {
@@ -393,6 +441,7 @@
     initAccessibility();
     initReducedMotion();
     initFeatureCardsSpotlight();
+    initHomeSecurityDiagram();
   }
 
   // Run when DOM is ready
