@@ -44,7 +44,8 @@ import {
     checkUsageLimit,
     incrementUsage,
     getUsageReport,
-    createDefaultFreePlan
+    createDefaultFreePlan,
+    createDefaultProPlan
 } from './billing/index.js';
 // VPS Providers imports
 import {
@@ -119,6 +120,7 @@ fastify.addHook('onRequest', async (req, reply) => {
     if (req.url.startsWith('/api/connect')) return;
     if (req.url.startsWith('/api/servers/verify-token')) return;
     if (req.url.startsWith('/api/webhooks')) return; // Webhooks have their own auth
+    if (req.url.startsWith('/api/pricing')) return; // Public pricing routes for sales website
     // Allow /mcp endpoint but require auth, skip other non-api routes
     if (req.url === '/' || (!req.url.startsWith('/api') && !req.url.startsWith('/mcp'))) return;
 
@@ -2284,6 +2286,69 @@ fastify.post('/api/billing/onboarding', async (req, reply) => {
     return { success: true };
 });
 
+// ==================== PUBLIC PRICING ROUTES (for sales website) ====================
+
+/**
+ * **GET /api/pricing/plans** - Récupère les formules de pricing pour le site de vente
+ *
+ * Cette route est PUBLIQUE (pas d'authentification requise).
+ * Elle retourne les plans actifs avec leurs prix, limites et fonctionnalités.
+ * Utilisée par le site marketing pour afficher dynamiquement les tarifs.
+ */
+fastify.get('/api/pricing/plans', async () => {
+    const plans = await getActivePlans();
+
+    return {
+        plans: plans.map(p => ({
+            id: p.id,
+            name: p.name,
+            displayName: p.displayName,
+            description: p.description,
+            // Prix en centimes et formatés
+            priceMonthly: p.priceMonthly || 0,
+            priceYearly: p.priceYearly || 0,
+            priceMonthlyFormatted: formatAmount(p.priceMonthly || 0),
+            priceYearlyFormatted: formatAmount(p.priceYearly || 0),
+            // Prix mensuel équivalent pour l'annuel (pour afficher les économies)
+            priceMonthlyFromYearly: p.priceYearly ? Math.round((p.priceYearly / 12)) : 0,
+            priceMonthlyFromYearlyFormatted: p.priceYearly ? formatAmount(Math.round((p.priceYearly / 12))) : '0 €',
+            // Économies en %
+            yearlyDiscount: p.priceMonthly && p.priceYearly
+                ? Math.round((1 - (p.priceYearly / (p.priceMonthly * 12))) * 100)
+                : 0,
+            // Limites
+            limits: {
+                servers: p.maxServers || 1,
+                apps: p.maxApps || 3,
+                domains: p.maxDomains || 3,
+                deploysPerDay: p.maxDeploysPerDay || 10
+            },
+            // Features (liste de fonctionnalités)
+            features: p.features ? JSON.parse(p.features) : [],
+            // Flags
+            isDefault: p.isDefault || false,
+            isPopular: p.name === 'pro' // Le plan Pro est marqué comme populaire
+        })),
+        // Infos supplémentaires
+        currency: 'EUR',
+        currencySymbol: '€',
+        updatedAt: Date.now()
+    };
+});
+
+/**
+ * **GET /api/pricing/options** - Récupère les options/add-ons disponibles
+ *
+ * Pour une future implémentation des options additionnelles.
+ */
+fastify.get('/api/pricing/options', async () => {
+    // Pour l'instant retourne une liste vide - à implémenter quand on aura des options
+    return {
+        options: [],
+        updatedAt: Date.now()
+    };
+});
+
 // Stripe Webhook (raw body required)
 fastify.post('/api/webhooks/stripe', {
     config: {
@@ -3984,7 +4049,8 @@ fastify.post('/api/contact', async (req, reply) => {
     }
 });
 
-// Initialize default free plan on startup
+// Initialize default plans on startup (Free + Pro)
 createDefaultFreePlan().catch(console.error);
+createDefaultProPlan().catch(console.error);
 
 fastify.listen({ port: 3000, host: '0.0.0.0' }).then(() => console.log('🚀 Engine Online'));

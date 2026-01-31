@@ -326,6 +326,24 @@
       ],
       "cta": "Choose Pro"
     },
+    "featureKeys": {
+      "servers_1": "1 server",
+      "servers_5": "5 servers",
+      "servers_unlimited": "Unlimited servers",
+      "apps_3": "3 applications",
+      "apps_unlimited": "Unlimited applications",
+      "ssl_auto": "Auto SSL (Let's Encrypt)",
+      "github_integration": "GitHub integration",
+      "support_community": "Community support",
+      "support_priority": "Priority support",
+      "mcp_integration": "MCP Integration (Claude, Cursor)",
+      "hot_patch": "Fast deployment (PM2)",
+      "services_25plus": "25+ installable services",
+      "basic_support": "Basic support",
+      "monitoring": "Server monitoring",
+      "custom_domains": "Custom domains",
+      "git_history": "Git history"
+    },
     "faq": {
       "title": "Frequently Asked Questions",
       "q1": "Can I cancel anytime?",

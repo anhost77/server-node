@@ -52,12 +52,31 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionW
     return { subscription: null, plan: freePlan };
 }
 
+/**
+ * Features disponibles pour les plans de pricing.
+ * Ces clés correspondent aux traductions dans les fichiers i18n du site de vente.
+ * Voir: apps/sales-website/src/i18n/{lang}.json -> pricingPage.featureKeys
+ */
+const FREE_PLAN_FEATURES = ['ssl_auto', 'github_integration', 'support_community'];
+const PRO_PLAN_FEATURES = ['mcp_integration', 'hot_patch', 'services_25plus', 'support_priority'];
+
 // Create default free plan if it doesn't exist
 export async function createDefaultFreePlan(): Promise<typeof schema.plans.$inferSelect> {
     const id = 'free';
     const existing = await db.select().from(schema.plans).where(eq(schema.plans.id, id)).get();
 
-    if (existing) return existing;
+    if (existing) {
+        // Mettre à jour les features si elles sont anciennes
+        const currentFeatures = existing.features ? JSON.parse(existing.features) : [];
+        if (!currentFeatures.includes('ssl_auto')) {
+            await db.update(schema.plans)
+                .set({ features: JSON.stringify(FREE_PLAN_FEATURES) })
+                .where(eq(schema.plans.id, id))
+                .run();
+            return (await db.select().from(schema.plans).where(eq(schema.plans.id, id)).get())!;
+        }
+        return existing;
+    }
 
     await db.insert(schema.plans).values({
         id,
@@ -70,10 +89,48 @@ export async function createDefaultFreePlan(): Promise<typeof schema.plans.$infe
         maxApps: 3,
         maxDomains: 3,
         maxDeploysPerDay: 10,
-        features: JSON.stringify(['basic_support']),
+        features: JSON.stringify(FREE_PLAN_FEATURES),
         isActive: true,
         isDefault: true,
         sortOrder: 0
+    }).run();
+
+    return (await db.select().from(schema.plans).where(eq(schema.plans.id, id)).get())!;
+}
+
+// Create default pro plan if it doesn't exist
+export async function createDefaultProPlan(): Promise<typeof schema.plans.$inferSelect> {
+    const id = 'pro';
+    const existing = await db.select().from(schema.plans).where(eq(schema.plans.id, id)).get();
+
+    if (existing) {
+        // Mettre à jour les features si elles sont anciennes
+        const currentFeatures = existing.features ? JSON.parse(existing.features) : [];
+        if (!currentFeatures.includes('mcp_integration')) {
+            await db.update(schema.plans)
+                .set({ features: JSON.stringify(PRO_PLAN_FEATURES) })
+                .where(eq(schema.plans.id, id))
+                .run();
+            return (await db.select().from(schema.plans).where(eq(schema.plans.id, id)).get())!;
+        }
+        return existing;
+    }
+
+    await db.insert(schema.plans).values({
+        id,
+        name: 'pro',
+        displayName: 'Pro',
+        description: 'For serious builders and small teams',
+        priceMonthly: 900, // 9€ en centimes
+        priceYearly: 8400, // 84€/an (7€/mois) en centimes
+        maxServers: 5,
+        maxApps: -1, // Illimité
+        maxDomains: -1, // Illimité
+        maxDeploysPerDay: -1, // Illimité
+        features: JSON.stringify(PRO_PLAN_FEATURES),
+        isActive: true,
+        isDefault: false,
+        sortOrder: 1
     }).run();
 
     return (await db.select().from(schema.plans).where(eq(schema.plans.id, id)).get())!;

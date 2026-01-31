@@ -330,6 +330,24 @@
       ],
       "cta": "Elegir Pro"
     },
+    "featureKeys": {
+      "servers_1": "1 servidor",
+      "servers_5": "5 servidores",
+      "servers_unlimited": "Servidores ilimitados",
+      "apps_3": "3 aplicaciones",
+      "apps_unlimited": "Aplicaciones ilimitadas",
+      "ssl_auto": "SSL auto (Let's Encrypt)",
+      "github_integration": "Integración GitHub",
+      "support_community": "Soporte comunitario",
+      "support_priority": "Soporte prioritario",
+      "mcp_integration": "Integración MCP (Claude, Cursor)",
+      "hot_patch": "Despliegue rápido (PM2)",
+      "services_25plus": "25+ servicios instalables",
+      "basic_support": "Soporte básico",
+      "monitoring": "Monitoreo de servidor",
+      "custom_domains": "Dominios personalizados",
+      "git_history": "Historial Git"
+    },
     "faq": {
       "title": "Preguntas Frecuentes",
       "q1": "¿Puedo cancelar en cualquier momento?",

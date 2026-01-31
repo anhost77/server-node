@@ -331,6 +331,24 @@
       ],
       "cta": "Choisir Pro"
     },
+    "featureKeys": {
+      "servers_1": "1 serveur",
+      "servers_5": "5 serveurs",
+      "servers_unlimited": "Serveurs illimités",
+      "apps_3": "3 applications",
+      "apps_unlimited": "Applications illimitées",
+      "ssl_auto": "SSL auto (Let's Encrypt)",
+      "github_integration": "Intégration GitHub",
+      "support_community": "Support communautaire",
+      "support_priority": "Support prioritaire",
+      "mcp_integration": "Intégration MCP (Claude, Cursor)",
+      "hot_patch": "Déploiement rapide (PM2)",
+      "services_25plus": "25+ services installables",
+      "basic_support": "Support de base",
+      "monitoring": "Monitoring serveur",
+      "custom_domains": "Domaines personnalisés",
+      "git_history": "Historique Git"
+    },
     "faq": {
       "title": "Questions fréquentes",
       "q1": "Puis-je résilier à tout moment ?",

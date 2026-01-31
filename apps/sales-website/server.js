@@ -21,14 +21,21 @@ import chokidar from 'chokidar';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import { config } from 'dotenv';
 import { build } from './build.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = 4500;
+// Charger les variables d'environnement
+config({ path: path.join(__dirname, '.env') });
+
+const PORT = process.env.PORT || 4500;
 const DIST_DIR = path.join(__dirname, 'dist');
 const SRC_DIR = path.join(__dirname, 'src');
+
+// URL de l'API Control Plane (configurable via .env)
+const API_URL = process.env.API_URL || 'http://localhost:3000';
 
 // Création de l'application Express
 const app = express();
@@ -119,7 +126,7 @@ app.use((req, res, next) => {
 // Proxy pour l'API contact vers le control-plane
 app.use('/api/contact', express.json(), async (req, res) => {
   try {
-    const response = await fetch('http://localhost:3000/api/contact', {
+    const response = await fetch(`${API_URL}/api/contact`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -129,8 +136,25 @@ app.use('/api/contact', express.json(), async (req, res) => {
     const data = await response.json();
     res.status(response.status).json(data);
   } catch (error) {
-    console.error('[Proxy] Erreur:', error.message);
+    console.error('[Proxy] Erreur API contact:', error.message);
     res.status(500).json({ error: 'Failed to reach API server' });
+  }
+});
+
+// Proxy pour l'API pricing (route publique)
+app.get('/api/pricing/plans', async (req, res) => {
+  try {
+    const response = await fetch(`${API_URL}/api/pricing/plans`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error('[Proxy] Erreur API pricing:', error.message);
+    res.status(500).json({ error: 'Failed to reach API server', plans: [] });
   }
 });
 

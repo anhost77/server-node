@@ -330,6 +330,24 @@
       ],
       "cta": "Pro wählen"
     },
+    "featureKeys": {
+      "servers_1": "1 Server",
+      "servers_5": "5 Server",
+      "servers_unlimited": "Unbegrenzte Server",
+      "apps_3": "3 Anwendungen",
+      "apps_unlimited": "Unbegrenzte Anwendungen",
+      "ssl_auto": "Auto SSL (Let's Encrypt)",
+      "github_integration": "GitHub Integration",
+      "support_community": "Community Support",
+      "support_priority": "Prioritäts-Support",
+      "mcp_integration": "MCP Integration (Claude, Cursor)",
+      "hot_patch": "Schnelles Deployment (PM2)",
+      "services_25plus": "25+ installierbare Dienste",
+      "basic_support": "Basis-Support",
+      "monitoring": "Server-Monitoring",
+      "custom_domains": "Benutzerdefinierte Domains",
+      "git_history": "Git-Historie"
+    },
     "faq": {
       "title": "Häufig Gestellte Fragen",
       "q1": "Kann ich jederzeit kündigen?",

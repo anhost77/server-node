@@ -56,9 +56,9 @@
     </div>
 
     <!-- Pricing Cards -->
-    <div class="pricing-grid-enhanced">
+    <div class="pricing-grid-enhanced" id="pricing-cards">
       <!-- Free Tier -->
-      <div class="pricing-card-enhanced">
+      <div class="pricing-card-enhanced" data-plan="free">
         <h3 class="pricing-plan-name">{{pricingPage.free.name}}</h3>
         <p class="pricing-plan-desc">{{pricingPage.free.desc}}</p>
 
@@ -83,7 +83,7 @@
       </div>
 
       <!-- Pro Tier - Featured -->
-      <div class="pricing-card-enhanced featured">
+      <div class="pricing-card-enhanced featured" data-plan="pro">
         <div class="pricing-badge-enhanced">{{pricingPage.pro.badge}}</div>
 
         <h3 class="pricing-plan-name">{{pricingPage.pro.name}}</h3>
@@ -293,40 +293,34 @@
 <!-- Final CTA -->
 {{> sections/cta}}
 
-<!-- Pricing Page Script -->
+<!-- Traductions des features pour le JS (injectées par le build) -->
+<script>
+  window.featureTranslations = {
+    "servers_1": "{{pricingPage.featureKeys.servers_1}}",
+    "servers_5": "{{pricingPage.featureKeys.servers_5}}",
+    "servers_unlimited": "{{pricingPage.featureKeys.servers_unlimited}}",
+    "apps_3": "{{pricingPage.featureKeys.apps_3}}",
+    "apps_unlimited": "{{pricingPage.featureKeys.apps_unlimited}}",
+    "ssl_auto": "{{pricingPage.featureKeys.ssl_auto}}",
+    "github_integration": "{{pricingPage.featureKeys.github_integration}}",
+    "support_community": "{{pricingPage.featureKeys.support_community}}",
+    "support_priority": "{{pricingPage.featureKeys.support_priority}}",
+    "mcp_integration": "{{pricingPage.featureKeys.mcp_integration}}",
+    "hot_patch": "{{pricingPage.featureKeys.hot_patch}}",
+    "services_25plus": "{{pricingPage.featureKeys.services_25plus}}",
+    "basic_support": "{{pricingPage.featureKeys.basic_support}}",
+    "monitoring": "{{pricingPage.featureKeys.monitoring}}",
+    "custom_domains": "{{pricingPage.featureKeys.custom_domains}}",
+    "git_history": "{{pricingPage.featureKeys.git_history}}"
+  };
+</script>
+
+<!-- Pricing API Script - Charge les plans dynamiquement -->
+<script src="/js/pricing.js" defer></script>
+
+<!-- Pricing Page Animations -->
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    // Billing Toggle
-    const billingOptions = document.querySelectorAll('.billing-option');
-    const priceAmounts = document.querySelectorAll('.price-amount');
-    const savingsBadge = document.getElementById('savings-badge');
-    const priceOldPro = document.getElementById('price-old-pro');
-
-    billingOptions.forEach((option) => {
-      option.addEventListener('click', () => {
-        // Update active state
-        billingOptions.forEach((opt) => opt.classList.remove('active'));
-        option.classList.add('active');
-
-        const billing = option.dataset.billing;
-
-        // Update prices
-        priceAmounts.forEach((amount) => {
-          const price = amount.dataset[billing];
-          amount.textContent = price;
-        });
-
-        // Show/hide savings badge and old prices
-        if (billing === 'annually') {
-          savingsBadge.style.display = 'inline-flex';
-          if (priceOldPro) priceOldPro.style.display = 'block';
-        } else {
-          savingsBadge.style.display = 'none';
-          if (priceOldPro) priceOldPro.style.display = 'none';
-        }
-      });
-    });
-
     // Reveal on scroll
     const revealObserver = new IntersectionObserver(
       (entries) => {
@@ -357,24 +351,26 @@
     }
 
     // Animation de flottement infinie pour le background
-    gsap.to('.pricing-hero-bg', {
-      duration: 25,
-      x: '3%',
-      y: '2%',
-      rotation: 0.01,
-      ease: 'sine.inOut',
-      repeat: -1,
-      yoyo: true,
-    });
+    if (typeof gsap !== 'undefined') {
+      gsap.to('.pricing-hero-bg', {
+        duration: 25,
+        x: '3%',
+        y: '2%',
+        rotation: 0.01,
+        ease: 'sine.inOut',
+        repeat: -1,
+        yoyo: true,
+      });
 
-    gsap.to('.pricing-hero-bg', {
-      duration: 18,
-      x: '-2%',
-      y: '-1%',
-      ease: 'sine.inOut',
-      repeat: -1,
-      yoyo: true,
-      delay: 4,
-    });
+      gsap.to('.pricing-hero-bg', {
+        duration: 18,
+        x: '-2%',
+        y: '-1%',
+        ease: 'sine.inOut',
+        repeat: -1,
+        yoyo: true,
+        delay: 4,
+      });
+    }
   });
 </script>
