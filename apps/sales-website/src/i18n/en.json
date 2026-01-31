@@ -389,7 +389,13 @@
     "forgotSubtitle": "Enter your email to receive a reset link",
     "forgotSubmit": "Send reset link",
     "forgotSuccess": "A password reset email has been sent to your address. Check your inbox.",
-    "backToLogin": "Back to login"
+    "backToLogin": "Back to login",
+    "errors": {
+      "emptyFields": "Please fill in all fields",
+      "invalidEmail": "Please enter a valid email address",
+      "invalidCredentials": "Invalid email or password",
+      "serverError": "Unable to reach server. Please try again."
+    }
   },
   "modal": {
     "close": "Close"

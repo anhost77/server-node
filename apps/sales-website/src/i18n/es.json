@@ -393,7 +393,13 @@
     "forgotSubtitle": "Ingresa tu email para recibir un enlace de restablecimiento",
     "forgotSubmit": "Enviar enlace",
     "forgotSuccess": "Se ha enviado un email de restablecimiento a tu dirección. Revisa tu bandeja de entrada.",
-    "backToLogin": "Volver al inicio de sesión"
+    "backToLogin": "Volver al inicio de sesión",
+    "errors": {
+      "emptyFields": "Por favor, rellena todos los campos",
+      "invalidEmail": "Por favor, introduce un email válido",
+      "invalidCredentials": "Email o contraseña incorrectos",
+      "serverError": "No se puede conectar al servidor. Inténtalo de nuevo."
+    }
   },
   "modal": {
     "close": "Cerrar"

@@ -87,6 +87,16 @@
 
     <!-- JS -->
     <script src="/js/main.js" defer></script>
+
+    <!-- Traductions pour la modal de connexion -->
+    <script>
+      window.loginTranslations = {
+        emptyFields: "{{loginModal.errors.emptyFields}}",
+        invalidEmail: "{{loginModal.errors.invalidEmail}}",
+        invalidCredentials: "{{loginModal.errors.invalidCredentials}}",
+        serverError: "{{loginModal.errors.serverError}}"
+      };
+    </script>
     <script src="/js/login-modal.js" defer></script>
   </body>
 </html>

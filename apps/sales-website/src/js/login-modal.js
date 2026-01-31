@@ -159,35 +159,113 @@
   }
 
   // ==========================================================================
+  // SHOW ERROR - Afficher un message d'erreur
+  // ==========================================================================
+  function showError(message) {
+    let errorEl = modal.querySelector('.login-error');
+
+    if (!errorEl) {
+      // Créer l'élément d'erreur s'il n'existe pas
+      errorEl = document.createElement('div');
+      errorEl.className = 'login-error';
+      const submitBtn = modal.querySelector('.panel-login .btn-login-submit');
+      if (submitBtn) {
+        submitBtn.parentNode.insertBefore(errorEl, submitBtn);
+      }
+    }
+
+    errorEl.textContent = message;
+    errorEl.style.display = 'block';
+
+    // Animation shake
+    modalContainer.style.animation = 'none';
+    modalContainer.offsetHeight; // Trigger reflow
+    modalContainer.style.animation = 'shake 0.5s ease';
+
+    // Masquer l'erreur après 5 secondes
+    setTimeout(() => {
+      errorEl.style.display = 'none';
+    }, 5000);
+  }
+
+  // ==========================================================================
+  // HIDE ERROR - Masquer le message d'erreur
+  // ==========================================================================
+  function hideError() {
+    const errorEl = modal.querySelector('.login-error');
+    if (errorEl) {
+      errorEl.style.display = 'none';
+    }
+  }
+
+  // ==========================================================================
+  // GET DASHBOARD URL - URL du dashboard selon l'environnement
+  // ==========================================================================
+  function getDashboardUrl() {
+    // En dev (localhost), utiliser le dashboard local
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:5173';
+    }
+    // En production
+    return 'https://app.serverflow.io';
+  }
+
+  // ==========================================================================
   // FORM SUBMIT - Gestion de la soumission login
   // ==========================================================================
   function initFormSubmit() {
     const submitBtn = modal.querySelector('.panel-login .btn-login-submit');
     if (!submitBtn) return;
 
-    submitBtn.addEventListener('click', (e) => {
+    submitBtn.addEventListener('click', async (e) => {
       e.preventDefault();
+      hideError();
 
-      const email = modal.querySelector('#login-email').value;
-      const password = modal.querySelector('#login-password').value;
+      const emailInput = modal.querySelector('#login-email');
+      const passwordInput = modal.querySelector('#login-password');
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
 
       if (!email || !password) {
         // Shake animation si champs vides
-        modalContainer.style.animation = 'none';
-        modalContainer.offsetHeight; // Trigger reflow
-        modalContainer.style.animation = 'shake 0.5s ease';
+        showError(window.loginTranslations?.emptyFields || 'Please fill in all fields');
+        return;
+      }
+
+      // Validation basique de l'email
+      if (!email.includes('@')) {
+        showError(window.loginTranslations?.invalidEmail || 'Please enter a valid email');
         return;
       }
 
       // Afficher le loader
       submitBtn.classList.add('loading');
 
-      // Simuler une requête (à remplacer par la vraie logique)
-      setTimeout(() => {
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include', // Important pour les cookies
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          // Succès - rediriger vers le dashboard
+          window.location.href = getDashboardUrl();
+        } else {
+          // Erreur d'authentification
+          submitBtn.classList.remove('loading');
+          showError(window.loginTranslations?.invalidCredentials || 'Invalid email or password');
+        }
+      } catch (error) {
+        console.error('[Login] Error:', error);
         submitBtn.classList.remove('loading');
-        // Rediriger vers l'app
-        window.location.href = 'https://app.serverflow.io/login';
-      }, 1500);
+        showError(window.loginTranslations?.serverError || 'Unable to reach server. Please try again.');
+      }
     });
   }
 
@@ -198,12 +276,20 @@
     const submitBtn = modal.querySelector('.btn-forgot-submit');
     if (!submitBtn) return;
 
-    submitBtn.addEventListener('click', (e) => {
+    submitBtn.addEventListener('click', async (e) => {
       e.preventDefault();
 
-      const email = modal.querySelector('#forgot-email').value;
+      const email = modal.querySelector('#forgot-email').value.trim();
 
       if (!email) {
+        modalContainer.style.animation = 'none';
+        modalContainer.offsetHeight;
+        modalContainer.style.animation = 'shake 0.5s ease';
+        return;
+      }
+
+      // Validation basique de l'email
+      if (!email.includes('@')) {
         modalContainer.style.animation = 'none';
         modalContainer.offsetHeight;
         modalContainer.style.animation = 'shake 0.5s ease';
@@ -213,8 +299,16 @@
       // Afficher le loader
       submitBtn.classList.add('loading');
 
-      // Simuler une requête
-      setTimeout(() => {
+      try {
+        const response = await fetch('/api/auth/forgot-password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
+        });
+
+        // Toujours afficher succès (pour ne pas révéler si l'email existe)
         submitBtn.classList.remove('loading');
 
         // Cacher le formulaire et afficher le message de succès
@@ -224,7 +318,17 @@
         if (inputGroup) inputGroup.style.display = 'none';
         submitBtn.style.display = 'none';
         if (successMsg) successMsg.style.display = 'block';
-      }, 1500);
+      } catch (error) {
+        console.error('[ForgotPassword] Error:', error);
+        submitBtn.classList.remove('loading');
+        // Afficher succès quand même (UX sécurisé)
+        const inputGroup = modal.querySelector('.panel-forgot .input-group');
+        const successMsg = modal.querySelector('.forgot-success');
+
+        if (inputGroup) inputGroup.style.display = 'none';
+        submitBtn.style.display = 'none';
+        if (successMsg) successMsg.style.display = 'block';
+      }
     });
   }
 

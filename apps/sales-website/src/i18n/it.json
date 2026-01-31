@@ -393,7 +393,13 @@
     "forgotSubtitle": "Inserisci la tua email per ricevere un link di reimpostazione",
     "forgotSubmit": "Invia link",
     "forgotSuccess": "Un'email per reimpostare la password è stata inviata al tuo indirizzo. Controlla la tua casella di posta.",
-    "backToLogin": "Torna al login"
+    "backToLogin": "Torna al login",
+    "errors": {
+      "emptyFields": "Per favore, compila tutti i campi",
+      "invalidEmail": "Per favore, inserisci un'email valida",
+      "invalidCredentials": "Email o password non validi",
+      "serverError": "Impossibile raggiungere il server. Riprova."
+    }
   },
   "modal": {
     "close": "Chiudi"

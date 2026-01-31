@@ -158,6 +158,78 @@ app.get('/api/pricing/plans', async (req, res) => {
   }
 });
 
+// Proxy pour l'API d'authentification (login)
+app.post('/api/auth/login', express.json(), async (req, res) => {
+  try {
+    const response = await fetch(`${API_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(req.body),
+    });
+
+    const data = await response.json();
+
+    // Transférer les cookies de session du control-plane vers le client
+    const setCookieHeader = response.headers.get('set-cookie');
+    if (setCookieHeader) {
+      res.setHeader('Set-Cookie', setCookieHeader);
+    }
+
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error('[Proxy] Erreur API login:', error.message);
+    res.status(500).json({ error: 'Failed to reach API server' });
+  }
+});
+
+// Proxy pour l'API d'authentification (register)
+app.post('/api/auth/register', express.json(), async (req, res) => {
+  try {
+    const response = await fetch(`${API_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(req.body),
+    });
+
+    const data = await response.json();
+
+    // Transférer les cookies de session
+    const setCookieHeader = response.headers.get('set-cookie');
+    if (setCookieHeader) {
+      res.setHeader('Set-Cookie', setCookieHeader);
+    }
+
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error('[Proxy] Erreur API register:', error.message);
+    res.status(500).json({ error: 'Failed to reach API server' });
+  }
+});
+
+// Proxy pour l'API forgot password
+app.post('/api/auth/forgot-password', express.json(), async (req, res) => {
+  try {
+    const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(req.body),
+    });
+
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error('[Proxy] Erreur API forgot-password:', error.message);
+    // Retourner un succès même si l'API n'existe pas encore (UX)
+    res.status(200).json({ success: true, message: 'If the email exists, a reset link has been sent.' });
+  }
+});
+
 // Servir les fichiers statiques
 app.use(express.static(DIST_DIR));
 

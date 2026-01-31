@@ -393,7 +393,13 @@
     "forgotSubtitle": "Geben Sie Ihre E-Mail ein, um einen Link zum Zurücksetzen zu erhalten",
     "forgotSubmit": "Link senden",
     "forgotSuccess": "Eine E-Mail zum Zurücksetzen des Passworts wurde an Ihre Adresse gesendet. Überprüfen Sie Ihren Posteingang.",
-    "backToLogin": "Zurück zur Anmeldung"
+    "backToLogin": "Zurück zur Anmeldung",
+    "errors": {
+      "emptyFields": "Bitte füllen Sie alle Felder aus",
+      "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+      "invalidCredentials": "Ungültige E-Mail oder Passwort",
+      "serverError": "Server nicht erreichbar. Bitte versuchen Sie es erneut."
+    }
   },
   "modal": {
     "close": "Schließen"

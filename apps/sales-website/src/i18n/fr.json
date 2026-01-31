@@ -394,7 +394,13 @@
     "forgotSubtitle": "Entrez votre email pour recevoir un lien de réinitialisation",
     "forgotSubmit": "Envoyer le lien",
     "forgotSuccess": "Un email de réinitialisation a été envoyé à votre adresse. Vérifiez votre boîte de réception.",
-    "backToLogin": "Retour à la connexion"
+    "backToLogin": "Retour à la connexion",
+    "errors": {
+      "emptyFields": "Veuillez remplir tous les champs",
+      "invalidEmail": "Veuillez entrer une adresse email valide",
+      "invalidCredentials": "Email ou mot de passe incorrect",
+      "serverError": "Impossible de contacter le serveur. Veuillez réessayer."
+    }
   },
   "modal": {
     "close": "Fermer"
