@@ -358,6 +358,29 @@
       "Vos données restent vôtres"
     ]
   },
+  "loginModal": {
+    "title": "Bon retour !",
+    "subtitle": "Connectez-vous à votre espace ServerFlow",
+    "email": "Email",
+    "emailPlaceholder": "vous@exemple.com",
+    "password": "Mot de passe",
+    "passwordPlaceholder": "Votre mot de passe",
+    "showPassword": "Afficher le mot de passe",
+    "rememberMe": "Se souvenir de moi",
+    "forgotPassword": "Mot de passe oublié ?",
+    "submit": "Se connecter",
+    "or": "ou continuer avec",
+    "noAccount": "Pas encore de compte ?",
+    "signUp": "Créer un compte",
+    "forgotTitle": "Réinitialiser le mot de passe",
+    "forgotSubtitle": "Entrez votre email pour recevoir un lien de réinitialisation",
+    "forgotSubmit": "Envoyer le lien",
+    "forgotSuccess": "Un email de réinitialisation a été envoyé à votre adresse. Vérifiez votre boîte de réception.",
+    "backToLogin": "Retour à la connexion"
+  },
+  "modal": {
+    "close": "Fermer"
+  },
   "footer": {
     "tagline": "Le Pont Zero-Trust pour le Déploiement AI-Native.",
     "product": {

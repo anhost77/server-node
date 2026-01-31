@@ -357,6 +357,29 @@
       "Tus datos siguen siendo tuyos"
     ]
   },
+  "loginModal": {
+    "title": "¡Bienvenido de nuevo!",
+    "subtitle": "Inicia sesión en tu cuenta ServerFlow",
+    "email": "Email",
+    "emailPlaceholder": "tu@ejemplo.com",
+    "password": "Contraseña",
+    "passwordPlaceholder": "Tu contraseña",
+    "showPassword": "Mostrar contraseña",
+    "rememberMe": "Recordarme",
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "submit": "Iniciar sesión",
+    "or": "o continuar con",
+    "noAccount": "¿No tienes cuenta?",
+    "signUp": "Crear cuenta",
+    "forgotTitle": "Restablecer contraseña",
+    "forgotSubtitle": "Ingresa tu email para recibir un enlace de restablecimiento",
+    "forgotSubmit": "Enviar enlace",
+    "forgotSuccess": "Se ha enviado un email de restablecimiento a tu dirección. Revisa tu bandeja de entrada.",
+    "backToLogin": "Volver al inicio de sesión"
+  },
+  "modal": {
+    "close": "Cerrar"
+  },
   "footer": {
     "tagline": "El Puente Zero-Trust para Despliegue AI-Native.",
     "product": {

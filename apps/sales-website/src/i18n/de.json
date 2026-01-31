@@ -357,6 +357,29 @@
       "Ihre Daten bleiben Ihre"
     ]
   },
+  "loginModal": {
+    "title": "Willkommen zurück!",
+    "subtitle": "Melden Sie sich bei Ihrem ServerFlow-Konto an",
+    "email": "E-Mail",
+    "emailPlaceholder": "sie@beispiel.com",
+    "password": "Passwort",
+    "passwordPlaceholder": "Ihr Passwort",
+    "showPassword": "Passwort anzeigen",
+    "rememberMe": "Angemeldet bleiben",
+    "forgotPassword": "Passwort vergessen?",
+    "submit": "Anmelden",
+    "or": "oder fortfahren mit",
+    "noAccount": "Noch kein Konto?",
+    "signUp": "Registrieren",
+    "forgotTitle": "Passwort zurücksetzen",
+    "forgotSubtitle": "Geben Sie Ihre E-Mail ein, um einen Link zum Zurücksetzen zu erhalten",
+    "forgotSubmit": "Link senden",
+    "forgotSuccess": "Eine E-Mail zum Zurücksetzen des Passworts wurde an Ihre Adresse gesendet. Überprüfen Sie Ihren Posteingang.",
+    "backToLogin": "Zurück zur Anmeldung"
+  },
+  "modal": {
+    "close": "Schließen"
+  },
   "footer": {
     "tagline": "Die Zero-Trust Brücke für KI-Native Bereitstellung.",
     "product": {

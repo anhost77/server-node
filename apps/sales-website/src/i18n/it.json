@@ -357,6 +357,29 @@
       "I tuoi dati restano tuoi"
     ]
   },
+  "loginModal": {
+    "title": "Bentornato!",
+    "subtitle": "Accedi al tuo account ServerFlow",
+    "email": "Email",
+    "emailPlaceholder": "tu@esempio.com",
+    "password": "Password",
+    "passwordPlaceholder": "La tua password",
+    "showPassword": "Mostra password",
+    "rememberMe": "Ricordami",
+    "forgotPassword": "Password dimenticata?",
+    "submit": "Accedi",
+    "or": "o continua con",
+    "noAccount": "Non hai un account?",
+    "signUp": "Registrati",
+    "forgotTitle": "Reimposta password",
+    "forgotSubtitle": "Inserisci la tua email per ricevere un link di reimpostazione",
+    "forgotSubmit": "Invia link",
+    "forgotSuccess": "Un'email per reimpostare la password è stata inviata al tuo indirizzo. Controlla la tua casella di posta.",
+    "backToLogin": "Torna al login"
+  },
+  "modal": {
+    "close": "Chiudi"
+  },
   "footer": {
     "tagline": "Il Ponte Zero-Trust per Distribuzione AI-Native.",
     "product": {
