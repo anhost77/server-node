@@ -77,9 +77,9 @@
           {{/each}}
         </ul>
 
-        <a href="https://app.serverflow.io/signup" class="pricing-cta pricing-cta-secondary">
+        <button type="button" class="pricing-cta pricing-cta-secondary" data-signup-plan="Free">
           {{pricingPage.free.cta}}
-        </a>
+        </button>
       </div>
 
       <!-- Pro Tier - Featured -->
@@ -112,9 +112,9 @@
           {{/each}}
         </ul>
 
-        <a href="https://app.serverflow.io/signup?plan=pro" class="pricing-cta pricing-cta-primary">
+        <button type="button" class="pricing-cta pricing-cta-primary" data-signup-plan="Pro">
           {{pricingPage.pro.cta}}
-        </a>
+        </button>
       </div>
     </div>
 
@@ -296,27 +296,43 @@
 <!-- Traductions des features pour le JS (injectées par le build) -->
 <script>
   window.featureTranslations = {
-    "servers_1": "{{pricingPage.featureKeys.servers_1}}",
-    "servers_5": "{{pricingPage.featureKeys.servers_5}}",
-    "servers_unlimited": "{{pricingPage.featureKeys.servers_unlimited}}",
-    "apps_3": "{{pricingPage.featureKeys.apps_3}}",
-    "apps_unlimited": "{{pricingPage.featureKeys.apps_unlimited}}",
-    "ssl_auto": "{{pricingPage.featureKeys.ssl_auto}}",
-    "github_integration": "{{pricingPage.featureKeys.github_integration}}",
-    "support_community": "{{pricingPage.featureKeys.support_community}}",
-    "support_priority": "{{pricingPage.featureKeys.support_priority}}",
-    "mcp_integration": "{{pricingPage.featureKeys.mcp_integration}}",
-    "hot_patch": "{{pricingPage.featureKeys.hot_patch}}",
-    "services_25plus": "{{pricingPage.featureKeys.services_25plus}}",
-    "basic_support": "{{pricingPage.featureKeys.basic_support}}",
-    "monitoring": "{{pricingPage.featureKeys.monitoring}}",
-    "custom_domains": "{{pricingPage.featureKeys.custom_domains}}",
-    "git_history": "{{pricingPage.featureKeys.git_history}}"
+    servers_1: '{{pricingPage.featureKeys.servers_1}}',
+    servers_5: '{{pricingPage.featureKeys.servers_5}}',
+    servers_unlimited: '{{pricingPage.featureKeys.servers_unlimited}}',
+    apps_3: '{{pricingPage.featureKeys.apps_3}}',
+    apps_unlimited: '{{pricingPage.featureKeys.apps_unlimited}}',
+    ssl_auto: '{{pricingPage.featureKeys.ssl_auto}}',
+    github_integration: '{{pricingPage.featureKeys.github_integration}}',
+    support_community: '{{pricingPage.featureKeys.support_community}}',
+    support_priority: '{{pricingPage.featureKeys.support_priority}}',
+    mcp_integration: '{{pricingPage.featureKeys.mcp_integration}}',
+    hot_patch: '{{pricingPage.featureKeys.hot_patch}}',
+    services_25plus: '{{pricingPage.featureKeys.services_25plus}}',
+    basic_support: '{{pricingPage.featureKeys.basic_support}}',
+    monitoring: '{{pricingPage.featureKeys.monitoring}}',
+    custom_domains: '{{pricingPage.featureKeys.custom_domains}}',
+    git_history: '{{pricingPage.featureKeys.git_history}}',
   };
 </script>
 
 <!-- Pricing API Script - Charge les plans dynamiquement -->
 <script src="/js/pricing.js" defer></script>
+
+<!-- Signup Modal Integration -->
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Connect pricing CTA buttons to signup modal
+    const signupButtons = document.querySelectorAll('[data-signup-plan]');
+    signupButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const planName = btn.dataset.signupPlan;
+        if (window.SignupModal && typeof window.SignupModal.open === 'function') {
+          window.SignupModal.open(planName);
+        }
+      });
+    });
+  });
+</script>
 
 <!-- Pricing Page Animations -->
 <script>

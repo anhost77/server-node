@@ -402,6 +402,40 @@
       "googleNotAvailable": "Accesso con Google in arrivo"
     }
   },
+  "signupModal": {
+    "title": "Crea il tuo account",
+    "subtitle": "Deploy in 90 secondi",
+    "name": "Nome completo",
+    "namePlaceholder": "Mario Rossi",
+    "email": "Email",
+    "emailPlaceholder": "tu@esempio.com",
+    "password": "Password",
+    "passwordPlaceholder": "Almeno 8 caratteri",
+    "showPassword": "Mostra password",
+    "termsText": "Accetto i",
+    "termsLink": "Termini di servizio",
+    "submit": "Crea account",
+    "or": "o continua con",
+    "hasAccount": "Hai già un account?",
+    "login": "Accedi",
+    "errors": {
+      "nameRequired": "Per favore, inserisci il tuo nome",
+      "emailRequired": "Per favore, inserisci la tua email",
+      "invalidEmail": "Per favore, inserisci un'email valida",
+      "passwordRequired": "Per favore, inserisci una password",
+      "passwordTooShort": "La password deve avere almeno 8 caratteri",
+      "termsRequired": "Per favore, accetta i termini di servizio",
+      "emailExists": "Questa email è già registrata",
+      "serverError": "Registrazione fallita. Riprova.",
+      "googleNotAvailable": "Registrazione con Google in arrivo"
+    },
+    "strength": {
+      "weak": "Debole",
+      "fair": "Discreta",
+      "good": "Buona",
+      "strong": "Forte"
+    }
+  },
   "modal": {
     "close": "Chiudi"
   },

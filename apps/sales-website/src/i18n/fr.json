@@ -403,6 +403,40 @@
       "googleNotAvailable": "Connexion Google bientôt disponible"
     }
   },
+  "signupModal": {
+    "title": "Créez votre compte",
+    "subtitle": "Déployez en 90 secondes",
+    "name": "Nom complet",
+    "namePlaceholder": "Jean Dupont",
+    "email": "Email",
+    "emailPlaceholder": "vous@exemple.com",
+    "password": "Mot de passe",
+    "passwordPlaceholder": "Au moins 8 caractères",
+    "showPassword": "Afficher le mot de passe",
+    "termsText": "J'accepte les",
+    "termsLink": "Conditions d'utilisation",
+    "submit": "Créer mon compte",
+    "or": "ou continuer avec",
+    "hasAccount": "Déjà un compte ?",
+    "login": "Se connecter",
+    "errors": {
+      "nameRequired": "Veuillez entrer votre nom",
+      "emailRequired": "Veuillez entrer votre email",
+      "invalidEmail": "Veuillez entrer un email valide",
+      "passwordRequired": "Veuillez entrer un mot de passe",
+      "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères",
+      "termsRequired": "Veuillez accepter les conditions d'utilisation",
+      "emailExists": "Cet email est déjà enregistré",
+      "serverError": "Erreur lors de l'inscription. Veuillez réessayer.",
+      "googleNotAvailable": "Inscription Google bientôt disponible"
+    },
+    "strength": {
+      "weak": "Faible",
+      "fair": "Moyen",
+      "good": "Bon",
+      "strong": "Fort"
+    }
+  },
   "modal": {
     "close": "Fermer"
   },

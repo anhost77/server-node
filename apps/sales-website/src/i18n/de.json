@@ -402,6 +402,40 @@
       "googleNotAvailable": "Google-Anmeldung kommt bald"
     }
   },
+  "signupModal": {
+    "title": "Konto erstellen",
+    "subtitle": "In 90 Sekunden deployen",
+    "name": "Vollständiger Name",
+    "namePlaceholder": "Max Mustermann",
+    "email": "E-Mail",
+    "emailPlaceholder": "sie@beispiel.de",
+    "password": "Passwort",
+    "passwordPlaceholder": "Mindestens 8 Zeichen",
+    "showPassword": "Passwort anzeigen",
+    "termsText": "Ich akzeptiere die",
+    "termsLink": "Nutzungsbedingungen",
+    "submit": "Konto erstellen",
+    "or": "oder weiter mit",
+    "hasAccount": "Bereits ein Konto?",
+    "login": "Anmelden",
+    "errors": {
+      "nameRequired": "Bitte geben Sie Ihren Namen ein",
+      "emailRequired": "Bitte geben Sie Ihre E-Mail ein",
+      "invalidEmail": "Bitte geben Sie eine gültige E-Mail ein",
+      "passwordRequired": "Bitte geben Sie ein Passwort ein",
+      "passwordTooShort": "Passwort muss mindestens 8 Zeichen haben",
+      "termsRequired": "Bitte akzeptieren Sie die Nutzungsbedingungen",
+      "emailExists": "Diese E-Mail ist bereits registriert",
+      "serverError": "Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+      "googleNotAvailable": "Google-Registrierung kommt bald"
+    },
+    "strength": {
+      "weak": "Schwach",
+      "fair": "Mittel",
+      "good": "Gut",
+      "strong": "Stark"
+    }
+  },
   "modal": {
     "close": "Schließen"
   },

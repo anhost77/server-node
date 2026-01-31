@@ -398,6 +398,40 @@
       "googleNotAvailable": "Google login coming soon"
     }
   },
+  "signupModal": {
+    "title": "Create your account",
+    "subtitle": "Start deploying in 90 seconds",
+    "name": "Full name",
+    "namePlaceholder": "John Doe",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "At least 8 characters",
+    "showPassword": "Show password",
+    "termsText": "I accept the",
+    "termsLink": "Terms of Service",
+    "submit": "Create account",
+    "or": "or continue with",
+    "hasAccount": "Already have an account?",
+    "login": "Sign in",
+    "errors": {
+      "nameRequired": "Please enter your name",
+      "emailRequired": "Please enter your email",
+      "invalidEmail": "Please enter a valid email",
+      "passwordRequired": "Please enter a password",
+      "passwordTooShort": "Password must be at least 8 characters",
+      "termsRequired": "Please accept the terms of service",
+      "emailExists": "This email is already registered",
+      "serverError": "Registration failed. Please try again.",
+      "googleNotAvailable": "Google signup coming soon"
+    },
+    "strength": {
+      "weak": "Weak",
+      "fair": "Fair",
+      "good": "Good",
+      "strong": "Strong"
+    }
+  },
   "modal": {
     "close": "Close"
   },

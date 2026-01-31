@@ -48,6 +48,7 @@
     <!-- CSS -->
     <link rel="stylesheet" href="/css/style.css" />
     <link rel="stylesheet" href="/css/login-modal.css" />
+    <link rel="stylesheet" href="/css/signup-modal.css" />
 
     <!-- JSON-LD -->
     <script type="application/ld+json">
@@ -85,6 +86,9 @@
     <!-- Login Modal -->
     {{> modals/login-modal}}
 
+    <!-- Signup Modal -->
+    {{> modals/signup-modal}}
+
     <!-- JS -->
     <script src="/js/main.js" defer></script>
 
@@ -99,5 +103,25 @@
       };
     </script>
     <script src="/js/login-modal.js" defer></script>
+
+    <!-- Traductions pour la modal d'inscription -->
+    <script>
+      window.signupTranslations = {
+        nameRequired: '{{signupModal.errors.nameRequired}}',
+        emailRequired: '{{signupModal.errors.emailRequired}}',
+        invalidEmail: '{{signupModal.errors.invalidEmail}}',
+        passwordRequired: '{{signupModal.errors.passwordRequired}}',
+        passwordTooShort: '{{signupModal.errors.passwordTooShort}}',
+        termsRequired: '{{signupModal.errors.termsRequired}}',
+        emailExists: '{{signupModal.errors.emailExists}}',
+        serverError: '{{signupModal.errors.serverError}}',
+        googleNotAvailable: '{{signupModal.errors.googleNotAvailable}}',
+        strength_weak: '{{signupModal.strength.weak}}',
+        strength_fair: '{{signupModal.strength.fair}}',
+        strength_good: '{{signupModal.strength.good}}',
+        strength_strong: '{{signupModal.strength.strong}}',
+      };
+    </script>
+    <script src="/js/signup-modal.js" defer></script>
   </body>
 </html>
