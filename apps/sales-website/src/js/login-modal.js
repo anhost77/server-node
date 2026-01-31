@@ -116,7 +116,7 @@
   // ==========================================================================
   function trapFocus(element) {
     const focusableElements = element.querySelectorAll(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
     );
     const firstFocusable = focusableElements[0];
     const lastFocusable = focusableElements[focusableElements.length - 1];
@@ -264,7 +264,9 @@
       } catch (error) {
         console.error('[Login] Error:', error);
         submitBtn.classList.remove('loading');
-        showError(window.loginTranslations?.serverError || 'Unable to reach server. Please try again.');
+        showError(
+          window.loginTranslations?.serverError || 'Unable to reach server. Please try again.',
+        );
       }
     });
   }
@@ -349,6 +351,29 @@
   }
 
   // ==========================================================================
+  // SOCIAL LOGIN - GitHub OAuth
+  // ==========================================================================
+  function initSocialLogin() {
+    const githubBtn = modal.querySelector('.btn-github');
+    if (githubBtn) {
+      githubBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Rediriger vers l'endpoint OAuth GitHub
+        window.location.href = '/api/auth/github';
+      });
+    }
+
+    const googleBtn = modal.querySelector('.btn-google');
+    if (googleBtn) {
+      googleBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Google OAuth pas encore implémenté
+        showError(window.loginTranslations?.googleNotAvailable || 'Google login coming soon');
+      });
+    }
+  }
+
+  // ==========================================================================
   // INIT - Initialiser la modal
   // ==========================================================================
   function initLoginModal() {
@@ -391,6 +416,7 @@
     initFormSubmit();
     initForgotSubmit();
     initPanelNavigation();
+    initSocialLogin();
   }
 
   // ==========================================================================

@@ -226,8 +226,16 @@ app.post('/api/auth/forgot-password', express.json(), async (req, res) => {
   } catch (error) {
     console.error('[Proxy] Erreur API forgot-password:', error.message);
     // Retourner un succès même si l'API n'existe pas encore (UX)
-    res.status(200).json({ success: true, message: 'If the email exists, a reset link has been sent.' });
+    res
+      .status(200)
+      .json({ success: true, message: 'If the email exists, a reset link has been sent.' });
   }
+});
+
+// Proxy pour GitHub OAuth - redirige vers le control-plane
+app.get('/api/auth/github', (req, res) => {
+  // Rediriger directement vers l'endpoint OAuth du control-plane
+  res.redirect(`${API_URL}/api/auth/github/login`);
 });
 
 // Servir les fichiers statiques

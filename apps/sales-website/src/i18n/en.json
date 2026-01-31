@@ -394,7 +394,8 @@
       "emptyFields": "Please fill in all fields",
       "invalidEmail": "Please enter a valid email address",
       "invalidCredentials": "Invalid email or password",
-      "serverError": "Unable to reach server. Please try again."
+      "serverError": "Unable to reach server. Please try again.",
+      "googleNotAvailable": "Google login coming soon"
     }
   },
   "modal": {

@@ -398,7 +398,8 @@
       "emptyFields": "Por favor, rellena todos los campos",
       "invalidEmail": "Por favor, introduce un email válido",
       "invalidCredentials": "Email o contraseña incorrectos",
-      "serverError": "No se puede conectar al servidor. Inténtalo de nuevo."
+      "serverError": "No se puede conectar al servidor. Inténtalo de nuevo.",
+      "googleNotAvailable": "Inicio de sesión con Google próximamente"
     }
   },
   "modal": {

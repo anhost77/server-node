@@ -399,7 +399,8 @@
       "emptyFields": "Veuillez remplir tous les champs",
       "invalidEmail": "Veuillez entrer une adresse email valide",
       "invalidCredentials": "Email ou mot de passe incorrect",
-      "serverError": "Impossible de contacter le serveur. Veuillez réessayer."
+      "serverError": "Impossible de contacter le serveur. Veuillez réessayer.",
+      "googleNotAvailable": "Connexion Google bientôt disponible"
     }
   },
   "modal": {

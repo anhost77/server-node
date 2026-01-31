@@ -398,7 +398,8 @@
       "emptyFields": "Bitte füllen Sie alle Felder aus",
       "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
       "invalidCredentials": "Ungültige E-Mail oder Passwort",
-      "serverError": "Server nicht erreichbar. Bitte versuchen Sie es erneut."
+      "serverError": "Server nicht erreichbar. Bitte versuchen Sie es erneut.",
+      "googleNotAvailable": "Google-Anmeldung kommt bald"
     }
   },
   "modal": {

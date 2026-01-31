@@ -398,7 +398,8 @@
       "emptyFields": "Per favore, compila tutti i campi",
       "invalidEmail": "Per favore, inserisci un'email valida",
       "invalidCredentials": "Email o password non validi",
-      "serverError": "Impossibile raggiungere il server. Riprova."
+      "serverError": "Impossibile raggiungere il server. Riprova.",
+      "googleNotAvailable": "Accesso con Google in arrivo"
     }
   },
   "modal": {
